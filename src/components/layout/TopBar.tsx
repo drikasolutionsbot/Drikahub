@@ -9,8 +9,10 @@ interface TopBarProps {
 
 export const TopBar = ({ onToggleSidebar }: TopBarProps) => {
   const { user, signOut } = useAuth();
+  const tokenSession = sessionStorage.getItem("token_session");
+  const tokenData = tokenSession ? JSON.parse(tokenSession) : null;
   const avatar = user?.user_metadata?.avatar_url;
-  const name = user?.user_metadata?.full_name || user?.user_metadata?.name || "U";
+  const name = user?.user_metadata?.full_name || user?.user_metadata?.name || tokenData?.tenant_name || "U";
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6">
@@ -37,7 +39,7 @@ export const TopBar = ({ onToggleSidebar }: TopBarProps) => {
             </div>
           )}
         </div>
-        <Button variant="ghost" size="icon" onClick={signOut} className="text-muted-foreground hover:text-foreground" title="Sair">
+        <Button variant="ghost" size="icon" onClick={() => { sessionStorage.removeItem("token_session"); signOut(); window.location.href = "/login"; }} className="text-muted-foreground hover:text-foreground" title="Sair">
           <LogOut className="h-4 w-4" />
         </Button>
       </div>

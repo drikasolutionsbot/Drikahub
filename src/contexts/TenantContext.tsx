@@ -29,18 +29,21 @@ export const TenantProvider = ({ children }: { children: ReactNode }) => {
   const fetchTenant = async () => {
     setLoading(true);
 
-    // Check token session first
+    // Check token session first - use stored data directly (no RLS needed)
     const tokenSessionStr = sessionStorage.getItem("token_session");
     if (tokenSessionStr) {
       try {
         const tokenSession = JSON.parse(tokenSessionStr);
         if (tokenSession.tenant_id) {
-          const { data } = await supabase
-            .from("tenants")
-            .select("*")
-            .eq("id", tokenSession.tenant_id)
-            .single();
-          setTenant(data as Tenant | null);
+          setTenant({
+            id: tokenSession.tenant_id,
+            name: tokenSession.tenant_name || "Loja",
+            discord_guild_id: null,
+            logo_url: null,
+            primary_color: "#FF69B4",
+            secondary_color: "#FFD700",
+            plan: "free",
+          });
           setLoading(false);
           return;
         }
