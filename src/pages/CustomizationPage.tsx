@@ -1,5 +1,7 @@
 import { useState, useRef } from "react";
-import { Palette, Pencil, Upload, X } from "lucide-react";
+import { Palette, Pencil, Upload, X, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { useTenant } from "@/contexts/TenantContext";
 
 const CustomizationPage = () => {
-  const { tenant } = useTenant();
+  const { tenant, tenantId, refetch } = useTenant();
   const [status, setStatus] = useState("/panel");
   const [interval, setStatusInterval] = useState("30");
   const [prefix, setPrefix] = useState("d!");
@@ -19,6 +21,9 @@ const CustomizationPage = () => {
   const [editName, setEditName] = useState("");
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
@@ -34,13 +39,65 @@ const CustomizationPage = () => {
 
   const handleFileSelect = (
     e: React.ChangeEvent<HTMLInputElement>,
-    setter: (v: string | null) => void
+    setter: (v: string | null) => void,
+    fileSetter: (f: File | null) => void
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    fileSetter(file);
     const reader = new FileReader();
     reader.onload = () => setter(reader.result as string);
     reader.readAsDataURL(file);
+  };
+
+  const handleSave = async () => {
+    if (!tenantId) return;
+    setSaving(true);
+    try {
+      const updates: Record<string, string> = {};
+
+      if (editName && editName !== botName) {
+        updates.name = editName;
+      }
+
+      if (avatarFile) {
+        const ext = avatarFile.name.split(".").pop();
+        const path = `${tenantId}/avatar.${ext}`;
+        const { error } = await supabase.storage
+          .from("tenant-assets")
+          .upload(path, avatarFile, { upsert: true });
+        if (error) throw error;
+        const { data: urlData } = supabase.storage
+          .from("tenant-assets")
+          .getPublicUrl(path);
+        updates.logo_url = urlData.publicUrl;
+      }
+
+      if (bannerFile) {
+        const ext = bannerFile.name.split(".").pop();
+        const path = `${tenantId}/banner.${ext}`;
+        const { error } = await supabase.storage
+          .from("tenant-assets")
+          .upload(path, bannerFile, { upsert: true });
+        if (error) throw error;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        const { error } = await supabase
+          .from("tenants")
+          .update(updates)
+          .eq("id", tenantId);
+        if (error) throw error;
+      }
+
+      toast.success("Perfil atualizado com sucesso!");
+      refetch();
+      setEditOpen(false);
+    } catch (err: any) {
+      toast.error("Erro ao salvar: " + (err.message || "Tente novamente"));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -125,7 +182,7 @@ const CustomizationPage = () => {
                   type="file"
                   accept="image/png,image/jpeg"
                   className="hidden"
-                  onChange={(e) => handleFileSelect(e, setAvatarPreview)}
+                  onChange={(e) => handleFileSelect(e, setAvatarPreview, setAvatarFile)}
                 />
               </div>
             </div>
@@ -157,7 +214,7 @@ const CustomizationPage = () => {
                   type="file"
                   accept="image/png,image/jpeg"
                   className="hidden"
-                  onChange={(e) => handleFileSelect(e, setBannerPreview)}
+                  onChange={(e) => handleFileSelect(e, setBannerPreview, setBannerFile)}
                 />
               </div>
             </div>
@@ -178,16 +235,16 @@ const CustomizationPage = () => {
                 variant="outline"
                 className="flex-1"
                 onClick={() => setEditOpen(false)}
+                disabled={saving}
               >
                 Cancelar
               </Button>
               <Button
                 className="flex-1"
-                onClick={() => {
-                  // TODO: save to Supabase / Discord API
-                  setEditOpen(false);
-                }}
+                onClick={handleSave}
+                disabled={saving}
               >
+                {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                 Salvar
               </Button>
             </div>
