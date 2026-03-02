@@ -33,6 +33,7 @@ import InviteTrackingPage from "./pages/InviteTrackingPage";
 import GiveawaysPage from "./pages/GiveawaysPage";
 import VipsPage from "./pages/VipsPage";
 import ECloudPage from "./pages/ECloudPage";
+import SupportPage from "./pages/SupportPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -89,6 +90,7 @@ const AppRoutes = () => (
       <Route path="/giveaways" element={<GiveawaysPage />} />
       <Route path="/vips" element={<VipsPage />} />
       <Route path="/ecloud" element={<ECloudPage />} />
+      <Route path="/support" element={<SupportPage />} />
     </Route>
     <Route path="*" element={<NotFound />} />
   </Routes>

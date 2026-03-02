@@ -2,7 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, DollarSign, Palette, Box, Hash, ShieldCheck, HandMetal,
   Store, Zap, Shield, Link2, Gift, Crown, Ticket, Cloud,
-  ChevronLeft, ChevronRight, Settings
+  ChevronLeft, ChevronRight, Settings, Headset
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { cn } from "@/lib/utils";
@@ -37,6 +37,12 @@ const navGroups = [
       { label: "VIPs", icon: Crown, path: "/vips" },
       { label: "Tickets", icon: Ticket, path: "/tickets" },
       { label: "eCloud", icon: Cloud, path: "/ecloud" },
+    ],
+  },
+  {
+    label: "AJUDA",
+    items: [
+      { label: "Suporte", icon: Headset, path: "/support" },
     ],
   },
 ];
