@@ -3,13 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Key, Loader2, Shield } from "lucide-react";
+import { Key, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { signInWithDiscord } = useAuth();
   const [imgError, setImgError] = useState(false);
   const [token, setToken] = useState("");
   const [validating, setValidating] = useState(false);
@@ -86,18 +84,6 @@ const LoginPage = () => {
           <p className="text-center text-xs text-muted-foreground">
             Ao entrar, você concorda com nossos Termos de Serviço
           </p>
-
-          <div className="pt-4 border-t border-border">
-            <a
-              href="/admin/login"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 w-full text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Shield className="h-3 w-3" />
-              Acesso Administrativo
-            </a>
-          </div>
         </div>
       </div>
     </div>

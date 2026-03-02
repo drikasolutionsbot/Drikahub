@@ -4,12 +4,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { AdminProvider } from "@/contexts/AdminContext";
 import { TenantProvider } from "@/contexts/TenantContext";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { AdminLayout } from "@/components/layout/AdminLayout";
 import LoginPage from "./pages/LoginPage";
-import AdminLoginPage from "./pages/admin/AdminLoginPage";
 import OnboardingPage from "./pages/OnboardingPage";
 import DashboardPage from "./pages/DashboardPage";
 import StorePage from "./pages/StorePage";
@@ -30,9 +27,6 @@ import InviteTrackingPage from "./pages/InviteTrackingPage";
 import GiveawaysPage from "./pages/GiveawaysPage";
 import VipsPage from "./pages/VipsPage";
 import ECloudPage from "./pages/ECloudPage";
-import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
-import AdminTenantsPage from "./pages/admin/AdminTenantsPage";
-import AdminTokensPage from "./pages/admin/AdminTokensPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,26 +45,11 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-const AdminPublicRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
-  if (loading) return null;
-  if (user) return <Navigate to="/admin" replace />;
-  return <>{children}</>;
-};
-
 const AppRoutes = () => (
   <Routes>
     <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
-    <Route path="/admin/login" element={<AdminPublicRoute><AdminLoginPage /></AdminPublicRoute>} />
     <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
     <Route path="/" element={<Navigate to="/dashboard" replace />} />
-    
-    {/* Admin routes - completely separate */}
-    <Route element={<ProtectedRoute><AdminProvider><AdminLayout /></AdminProvider></ProtectedRoute>}>
-      <Route path="/admin" element={<AdminDashboardPage />} />
-      <Route path="/admin/tenants" element={<AdminTenantsPage />} />
-      <Route path="/admin/tokens" element={<AdminTokensPage />} />
-    </Route>
 
     {/* Dashboard routes */}
     <Route element={<ProtectedRoute><TenantProvider><DashboardLayout /></TenantProvider></ProtectedRoute>}>
