@@ -83,11 +83,11 @@ const CustomizationPage = () => {
       }
 
       if (Object.keys(updates).length > 0) {
-        const { error } = await supabase
-          .from("tenants")
-          .update(updates)
-          .eq("id", tenantId);
+        const { data, error } = await supabase.functions.invoke("update-tenant", {
+          body: { tenant_id: tenantId, updates },
+        });
         if (error) throw error;
+        if (data?.error) throw new Error(data.error);
       }
 
       toast.success("Perfil atualizado com sucesso!");
