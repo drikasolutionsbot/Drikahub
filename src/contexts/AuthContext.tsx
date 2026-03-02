@@ -24,7 +24,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      setLoading(false);
+      // Only set loading to false if there are no auth tokens in the URL hash
+      // Otherwise, let onAuthStateChange handle it after processing the tokens
+      const hasAuthParams = window.location.hash?.includes("access_token") || window.location.hash?.includes("refresh_token");
+      if (!hasAuthParams) {
+        setLoading(false);
+      }
     });
 
     return () => subscription.unsubscribe();
