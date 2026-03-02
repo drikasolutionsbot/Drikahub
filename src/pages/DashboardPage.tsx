@@ -3,6 +3,7 @@ import { useTenant } from "@/contexts/TenantContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Server, ExternalLink, Users, UserCheck, Settings2, Plus, UserPlus } from "lucide-react";
+import MemberSearchModal from "@/components/dashboard/MemberSearchModal";
 
 const DISCORD_CLIENT_ID = "1477916070508757092";
 const BOT_PERMISSIONS = "8";
@@ -10,6 +11,7 @@ const BOT_PERMISSIONS = "8";
 const DashboardPage = () => {
   const { tenant, loading: tenantLoading } = useTenant();
   const [activeTab, setActiveTab] = useState<"membros" | "cargos">("membros");
+  const [memberSearchOpen, setMemberSearchOpen] = useState(false);
 
   if (tenantLoading || !tenant) {
     return (
@@ -136,7 +138,12 @@ const DashboardPage = () => {
             <div className="rounded-xl border border-border bg-card p-5 space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold border-l-2 border-primary pl-3">Lista de membros</h3>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground"
+                  onClick={() => setMemberSearchOpen(true)}
+                >
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
@@ -171,6 +178,11 @@ const DashboardPage = () => {
           </div>
         )}
       </div>
+
+      <MemberSearchModal
+        open={memberSearchOpen}
+        onOpenChange={setMemberSearchOpen}
+      />
     </div>
   );
 };
