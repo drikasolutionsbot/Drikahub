@@ -1,8 +1,9 @@
-import logo from "@/assets/logo.png";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 
 const LoginPage = () => {
   const { signInWithDiscord } = useAuth();
+  const [imgError, setImgError] = useState(false);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
@@ -13,7 +14,11 @@ const LoginPage = () => {
       
       <div className="relative z-10 w-full max-w-md space-y-8 px-4">
         <div className="flex flex-col items-center space-y-4 animate-fade-in">
-          <img src={logo} alt="Drika Solutions" className="h-24 w-24 object-contain" />
+          {!imgError ? (
+            <img src="/logo.png" alt="Drika Solutions" className="h-24 w-24 object-contain" onError={() => setImgError(true)} />
+          ) : (
+            <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-primary/10 text-4xl font-bold text-primary">D</div>
+          )}
           <h1 className="font-display text-3xl font-bold text-gradient-pink">DRIKA SOLUTIONS</h1>
           <p className="text-center text-muted-foreground">
             Gerencie sua loja no Discord com estilo
