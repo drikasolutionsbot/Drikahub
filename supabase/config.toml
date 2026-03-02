@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.create-tenant]
 verify_jwt = false
+
+[functions.discord-channels]
+verify_jwt = false
