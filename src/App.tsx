@@ -4,8 +4,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { AdminProvider } from "@/contexts/AdminContext";
 import { TenantProvider } from "@/contexts/TenantContext";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { AdminLayout } from "@/components/layout/AdminLayout";
 import LoginPage from "./pages/LoginPage";
 import OnboardingPage from "./pages/OnboardingPage";
 import DashboardPage from "./pages/DashboardPage";
@@ -17,6 +19,9 @@ import PaymentsPage from "./pages/PaymentsPage";
 import TicketsPage from "./pages/TicketsPage";
 import FinancePage from "./pages/FinancePage";
 import SettingsPage from "./pages/SettingsPage";
+import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
+import AdminTenantsPage from "./pages/admin/AdminTenantsPage";
+import AdminTokensPage from "./pages/admin/AdminTokensPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -40,6 +45,15 @@ const AppRoutes = () => (
     <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
     <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
     <Route path="/" element={<Navigate to="/dashboard" replace />} />
+    
+    {/* Admin routes */}
+    <Route element={<ProtectedRoute><AdminProvider><AdminLayout /></AdminProvider></ProtectedRoute>}>
+      <Route path="/admin" element={<AdminDashboardPage />} />
+      <Route path="/admin/tenants" element={<AdminTenantsPage />} />
+      <Route path="/admin/tokens" element={<AdminTokensPage />} />
+    </Route>
+
+    {/* Dashboard routes */}
     <Route element={<ProtectedRoute><TenantProvider><DashboardLayout /></TenantProvider></ProtectedRoute>}>
       <Route path="/dashboard" element={<DashboardPage />} />
       <Route path="/store" element={<StorePage />} />

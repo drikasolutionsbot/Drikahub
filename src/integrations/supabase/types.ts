@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_tokens: {
+        Row: {
+          allowed_ip: string | null
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          label: string | null
+          last_used_at: string | null
+          revoked: boolean
+          tenant_id: string
+          token: string
+        }
+        Insert: {
+          allowed_ip?: string | null
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          label?: string | null
+          last_used_at?: string | null
+          revoked?: boolean
+          tenant_id: string
+          token?: string
+        }
+        Update: {
+          allowed_ip?: string | null
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          label?: string | null
+          last_used_at?: string | null
+          revoked?: boolean
+          tenant_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "access_tokens_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       affiliates: {
         Row: {
           active: boolean
@@ -498,13 +545,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       is_tenant_member: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
       }
     }
     Enums: {
-      app_role: "owner" | "admin" | "support"
+      app_role: "owner" | "admin" | "support" | "super_admin"
       coupon_type: "percent" | "fixed"
       order_status:
         | "pending_payment"
@@ -642,7 +690,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["owner", "admin", "support"],
+      app_role: ["owner", "admin", "support", "super_admin"],
       coupon_type: ["percent", "fixed"],
       order_status: [
         "pending_payment",
