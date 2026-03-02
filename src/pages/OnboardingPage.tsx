@@ -67,8 +67,24 @@ const OnboardingPage = () => {
           discord_guild_id: guild.id,
         },
       });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      if (error) {
+        // If already exists, treat as success
+        const msg = error.message || "";
+        if (msg.includes("já está vinculado") || msg.includes("já possui")) {
+          setPhase("done");
+          toast({ title: "Servidor já configurado! Prosseguindo..." });
+          return;
+        }
+        throw error;
+      }
+      if (data?.error) {
+        if (data.error.includes("já está vinculado") || data.error.includes("já possui")) {
+          setPhase("done");
+          toast({ title: "Servidor já configurado! Prosseguindo..." });
+          return;
+        }
+        throw new Error(data.error);
+      }
       setPhase("done");
       toast({ title: "Loja criada com sucesso! 🎉" });
     } catch (err: any) {

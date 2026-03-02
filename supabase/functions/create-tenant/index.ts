@@ -30,7 +30,10 @@ serve(async (req) => {
     // Use service role for privileged operations
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
-    const { name, discord_guild_id, primary_color, secondary_color } = await req.json();
+    const body = await req.json();
+    const { name, discord_guild_id, primary_color, secondary_color } = body;
+    console.log("create-tenant body:", JSON.stringify(body));
+    console.log("user:", user.id);
 
     if (!name || !discord_guild_id) {
       throw new Error("name and discord_guild_id are required");
