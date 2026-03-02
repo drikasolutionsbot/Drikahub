@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
+import WifiLoader from "@/components/ui/wifi-loader";
 import {
   Server,
   ExternalLink,
@@ -41,6 +42,8 @@ const OnboardingPage = () => {
       return;
     }
 
+    const minDelay = new Promise(resolve => setTimeout(resolve, 5000));
+
     const checkExistingTenant = async () => {
       if (!user) return;
       try {
@@ -49,11 +52,16 @@ const OnboardingPage = () => {
           .select("tenant_id")
           .eq("user_id", user.id)
           .maybeSingle();
+
+        await minDelay;
+
         if (data?.tenant_id) {
           navigate("/dashboard", { replace: true });
           return;
         }
-      } catch {}
+      } catch {
+        await minDelay;
+      }
       setPhase("add");
     };
     checkExistingTenant();
@@ -154,9 +162,8 @@ const OnboardingPage = () => {
 
           {/* Phase: Loading */}
           {phase === "loading" && (
-            <div className="flex flex-col items-center gap-3 py-12">
-              <Loader2 className="h-10 w-10 animate-spin text-primary" />
-              <p className="text-muted-foreground">Verificando...</p>
+            <div className="flex flex-col items-center gap-3 py-16">
+              <WifiLoader />
             </div>
           )}
 
