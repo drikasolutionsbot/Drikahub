@@ -44,14 +44,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const isInIframe = window.self !== window.top;
     if (isInIframe) {
-      const popup = window.open(data.url, "_blank", "noopener,noreferrer");
-      if (!popup) {
-        window.location.assign(data.url);
-      }
-      return;
+      window.open(data.url, "_blank");
+    } else {
+      window.location.assign(data.url);
     }
-
-    window.location.assign(data.url);
   };
 
   const signOut = async () => {
