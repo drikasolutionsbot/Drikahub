@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.discord-guild-info]
 verify_jwt = false
+
+[functions.discord-bot-guilds]
+verify_jwt = false

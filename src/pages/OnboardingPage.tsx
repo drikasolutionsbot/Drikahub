@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import {
   Check,
   LayoutDashboard,
   Settings,
+  RefreshCw,
 } from "lucide-react";
 
 const DISCORD_CLIENT_ID = "1477916070508757092";
@@ -24,55 +25,58 @@ interface DiscordGuild {
 
 const OnboardingPage = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { user } = useAuth();
-  const [botAdded, setBotAdded] = useState(false);
+  const [phase, setPhase] = useState<"add" | "select" | "done">("add");
+  const [guilds, setGuilds] = useState<DiscordGuild[]>([]);
+  const [guildsLoading, setGuildsLoading] = useState(false);
   const [selectedGuild, setSelectedGuild] = useState<DiscordGuild | null>(null);
-  const [guildLoading, setGuildLoading] = useState(false);
   const [creatingTenant, setCreatingTenant] = useState(false);
-
-  useEffect(() => {
-    const guildId = searchParams.get("guild_id");
-    if (guildId) {
-      fetchGuildAndCreateTenant(guildId);
-    }
-  }, [searchParams]);
-
-  const fetchGuildAndCreateTenant = async (guildId: string) => {
-    setGuildLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("discord-guild-info", {
-        body: { guild_id: guildId },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      setSelectedGuild(data);
-
-      // Auto-create tenant with guild name
-      setCreatingTenant(true);
-      const { data: tenantData, error: tenantError } = await supabase.functions.invoke("create-tenant", {
-        body: {
-          name: data.name,
-          discord_guild_id: data.id,
-        },
-      });
-      if (tenantError) throw tenantError;
-      if (tenantData?.error) throw new Error(tenantData.error);
-
-      setBotAdded(true);
-      toast({ title: "Bot adicionado com sucesso! 🎉" });
-    } catch (err: any) {
-      console.error("Error:", err);
-      toast({ title: "Erro ao configurar", description: err.message, variant: "destructive" });
-    } finally {
-      setGuildLoading(false);
-      setCreatingTenant(false);
-    }
-  };
 
   const handleAddBot = () => {
     const url = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&permissions=${BOT_PERMISSIONS}&scope=bot%20applications.commands`;
-    window.location.href = url;
+    window.open(url, "_blank");
+  };
+
+  const fetchBotGuilds = async () => {
+    setGuildsLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("discord-bot-guilds");
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const list = Array.isArray(data) ? data : [];
+      setGuilds(list);
+      if (list.length > 0) {
+        setPhase("select");
+      } else {
+        toast({ title: "Nenhum servidor encontrado", description: "Adicione o bot a um servidor primeiro.", variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "Erro ao buscar servidores", description: err.message, variant: "destructive" });
+    } finally {
+      setGuildsLoading(false);
+    }
+  };
+
+  const handleSelectGuild = async (guild: DiscordGuild) => {
+    setSelectedGuild(guild);
+    setCreatingTenant(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-tenant", {
+        body: {
+          name: guild.name,
+          discord_guild_id: guild.id,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setPhase("done");
+      toast({ title: "Loja criada com sucesso! 🎉" });
+    } catch (err: any) {
+      toast({ title: "Erro ao criar loja", description: err.message, variant: "destructive" });
+      setSelectedGuild(null);
+    } finally {
+      setCreatingTenant(false);
+    }
   };
 
   return (
@@ -84,31 +88,106 @@ const OnboardingPage = () => {
 
       <div className="relative z-10 w-full max-w-lg">
         <div className="rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-lg animate-fade-in">
-          {guildLoading || creatingTenant ? (
-            <div className="flex flex-col items-center gap-3 py-12">
-              <Loader2 className="h-10 w-10 animate-spin text-primary" />
-              <p className="text-muted-foreground">
-                {creatingTenant ? "Criando sua loja..." : "Conectando ao servidor..."}
-              </p>
+
+          {/* Phase: Add bot */}
+          {phase === "add" && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="font-display text-2xl font-bold">Adicione o bot ao servidor</h2>
+                <p className="text-muted-foreground mt-1">
+                  Adicione o bot ao seu servidor e depois clique em "Já adicionei"
+                </p>
+              </div>
+
+              <div className="flex flex-col items-center gap-4 py-6">
+                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#5865F2]/10">
+                  <Server className="h-10 w-10 text-[#5865F2]" />
+                </div>
+                <Button
+                  onClick={handleAddBot}
+                  className="gap-2 bg-[#5865F2] hover:bg-[#4752C4] text-white px-6"
+                  size="lg"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Adicionar ao Discord
+                </Button>
+              </div>
+
+              <Button
+                onClick={fetchBotGuilds}
+                disabled={guildsLoading}
+                className="w-full gap-2 gradient-pink text-primary-foreground"
+                size="lg"
+              >
+                {guildsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                Já adicionei o bot
+              </Button>
             </div>
-          ) : botAdded && selectedGuild ? (
+          )}
+
+          {/* Phase: Select server */}
+          {phase === "select" && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="font-display text-2xl font-bold">Selecione o servidor</h2>
+                <p className="text-muted-foreground mt-1">
+                  Escolha o servidor onde o bot foi adicionado
+                </p>
+              </div>
+
+              {creatingTenant ? (
+                <div className="flex flex-col items-center gap-3 py-8">
+                  <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                  <p className="text-muted-foreground">Criando sua loja...</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-80 overflow-y-auto">
+                  {guilds.map((guild) => (
+                    <button
+                      key={guild.id}
+                      onClick={() => handleSelectGuild(guild)}
+                      className="flex w-full items-center gap-3 rounded-xl border border-border p-3 hover:bg-muted transition-colors text-left"
+                    >
+                      {guild.icon ? (
+                        <img src={guild.icon} alt="" className="h-10 w-10 rounded-full" />
+                      ) : (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground font-bold">
+                          {guild.name[0]}
+                        </div>
+                      )}
+                      <span className="font-medium truncate">{guild.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setPhase("add")} className="flex-1">
+                  Voltar
+                </Button>
+                <Button variant="outline" onClick={fetchBotGuilds} disabled={guildsLoading} className="gap-2">
+                  <RefreshCw className={`h-4 w-4 ${guildsLoading ? "animate-spin" : ""}`} />
+                  Atualizar
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Phase: Done */}
+          {phase === "done" && selectedGuild && (
             <div className="space-y-6">
               <div className="flex flex-col items-center gap-4 text-center">
                 <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10">
                   <Check className="h-8 w-8 text-green-500" />
                 </div>
                 <div>
-                  <h2 className="font-display text-2xl font-bold">Bot conectado!</h2>
+                  <h2 className="font-display text-2xl font-bold">Tudo pronto!</h2>
                   <p className="text-muted-foreground mt-1">
-                    O bot foi adicionado ao servidor <strong>{selectedGuild.name}</strong>
+                    Servidor <strong>{selectedGuild.name}</strong> conectado
                   </p>
                 </div>
                 {selectedGuild.icon && (
-                  <img
-                    src={selectedGuild.icon}
-                    alt={selectedGuild.name}
-                    className="h-16 w-16 rounded-full border-2 border-border"
-                  />
+                  <img src={selectedGuild.icon} alt="" className="h-16 w-16 rounded-full border-2 border-border" />
                 )}
               </div>
 
@@ -133,34 +212,8 @@ const OnboardingPage = () => {
               </div>
 
               <p className="text-xs text-center text-muted-foreground">
-                Você pode configurar canais, produtos e cores no painel a qualquer momento.
+                Configure canais, produtos e cores no painel a qualquer momento.
               </p>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              <div>
-                <h2 className="font-display text-2xl font-bold">Adicione o bot ao servidor</h2>
-                <p className="text-muted-foreground mt-1">
-                  Clique no botão abaixo para adicionar o bot e selecionar seu servidor diretamente no Discord
-                </p>
-              </div>
-
-              <div className="flex flex-col items-center gap-4 py-8">
-                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#5865F2]/10">
-                  <Server className="h-10 w-10 text-[#5865F2]" />
-                </div>
-                <p className="text-sm text-muted-foreground text-center max-w-sm">
-                  Você será redirecionado para o Discord para escolher o servidor e autorizar o bot
-                </p>
-                <Button
-                  onClick={handleAddBot}
-                  className="gap-2 bg-[#5865F2] hover:bg-[#4752C4] text-white px-6"
-                  size="lg"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  Adicionar ao Discord
-                </Button>
-              </div>
             </div>
           )}
         </div>
