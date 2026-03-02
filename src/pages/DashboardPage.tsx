@@ -22,9 +22,15 @@ const DISCORD_CLIENT_ID = "1477916070508757092";
 const BOT_PERMISSIONS = "8";
 
 const DashboardPage = () => {
-  const { tenant, loading: tenantLoading } = useTenant();
+  const { tenant, tenantId, loading: tenantLoading, refetch } = useTenant();
   const [activeTab, setActiveTab] = useState<"membros" | "cargos">("membros");
   const [memberSearchOpen, setMemberSearchOpen] = useState(false);
+
+  // Server switch modal
+  const [serverModalOpen, setServerModalOpen] = useState(false);
+  const [guilds, setGuilds] = useState<{ id: string; name: string; icon: string | null }[]>([]);
+  const [loadingGuilds, setLoadingGuilds] = useState(false);
+  const [switchingGuild, setSwitchingGuild] = useState<string | null>(null);
 
   // Members state
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
@@ -175,6 +181,39 @@ const DashboardPage = () => {
     );
   };
 
+  const openServerModal = async () => {
+    setServerModalOpen(true);
+    setLoadingGuilds(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("discord-bot-guilds");
+      if (error) throw error;
+      setGuilds(Array.isArray(data) ? data : []);
+    } catch {
+      toast.error("Erro ao carregar servidores.");
+    } finally {
+      setLoadingGuilds(false);
+    }
+  };
+
+  const handleSwitchGuild = async (guildId: string) => {
+    if (!tenantId) return;
+    setSwitchingGuild(guildId);
+    try {
+      const { data, error } = await supabase.functions.invoke("update-tenant", {
+        body: { tenant_id: tenantId, updates: { discord_guild_id: guildId } },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success("Servidor alterado com sucesso!");
+      refetch();
+      setServerModalOpen(false);
+    } catch (err: any) {
+      toast.error("Erro ao trocar servidor: " + (err.message || "Tente novamente"));
+    } finally {
+      setSwitchingGuild(null);
+    }
+  };
+
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Header */}
@@ -190,7 +229,7 @@ const DashboardPage = () => {
         <div className="rounded-xl border border-border bg-card p-5 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-lg font-semibold border-l-2 border-primary pl-3">Servidor Principal</h2>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground"><Settings2 className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={openServerModal}><Settings2 className="h-4 w-4" /></Button>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-sm">{tenant.name[0]?.toUpperCase()}</div>
@@ -390,6 +429,54 @@ const DashboardPage = () => {
               {creatingRole ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Criando...</> : "Criar cargo"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Server Switch Modal */}
+      <Dialog open={serverModalOpen} onOpenChange={setServerModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Trocar Servidor</DialogTitle>
+            <DialogDescription>Selecione o servidor onde o bot irá operar.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1 max-h-[300px] overflow-y-auto py-2">
+            {loadingGuilds ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : guilds.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">Nenhum servidor encontrado.</p>
+            ) : (
+              guilds.map(guild => (
+                <button
+                  key={guild.id}
+                  onClick={() => handleSwitchGuild(guild.id)}
+                  disabled={switchingGuild !== null}
+                  className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-left transition-colors ${
+                    tenant?.discord_guild_id === guild.id
+                      ? "bg-primary/10 border border-primary/20"
+                      : "hover:bg-accent/50"
+                  }`}
+                >
+                  <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0">
+                    {guild.icon ? (
+                      <img src={guild.icon} alt={guild.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <span className="text-xs font-bold text-muted-foreground">{guild.name[0]?.toUpperCase()}</span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{guild.name}</p>
+                    <p className="text-xs font-mono text-muted-foreground">{guild.id}</p>
+                  </div>
+                  {switchingGuild === guild.id && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+                  {tenant?.discord_guild_id === guild.id && !switchingGuild && (
+                    <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-medium">Atual</span>
+                  )}
+                </button>
+              ))
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
