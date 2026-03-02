@@ -26,11 +26,31 @@ interface DiscordGuild {
 const OnboardingPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [phase, setPhase] = useState<"add" | "select" | "done">("add");
+  const [phase, setPhase] = useState<"loading" | "add" | "select" | "done">("loading");
   const [guilds, setGuilds] = useState<DiscordGuild[]>([]);
   const [guildsLoading, setGuildsLoading] = useState(false);
   const [selectedGuild, setSelectedGuild] = useState<DiscordGuild | null>(null);
   const [creatingTenant, setCreatingTenant] = useState(false);
+
+  // Check if user already has a tenant
+  useEffect(() => {
+    const checkExistingTenant = async () => {
+      if (!user) return;
+      try {
+        const { data } = await supabase
+          .from("user_roles")
+          .select("tenant_id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (data?.tenant_id) {
+          navigate("/dashboard", { replace: true });
+          return;
+        }
+      } catch {}
+      setPhase("add");
+    };
+    checkExistingTenant();
+  }, [user, navigate]);
 
   const getEdgeErrorMessage = async (error: any) => {
     const fallback = error?.message || "Erro inesperado";
@@ -124,6 +144,14 @@ const OnboardingPage = () => {
 
       <div className="relative z-10 w-full max-w-lg">
         <div className="rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-lg animate-fade-in">
+
+          {/* Phase: Loading */}
+          {phase === "loading" && (
+            <div className="flex flex-col items-center gap-3 py-12">
+              <Loader2 className="h-10 w-10 animate-spin text-primary" />
+              <p className="text-muted-foreground">Verificando...</p>
+            </div>
+          )}
 
           {/* Phase: Add bot */}
           {phase === "add" && (
