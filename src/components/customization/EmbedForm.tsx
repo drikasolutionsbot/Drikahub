@@ -1,9 +1,10 @@
-import { Plus, Trash2, GripVertical } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import ImageUploadField from "./ImageUploadField";
 import type { EmbedData, EmbedField } from "./types";
 
 interface EmbedFormProps {
@@ -58,10 +59,7 @@ const EmbedForm = ({ embed, onChange }: EmbedFormProps) => {
               <label className="text-xs text-muted-foreground">Nome</label>
               <Input value={embed.author_name} onChange={e => update("author_name", e.target.value)} placeholder="Nome do autor" className="bg-background border-border text-sm" />
             </div>
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">URL do Ícone</label>
-              <Input value={embed.author_icon_url} onChange={e => update("author_icon_url", e.target.value)} placeholder="https://..." className="bg-background border-border text-sm" />
-            </div>
+            <ImageUploadField label="Ícone do Autor" value={embed.author_icon_url} onChange={v => update("author_icon_url", v)} folder="embeds/author" />
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground">URL</label>
               <Input value={embed.author_url} onChange={e => update("author_url", e.target.value)} placeholder="https://..." className="bg-background border-border text-sm" />
@@ -69,7 +67,7 @@ const EmbedForm = ({ embed, onChange }: EmbedFormProps) => {
           </AccordionContent>
         </AccordionItem>
 
-        {/* Body (Title + Description) */}
+        {/* Body */}
         <AccordionItem value="body" className="border border-border rounded-lg px-4">
           <AccordionTrigger className="text-sm font-medium py-3">Corpo</AccordionTrigger>
           <AccordionContent className="space-y-3 pb-4">
@@ -98,14 +96,8 @@ const EmbedForm = ({ embed, onChange }: EmbedFormProps) => {
         <AccordionItem value="images" className="border border-border rounded-lg px-4">
           <AccordionTrigger className="text-sm font-medium py-3">Imagens</AccordionTrigger>
           <AccordionContent className="space-y-3 pb-4">
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">URL da Imagem</label>
-              <Input value={embed.image_url} onChange={e => update("image_url", e.target.value)} placeholder="https://..." className="bg-background border-border text-sm" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">URL da Thumbnail</label>
-              <Input value={embed.thumbnail_url} onChange={e => update("thumbnail_url", e.target.value)} placeholder="https://..." className="bg-background border-border text-sm" />
-            </div>
+            <ImageUploadField label="Imagem" value={embed.image_url} onChange={v => update("image_url", v)} folder="embeds/images" />
+            <ImageUploadField label="Thumbnail" value={embed.thumbnail_url} onChange={v => update("thumbnail_url", v)} folder="embeds/thumbnails" />
           </AccordionContent>
         </AccordionItem>
 
@@ -147,10 +139,7 @@ const EmbedForm = ({ embed, onChange }: EmbedFormProps) => {
               <label className="text-xs text-muted-foreground">Texto do Rodapé</label>
               <Input value={embed.footer_text} onChange={e => update("footer_text", e.target.value)} placeholder="Texto do rodapé" className="bg-background border-border text-sm" />
             </div>
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">URL do Ícone</label>
-              <Input value={embed.footer_icon_url} onChange={e => update("footer_icon_url", e.target.value)} placeholder="https://..." className="bg-background border-border text-sm" />
-            </div>
+            <ImageUploadField label="Ícone do Rodapé" value={embed.footer_icon_url} onChange={v => update("footer_icon_url", v)} folder="embeds/footer" />
             <div className="flex items-center gap-2">
               <Switch checked={embed.timestamp} onCheckedChange={v => update("timestamp", v)} />
               <label className="text-xs text-muted-foreground">Incluir timestamp</label>
