@@ -62,6 +62,23 @@ const ECloudPage = () => {
   const [lastCheck, setLastCheck] = useState<Date | null>(null);
   const prevBotOnline = useRef<boolean | null>(null);
 
+  const playNotificationSound = useCallback(() => {
+    try {
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.1);
+      osc.frequency.setValueAtTime(880, ctx.currentTime + 0.2);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.4);
+    } catch {}
+  }, []);
+
   // Track status changes and notify
   useEffect(() => {
     if (prevBotOnline.current === true && botOnline === false) {
@@ -196,8 +213,10 @@ const ECloudPage = () => {
         (payload) => {
           const row = payload.new as any;
           if (payload.eventType === "INSERT") {
+            playNotificationSound();
             toast.info("🛒 Nova venda", { description: `${row.product_name} — ${row.discord_username || "Usuário"}` });
           } else if (payload.eventType === "UPDATE" && (row.status === "paid" || row.status === "delivered")) {
+            playNotificationSound();
             toast.success("💰 Pagamento confirmado", { description: row.product_name });
           }
           fetchData();
