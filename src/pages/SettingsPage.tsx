@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Upload, Palette, Users, CreditCard, QrCode, Loader2, Copy, CheckCircle2, Wallet } from "lucide-react";
+import { Upload, Paintbrush, Users, Crown, QrCode, Loader2, Copy, CheckCircle2, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -131,19 +131,33 @@ const SettingsPage = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="font-display text-2xl font-bold">Configurações</h1>
-        <p className="text-muted-foreground">Personalize seu painel</p>
-      </div>
+      {/* Header with gradient bg */}
+      <div className="relative rounded-2xl overflow-hidden p-6 pb-4">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/8 via-transparent to-accent/5" />
+        <div className="absolute inset-0 border border-primary/10 rounded-2xl" />
+        <div className="relative">
+          <h1 className="font-display text-2xl font-bold">Configurações</h1>
+          <p className="text-muted-foreground text-sm mt-1">Personalize seu painel</p>
+        </div>
 
-      <Tabs defaultValue={defaultTab}>
-        <TabsList className="bg-muted">
-          <TabsTrigger value="branding"><Palette className="mr-2 h-4 w-4" /> Marca</TabsTrigger>
-          <TabsTrigger value="pix"><QrCode className="mr-2 h-4 w-4" /> PIX</TabsTrigger>
-          <TabsTrigger value="users"><Users className="mr-2 h-4 w-4" /> Usuários</TabsTrigger>
-          <TabsTrigger value="plan"><CreditCard className="mr-2 h-4 w-4" /> Plano</TabsTrigger>
-          <TabsTrigger value="wallet"><Wallet className="mr-2 h-4 w-4" /> Carteira</TabsTrigger>
-        </TabsList>
+        <Tabs defaultValue={defaultTab} className="relative mt-5">
+          <TabsList className="bg-muted/60 backdrop-blur-sm border border-border/50 p-1 h-auto gap-1">
+            <TabsTrigger value="branding" className="gap-2 data-[state=active]:bg-card data-[state=active]:shadow-md px-4 py-2">
+              <Paintbrush className="h-4 w-4" /> Marca
+            </TabsTrigger>
+            <TabsTrigger value="pix" className="gap-2 data-[state=active]:bg-card data-[state=active]:shadow-md px-4 py-2">
+              <QrCode className="h-4 w-4" /> PIX
+            </TabsTrigger>
+            <TabsTrigger value="users" className="gap-2 data-[state=active]:bg-card data-[state=active]:shadow-md px-4 py-2">
+              <Users className="h-4 w-4" /> Usuários
+            </TabsTrigger>
+            <TabsTrigger value="plan" className="gap-2 data-[state=active]:bg-card data-[state=active]:shadow-md px-4 py-2">
+              <Crown className="h-4 w-4" /> Plano
+            </TabsTrigger>
+            <TabsTrigger value="wallet" className="gap-2 data-[state=active]:bg-card data-[state=active]:shadow-md px-4 py-2">
+              <Wallet className="h-4 w-4" /> Carteira
+            </TabsTrigger>
+          </TabsList>
 
         {/* Branding Tab */}
         <TabsContent value="branding">
@@ -380,6 +394,7 @@ const SettingsPage = () => {
           <WalletTab />
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   );
 };
