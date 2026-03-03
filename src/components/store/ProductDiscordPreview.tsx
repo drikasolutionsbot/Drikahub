@@ -1,4 +1,5 @@
 import { Eye } from "lucide-react";
+import { useTenant } from "@/contexts/TenantContext";
 
 interface Product {
   id: string;
@@ -30,6 +31,9 @@ const typeLabels: Record<string, string> = {
 };
 
 export const ProductDiscordPreview = ({ product, storeName }: ProductDiscordPreviewProps) => {
+  const { tenant } = useTenant();
+  const botName = storeName || tenant?.name || "Bot";
+  const botAvatar = tenant?.logo_url;
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
@@ -41,10 +45,14 @@ export const ProductDiscordPreview = ({ product, storeName }: ProductDiscordPrev
       <div className="bg-[#313338] rounded-lg p-4 max-w-sm">
         {/* Bot header */}
         <div className="flex items-center gap-2 mb-2">
-          <div className="h-6 w-6 rounded-full bg-[#5865F2] flex items-center justify-center">
-            <span className="text-[10px] text-white font-bold">B</span>
-          </div>
-          <span className="text-[#dcddde] text-xs font-semibold">{storeName || "Bot"}</span>
+          {botAvatar ? (
+            <img src={botAvatar} alt="" className="h-6 w-6 rounded-full object-cover" />
+          ) : (
+            <div className="h-6 w-6 rounded-full bg-[#5865F2] flex items-center justify-center">
+              <span className="text-[10px] text-white font-bold">{botName.charAt(0).toUpperCase()}</span>
+            </div>
+          )}
+          <span className="text-[#dcddde] text-xs font-semibold">{botName}</span>
           <span className="bg-[#5865F2] text-white text-[9px] px-1 rounded font-medium">BOT</span>
         </div>
 
