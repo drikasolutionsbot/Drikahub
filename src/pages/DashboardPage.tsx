@@ -19,7 +19,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 const DISCORD_CLIENT_ID = "1477916070508757092";
-const BOT_PERMISSIONS = "8";
+const BOT_PERMISSIONS = "536870920"; // Administrator + MANAGE_WEBHOOKS
 
 const DashboardPage = () => {
   const { tenant, tenantId, loading: tenantLoading, refetch } = useTenant();
