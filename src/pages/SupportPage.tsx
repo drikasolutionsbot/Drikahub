@@ -98,9 +98,9 @@ const SupportPage = () => {
                   </div>
                 </div>
                 <div className="support-card-actions">
-                  <div className="support-card-btn">{contact.action_text}</div>
+                  <div className="support-card-btn" onClick={(e) => { e.stopPropagation(); if (contact.url) window.open(contact.url, "_blank"); }}>{contact.action_text}</div>
                   {contact.secondary_action_text && (
-                    <div className="support-card-btn secondary">{contact.secondary_action_text}</div>
+                    <div className="support-card-btn secondary" onClick={(e) => { e.stopPropagation(); if (contact.url) window.open(contact.url, "_blank"); }}>{contact.secondary_action_text}</div>
                   )}
                 </div>
               </div>
