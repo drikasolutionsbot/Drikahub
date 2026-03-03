@@ -26,18 +26,25 @@ serve(async (req) => {
     const botToken = Deno.env.get("DISCORD_BOT_TOKEN");
     if (!botToken) throw new Error("DISCORD_BOT_TOKEN not configured");
 
-    // Build payload
-    const payload: Record<string, any> = {};
-    if (content) payload.content = content;
-    if (embeds) payload.embeds = embeds;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // If product_id is provided, add buy/variations buttons
+    // Fetch tenant info for white-label identity
+    const { data: tenant } = await supabase
+      .from("tenants")
+      .select("name, logo_url")
+      .eq("id", tenant_id)
+      .single();
+
+    const tenantName = tenant?.name || "Bot";
+    const tenantLogo = tenant?.logo_url || undefined;
+
+    // Determine if we need interactive buttons (product_id present)
+    let buttonComponents: any[] | null = null;
+
     if (product_id) {
-      // Fetch product fields to check if there are variations
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const supabase = createClient(supabaseUrl, serviceRoleKey);
-
+      // Check for variations
       const { data: fields } = await supabase
         .from("product_fields")
         .select("id")
@@ -48,8 +55,8 @@ serve(async (req) => {
 
       const buttons: any[] = [
         {
-          type: 2, // Button
-          style: 3, // Success (green)
+          type: 2,
+          style: 3,
           label: "Comprar",
           emoji: { name: "🛒" },
           custom_id: `buy_product:${product_id}`,
@@ -59,7 +66,7 @@ serve(async (req) => {
       if (hasVariations) {
         buttons.push({
           type: 2,
-          style: 2, // Secondary (gray)
+          style: 2,
           label: "Variações",
           emoji: { name: "📋" },
           custom_id: `view_variations:${product_id}`,
@@ -74,35 +81,76 @@ serve(async (req) => {
         custom_id: `view_details:${product_id}`,
       });
 
-      payload.components = [
-        {
-          type: 1, // Action Row
-          components: buttons,
-        },
-      ];
-    } else if (components) {
-      payload.components = components;
+      buttonComponents = [{ type: 1, components: buttons }];
     }
 
-    // Send message via Bot API (supports components/interactions)
-    const sendRes = await fetch(`${DISCORD_API}/channels/${channel_id}/messages`, {
+    // --- Strategy: Use webhook for embed (white-label) + bot for buttons ---
+    // If we have product buttons, send embed via webhook and buttons via bot separately
+    // If no buttons needed, just send via webhook for white-label
+
+    // Step 1: Get or create a webhook for this channel
+    const webhookUrl = await getOrCreateWebhook(botToken, channel_id, tenantName);
+
+    // Step 2: Send embed via webhook (with custom name/avatar)
+    const webhookPayload: Record<string, any> = {
+      username: tenantName,
+    };
+    if (tenantLogo) webhookPayload.avatar_url = tenantLogo;
+    if (content) webhookPayload.content = content;
+    if (embeds) webhookPayload.embeds = embeds;
+
+    // If no buttons needed, include components in webhook (non-interactive)
+    if (!buttonComponents && components) {
+      // Webhooks don't support interactive components, so skip
+    }
+
+    const webhookRes = await fetch(`${webhookUrl}?wait=true`, {
       method: "POST",
-      headers: {
-        Authorization: `Bot ${botToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(webhookPayload),
     });
 
-    if (!sendRes.ok) {
-      const errText = await sendRes.text();
-      console.error("Bot message failed:", sendRes.status, errText);
-      throw new Error(`Discord API error: ${sendRes.status} - ${errText}`);
+    if (!webhookRes.ok) {
+      const errText = await webhookRes.text();
+      console.error("Webhook send failed:", webhookRes.status, errText);
+      throw new Error(`Webhook error: ${webhookRes.status} - ${errText}`);
     }
 
-    const message = await sendRes.json();
+    const webhookMessage = await webhookRes.json();
+    let botMessageId: string | null = null;
 
-    return new Response(JSON.stringify({ success: true, message_id: message.id }), {
+    // Step 3: If we have interactive buttons, send them as a separate bot message
+    if (buttonComponents) {
+      const botPayload = {
+        components: buttonComponents,
+        // Reference context so user knows what buttons are for
+        content: "",
+      };
+
+      const botRes = await fetch(`${DISCORD_API}/channels/${channel_id}/messages`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bot ${botToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(botPayload),
+      });
+
+      if (!botRes.ok) {
+        const errText = await botRes.text();
+        console.error("Bot buttons message failed:", botRes.status, errText);
+        // Don't throw - embed was sent successfully, just log the button failure
+      } else {
+        const botMessage = await botRes.json();
+        botMessageId = botMessage.id;
+      }
+    }
+
+    return new Response(JSON.stringify({ 
+      success: true, 
+      message_id: webhookMessage.id,
+      button_message_id: botMessageId,
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
@@ -114,3 +162,41 @@ serve(async (req) => {
     });
   }
 });
+
+/**
+ * Gets an existing webhook for the channel or creates a new one.
+ * Returns the full webhook URL (with token).
+ */
+async function getOrCreateWebhook(botToken: string, channelId: string, botName: string): Promise<string> {
+  // List existing webhooks for the channel
+  const listRes = await fetch(`${DISCORD_API}/channels/${channelId}/webhooks`, {
+    headers: { Authorization: `Bot ${botToken}` },
+  });
+
+  if (listRes.ok) {
+    const webhooks = await listRes.json();
+    // Find a webhook created by our bot
+    const existing = webhooks.find((wh: any) => wh.name === "Drika Store" || wh.name === botName);
+    if (existing && existing.token) {
+      return `${DISCORD_API}/webhooks/${existing.id}/${existing.token}`;
+    }
+  }
+
+  // Create a new webhook
+  const createRes = await fetch(`${DISCORD_API}/channels/${channelId}/webhooks`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bot ${botToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ name: "Drika Store" }),
+  });
+
+  if (!createRes.ok) {
+    const errText = await createRes.text();
+    throw new Error(`Failed to create webhook: ${createRes.status} - ${errText}`);
+  }
+
+  const webhook = await createRes.json();
+  return `${DISCORD_API}/webhooks/${webhook.id}/${webhook.token}`;
+}
