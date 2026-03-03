@@ -57,6 +57,42 @@ const channelSections = [
       { key: "logs_moderation_timeouts", label: "Timeouts" },
     ],
   },
+  {
+    title: "Cargos",
+    description: "Canais para logs de gerenciamento de cargos",
+    channels: [
+      { key: "logs_roles_added", label: "Cargos Adicionados" },
+      { key: "logs_roles_removed", label: "Cargos Removidos" },
+      { key: "logs_roles_created", label: "Cargos Criados" },
+      { key: "logs_roles_deleted", label: "Cargos Deletados" },
+      { key: "logs_roles_edited", label: "Cargos Editados" },
+    ],
+  },
+  {
+    title: "Canais",
+    description: "Canais para logs de gerenciamento de canais",
+    channels: [
+      { key: "logs_channels_created", label: "Canais Criados" },
+      { key: "logs_channels_edited", label: "Canais Editados" },
+      { key: "logs_channels_deleted", label: "Canais Deletados" },
+    ],
+  },
+  {
+    title: "Permissões",
+    description: "Canais para logs de gerenciamento de permissões",
+    channels: [
+      { key: "logs_perms_added", label: "Permissões Adicionadas" },
+      { key: "logs_perms_removed", label: "Permissões Removidas" },
+    ],
+  },
+  {
+    title: "Suporte",
+    description: "Canais para logs de suporte e tickets",
+    channels: [
+      { key: "logs_tickets_opened", label: "Tickets Abertos" },
+      { key: "logs_tickets_closed", label: "Tickets Fechados" },
+    ],
+  },
 ];
 
 interface ChannelConfig {
