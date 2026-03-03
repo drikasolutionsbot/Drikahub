@@ -410,6 +410,7 @@ async function processPurchase(
   let dmSent = false;
   if (dmChannelRes.ok) {
     const dmChannel = await dmChannelRes.json();
+    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(brcode)}`;
     const embed = {
       title: "🛒 Pedido criado!",
       description: `Seu pedido **#${order.order_number}** foi criado.\nEfetue o pagamento via PIX para receber seu produto automaticamente.`,
@@ -419,6 +420,7 @@ async function processPurchase(
         { name: "💰 Valor", value: formatBRL(priceCents), inline: true },
         { name: "📋 PIX Copia e Cola", value: `\`\`\`\n${brcode}\n\`\`\``, inline: false },
       ],
+      image: { url: qrImageUrl },
       footer: { text: "Copie o código acima e pague no app do seu banco • Expira em 30 min" },
       timestamp: new Date().toISOString(),
     };
