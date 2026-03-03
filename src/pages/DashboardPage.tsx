@@ -18,7 +18,6 @@ import type { DiscordMember } from "@/components/dashboard/MemberSearchModal";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
-const DISCORD_CLIENT_ID = "1477916070508757092";
 const BOT_PERMISSIONS = "8";
 
 const DashboardPage = () => {
@@ -174,9 +173,15 @@ const DashboardPage = () => {
     );
   }
 
+  const botClientId = (tenant as any)?.bot_client_id;
+
   const handleAddBot = () => {
+    if (!botClientId) {
+      toast.error("Configure o Client ID do bot na página de Personalização primeiro.");
+      return;
+    }
     window.open(
-      `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&permissions=${BOT_PERMISSIONS}&scope=bot%20applications.commands`,
+      `https://discord.com/oauth2/authorize?client_id=${botClientId}&permissions=${BOT_PERMISSIONS}&scope=bot%20applications.commands`,
       "_blank"
     );
   };
@@ -246,7 +251,7 @@ const DashboardPage = () => {
             </div>
           </div>
           <Button variant="outline" className="gap-2 text-sm" onClick={handleAddBot}>
-            <ExternalLink className="h-3.5 w-3.5" /> Adicionar <strong>Drika Bot</strong> ao servidor
+            <ExternalLink className="h-3.5 w-3.5" /> Adicionar <strong>{tenant?.name || "Bot"}</strong> ao servidor
           </Button>
         </div>
         <div className="rounded-xl border border-border bg-card p-5 space-y-4">
