@@ -158,7 +158,14 @@ export const ProductDetail = ({ product, onBack, onSave, onDelete, categories = 
             </TabsContent>
 
             <TabsContent value="campos" className="mt-0">
-              <ProductDetailFields productId={product.id} />
+              <div className={showPreview ? "grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6" : ""}>
+                <ProductDetailFields productId={product.id} />
+                {showPreview && (
+                  <div className="sticky top-4">
+                    <ProductDiscordPreview product={edited} />
+                  </div>
+                )}
+              </div>
             </TabsContent>
 
             <TabsContent value="cupons" className="mt-0">
