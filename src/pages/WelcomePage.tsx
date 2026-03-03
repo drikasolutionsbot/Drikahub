@@ -3,6 +3,7 @@ import { useTenant } from "@/contexts/TenantContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import ImageUploadField from "@/components/customization/ImageUploadField";
+import ChannelSelectWithCreate from "@/components/channels/ChannelSelectWithCreate";
 import {
   HandMetal, Send, MessageSquare, UserPlus, LogOut, Hash, Settings2, Eye, Save,
   RefreshCw, Plus, Trash2, ToggleLeft, ToggleRight, Sparkles, Shield, Bot
@@ -507,16 +508,15 @@ const WelcomePage = () => {
               <CardContent className="space-y-4">
                 <div>
                   <Label>Canal de Boas-Vindas</Label>
-                  <select
+                  <ChannelSelectWithCreate
                     value={config.channel_id}
-                    onChange={(e) => setConfig((p) => ({ ...p, channel_id: e.target.value }))}
-                    className="w-full mt-1 h-10 rounded-md border border-input bg-background px-3 text-sm"
-                  >
-                    <option value="">Selecione um canal</option>
-                    {channels.map((ch) => (
-                      <option key={ch.id} value={ch.id}>#{ch.name}</option>
-                    ))}
-                  </select>
+                    onChange={(v) => setConfig((p) => ({ ...p, channel_id: v }))}
+                    channels={channels}
+                    onChannelCreated={fetchDiscordData}
+                    tenantId={tenantId}
+                    placeholder="Selecione um canal"
+                    defaultNewName="boas-vindas"
+                  />
                 </div>
                 <Separator />
                 {renderEmbedEditor("welcome", "embed_data", "content")}
@@ -598,16 +598,15 @@ const WelcomePage = () => {
               <CardContent className="space-y-4">
                 <div>
                   <Label>Canal de Despedida</Label>
-                  <select
+                  <ChannelSelectWithCreate
                     value={config.goodbye_channel_id}
-                    onChange={(e) => setConfig((p) => ({ ...p, goodbye_channel_id: e.target.value }))}
-                    className="w-full mt-1 h-10 rounded-md border border-input bg-background px-3 text-sm"
-                  >
-                    <option value="">Selecione um canal</option>
-                    {channels.map((ch) => (
-                      <option key={ch.id} value={ch.id}>#{ch.name}</option>
-                    ))}
-                  </select>
+                    onChange={(v) => setConfig((p) => ({ ...p, goodbye_channel_id: v }))}
+                    channels={channels}
+                    onChannelCreated={fetchDiscordData}
+                    tenantId={tenantId}
+                    placeholder="Selecione um canal"
+                    defaultNewName="despedida"
+                  />
                 </div>
                 <Separator />
                 {renderEmbedEditor("goodbye", "goodbye_embed_data", "goodbye_content")}
