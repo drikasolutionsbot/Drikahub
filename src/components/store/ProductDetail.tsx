@@ -1,6 +1,17 @@
 import { useState } from "react";
-import { ArrowLeft, RefreshCw, Send } from "lucide-react";
+import { ArrowLeft, RefreshCw, Send, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProductDetailGeneral } from "./ProductDetailGeneral";
 import { ProductDetailFields } from "./ProductDetailFields";
@@ -25,9 +36,10 @@ interface ProductDetailProps {
   product: Product;
   onBack: () => void;
   onSave: (product: Product) => void;
+  onDelete: (productId: string) => void;
 }
 
-export const ProductDetail = ({ product, onBack, onSave }: ProductDetailProps) => {
+export const ProductDetail = ({ product, onBack, onSave, onDelete }: ProductDetailProps) => {
   const [edited, setEdited] = useState<Product>({ ...product });
   const [dirty, setDirty] = useState(false);
   const [postModalOpen, setPostModalOpen] = useState(false);
@@ -66,6 +78,31 @@ export const ProductDetail = ({ product, onBack, onSave }: ProductDetailProps) =
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" size="sm" className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30">
+                <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                Excluir
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="bg-card border-border">
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir produto</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tem certeza que deseja excluir <strong>{product.name}</strong>? Esta ação não pode ser desfeita. Todos os campos, estoque, cupons e hooks vinculados serão removidos.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="border-border">Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => onDelete(product.id)}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Excluir
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           <Button variant="outline" size="sm" className="text-xs">
             <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
             Sincronizar Mensagens

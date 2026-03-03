@@ -94,6 +94,20 @@ const StorePage = () => {
     }
   };
 
+  const handleDelete = async (productId: string) => {
+    if (!tenantId) return;
+    const { data, error } = await supabase.functions.invoke("manage-products", {
+      body: { action: "delete", tenant_id: tenantId, product_id: productId },
+    });
+    if (error || data?.error) {
+      toast({ title: "Erro ao excluir produto", description: error?.message || data?.error, variant: "destructive" });
+    } else {
+      setSelectedProduct(null);
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      toast({ title: "Produto excluído!" });
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
@@ -129,6 +143,7 @@ const StorePage = () => {
                     product={selectedProduct}
                     onBack={() => setSelectedProduct(null)}
                     onSave={handleSave}
+                    onDelete={handleDelete}
                   />
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-12">
