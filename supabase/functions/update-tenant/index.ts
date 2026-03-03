@@ -7,6 +7,56 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+async function updateDiscordBotProfile(updates: Record<string, any>, logoUrl?: string) {
+  const botToken = Deno.env.get("DISCORD_BOT_TOKEN");
+  if (!botToken) return;
+
+  const discordPayload: Record<string, any> = {};
+
+  // Update bot username if name changed
+  if (updates.name) {
+    discordPayload.username = updates.name;
+  }
+
+  // Update bot avatar if logo_url changed
+  if (updates.logo_url || logoUrl) {
+    const avatarUrl = updates.logo_url || logoUrl;
+    try {
+      const res = await fetch(avatarUrl);
+      if (res.ok) {
+        const buffer = await res.arrayBuffer();
+        const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+        const contentType = res.headers.get("content-type") || "image/png";
+        discordPayload.avatar = `data:${contentType};base64,${base64}`;
+      }
+    } catch (e) {
+      console.error("Failed to fetch avatar for Discord:", e);
+    }
+  }
+
+  if (Object.keys(discordPayload).length === 0) return;
+
+  try {
+    const res = await fetch("https://discord.com/api/v10/users/@me", {
+      method: "PATCH",
+      headers: {
+        "Authorization": `Bot ${botToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(discordPayload),
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      console.error("Discord API error:", res.status, err);
+    } else {
+      console.log("Discord bot profile updated successfully");
+    }
+  } catch (e) {
+    console.error("Failed to update Discord bot profile:", e);
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -44,6 +94,9 @@ serve(async (req) => {
       .single();
 
     if (error) throw error;
+
+    // Sync avatar and name to Discord bot profile (non-blocking)
+    updateDiscordBotProfile(safeUpdates, data.logo_url).catch(console.error);
 
     return new Response(JSON.stringify(data), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
