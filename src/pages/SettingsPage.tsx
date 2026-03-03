@@ -65,15 +65,15 @@ const SettingsPage = () => {
     enabled: !!tenantId,
   });
 
-  // Payment providers for this tenant
+  // Payment providers for this tenant (via edge function to bypass RLS for token auth)
   const { data: providers = [], isLoading: providersLoading, refetch: refetchProviders } = useQuery({
     queryKey: ["payment-providers", tenantId],
     queryFn: async () => {
       if (!tenantId) return [];
-      const { data } = await supabase
-        .from("payment_providers")
-        .select("*")
-        .eq("tenant_id", tenantId);
+      const { data, error } = await supabase.functions.invoke("manage-payment-providers", {
+        body: { action: "list", tenant_id: tenantId },
+      });
+      if (error) throw error;
       return data ?? [];
     },
     enabled: !!tenantId,
