@@ -76,24 +76,31 @@ const PaymentsPage = () => {
   const handleSave = async (providerKey: string, apiKey: string, secretKey: string) => {
     if (!tenantId) return;
     const existing = getConfig(providerKey);
-    if (existing) {
-      await (supabase as any).from("payment_providers").update({
-        api_key_encrypted: apiKey,
-        secret_key_encrypted: secretKey,
-        active: true,
-        updated_at: new Date().toISOString(),
-      }).eq("id", existing.id);
-    } else {
-      await (supabase as any).from("payment_providers").insert({
-        tenant_id: tenantId,
-        provider_key: providerKey,
-        api_key_encrypted: apiKey,
-        secret_key_encrypted: secretKey,
-        active: true,
-      });
+    try {
+      if (existing) {
+        const { error } = await (supabase as any).from("payment_providers").update({
+          api_key_encrypted: apiKey,
+          secret_key_encrypted: secretKey,
+          active: true,
+          updated_at: new Date().toISOString(),
+        }).eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await (supabase as any).from("payment_providers").insert({
+          tenant_id: tenantId,
+          provider_key: providerKey,
+          api_key_encrypted: apiKey,
+          secret_key_encrypted: secretKey,
+          active: true,
+        });
+        if (error) throw error;
+      }
+      refetch();
+      toast({ title: "Provedor salvo e ativado!" });
+    } catch (err: any) {
+      console.error("Erro ao salvar provedor:", err);
+      toast({ title: "Erro ao salvar provedor", description: err.message, variant: "destructive" });
     }
-    refetch();
-    toast({ title: "Provedor salvo e ativado!" });
   };
 
   const handleToggle = async (providerId: string, currentActive: boolean) => {
