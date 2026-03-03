@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Bell, Menu, Search, LogOut, User, Settings, ChevronDown, QrCode } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Bell, Menu, Search, LogOut, User, Settings, ChevronDown, QrCode, Zap, CheckCircle, AlertCircle, Inbox } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -7,20 +7,42 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { useAuth } from "@/contexts/AuthContext";
 import { useTenant } from "@/contexts/TenantContext";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 interface TopBarProps {
   onToggleSidebar: () => void;
 }
 
-const notifications = [
-  { id: "1", title: "Novo pedido recebido", desc: "Pedido #1042 aguardando pagamento", time: "2 min atrás", read: false },
-  { id: "2", title: "Ticket respondido", desc: "Cliente respondeu o ticket #87", time: "15 min atrás", read: false },
-  { id: "3", title: "Estoque baixo", desc: "Produto 'VIP Pass' com estoque crítico", time: "1h atrás", read: true },
-];
+interface Notification {
+  id: string;
+  title: string;
+  desc: string;
+  time: string;
+  read: boolean;
+  type: "payment" | "info";
+}
+
+const providerLabels: Record<string, string> = {
+  mercadopago: "Mercado Pago",
+  pushinpay: "PushinPay",
+  efi: "Efí",
+  mistic_pay: "Mistic Pay",
+};
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "agora";
+  if (mins < 60) return `${mins} min atrás`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h atrás`;
+  return `${Math.floor(hours / 24)}d atrás`;
+}
 
 export const TopBar = ({ onToggleSidebar }: TopBarProps) => {
   const { user, signOut } = useAuth();
-  const { tenant } = useTenant();
+  const { tenant, tenantId } = useTenant();
   const navigate = useNavigate();
   const tokenSession = sessionStorage.getItem("token_session");
   const tokenData = tokenSession ? JSON.parse(tokenSession) : null;
@@ -29,7 +51,95 @@ export const TopBar = ({ onToggleSidebar }: TopBarProps) => {
   const email = user?.email || "token@acesso";
 
   const [notifOpen, setNotifOpen] = useState(false);
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [readIds, setReadIds] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem("read_notif_ids");
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch { return new Set(); }
+  });
+
+  // Fetch recent webhook logs as notifications
+  const fetchNotifications = useCallback(async () => {
+    if (!tenantId) return;
+    const { data } = await (supabase as any)
+      .from("webhook_logs")
+      .select("id, provider_key, event_type, status, created_at, result")
+      .eq("tenant_id", tenantId)
+      .order("created_at", { ascending: false })
+      .limit(20);
+
+    if (data) {
+      const notifs: Notification[] = data.map((log: any) => ({
+        id: log.id,
+        title: log.status === "processed"
+          ? "Pagamento confirmado"
+          : log.status === "ignored"
+            ? "Webhook ignorado"
+            : "Webhook recebido",
+        desc: `${providerLabels[log.provider_key] || log.provider_key} — ${log.event_type || "evento"}`,
+        time: timeAgo(log.created_at),
+        read: readIds.has(log.id),
+        type: log.status === "processed" ? "payment" : "info",
+      }));
+      setNotifications(notifs);
+    }
+  }, [tenantId, readIds]);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  // Realtime subscription
+  useEffect(() => {
+    if (!tenantId) return;
+
+    const channel = supabase
+      .channel("webhook-notifications")
+      .on(
+        "postgres_changes" as any,
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "webhook_logs",
+          filter: `tenant_id=eq.${tenantId}`,
+        },
+        (payload: any) => {
+          const log = payload.new;
+          const newNotif: Notification = {
+            id: log.id,
+            title: log.status === "processed" ? "Pagamento confirmado" : "Webhook recebido",
+            desc: `${providerLabels[log.provider_key] || log.provider_key} — ${log.event_type || "evento"}`,
+            time: "agora",
+            read: false,
+            type: log.status === "processed" ? "payment" : "info",
+          };
+          setNotifications((prev) => [newNotif, ...prev].slice(0, 30));
+
+          // Show toast for processed payments
+          if (log.status === "processed") {
+            toast({
+              title: "💰 Pagamento confirmado!",
+              description: `Via ${providerLabels[log.provider_key] || log.provider_key}`,
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [tenantId]);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const markAllRead = () => {
+    const allIds = new Set(notifications.map((n) => n.id));
+    setReadIds(allIds);
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    localStorage.setItem("read_notif_ids", JSON.stringify([...allIds]));
+  };
 
   const handleLogout = () => {
     sessionStorage.removeItem("token_session");
@@ -55,8 +165,8 @@ export const TopBar = ({ onToggleSidebar }: TopBarProps) => {
             <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground">
               <Bell className="h-5 w-5" />
               {unreadCount > 0 && (
-                <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-                  {unreadCount}
+                <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground animate-pulse">
+                  {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}
             </Button>
@@ -64,23 +174,43 @@ export const TopBar = ({ onToggleSidebar }: TopBarProps) => {
           <PopoverContent align="end" className="w-80 p-0 bg-card border-border">
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
               <h4 className="text-sm font-semibold">Notificações</h4>
-              <span className="text-xs text-muted-foreground">{unreadCount} não lida(s)</span>
-            </div>
-            <div className="max-h-72 overflow-y-auto">
-              {notifications.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">Nenhuma notificação</p>
+              {unreadCount > 0 ? (
+                <button onClick={markAllRead} className="text-xs text-primary hover:underline">
+                  Marcar todas como lidas
+                </button>
               ) : (
-                notifications.map(n => (
+                <span className="text-xs text-muted-foreground">Tudo lido</span>
+              )}
+            </div>
+            <div className="max-h-80 overflow-y-auto">
+              {notifications.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+                  <Inbox className="h-8 w-8 mb-2 opacity-30" />
+                  <p className="text-sm">Nenhuma notificação</p>
+                  <p className="text-xs mt-1">Webhooks processados aparecerão aqui</p>
+                </div>
+              ) : (
+                notifications.map((n) => (
                   <div
                     key={n.id}
                     className={`px-4 py-3 border-b border-border last:border-0 hover:bg-accent/50 transition-colors cursor-pointer ${!n.read ? "bg-primary/5" : ""}`}
+                    onClick={() => navigate("/payments")}
                   >
-                    <div className="flex items-start gap-2">
-                      {!n.read && <span className="mt-1.5 h-2 w-2 rounded-full bg-primary shrink-0" />}
-                      <div className={!n.read ? "" : "ml-4"}>
-                        <p className="text-sm font-medium">{n.title}</p>
-                        <p className="text-xs text-muted-foreground">{n.desc}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{n.time}</p>
+                    <div className="flex items-start gap-2.5">
+                      <div className="mt-0.5 shrink-0">
+                        {n.type === "payment" ? (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium truncate">{n.title}</p>
+                          {!n.read && <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />}
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate">{n.desc}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{n.time}</p>
                       </div>
                     </div>
                   </div>
