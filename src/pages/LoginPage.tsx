@@ -70,18 +70,6 @@ const LoginPage = () => {
           />
         </div>
 
-        {/* Banner */}
-        <div className="animate-fade-in" style={{ animationDelay: "0.1s" }}>
-          <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-primary/20 border border-white/10">
-            <img
-              src={drikaBanner}
-              alt="Drika Solutions - Bot de Vendas para Discord"
-              className="w-full h-auto object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent" />
-          </div>
-        </div>
-
         {/* Login form */}
         <div className="space-y-4 animate-fade-in" style={{ animationDelay: "0.2s" }}>
           <div className="space-y-3">
