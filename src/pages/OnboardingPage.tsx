@@ -15,7 +15,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 
-const DISCORD_CLIENT_ID = "1477916070508757092";
+const DEFAULT_DISCORD_CLIENT_ID = "1477916070508757092";
 const BOT_PERMISSIONS = "8";
 
 interface DiscordGuild {
@@ -84,7 +84,7 @@ const OnboardingPage = () => {
   };
 
   const handleAddBot = () => {
-    const url = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&permissions=${BOT_PERMISSIONS}&scope=bot%20applications.commands`;
+    const url = `https://discord.com/oauth2/authorize?client_id=${DEFAULT_DISCORD_CLIENT_ID}&permissions=${BOT_PERMISSIONS}&scope=bot%20applications.commands`;
     window.open(url, "_blank");
   };
 
