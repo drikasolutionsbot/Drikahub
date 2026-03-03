@@ -1,9 +1,24 @@
-/* ===== SUPPORT CARDS GRID ===== */
-.support-cards-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+/* ===== LAYOUT ===== */
+.support-layout {
+  display: flex;
   gap: 24px;
-  padding: 8px 0;
+  align-items: flex-start;
+}
+
+/* ===== CARDS GRID ===== */
+.support-cards-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+  min-width: 0;
+}
+
+@media (min-width: 768px) {
+  .support-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
 }
 
 /* ===== CARD ===== */
@@ -20,6 +35,10 @@
 .support-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+.support-card.active {
+  box-shadow: 0 0 0 2px hsl(330 80% 55%), 0 20px 40px rgba(0, 0, 0, 0.4);
 }
 
 /* TOP */
@@ -216,46 +235,79 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
-/* ===== MODAL ===== */
-.support-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 50;
-  animation: supportModalFadeIn 0.2s ease;
-}
-
-@keyframes supportModalFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes supportModalSlideIn {
-  from { opacity: 0; transform: scale(0.95) translateY(10px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-.support-modal {
+/* ===== SIDE PANEL ===== */
+.support-side-panel {
   position: relative;
-  width: 90%;
-  max-width: 420px;
+  width: 340px;
+  flex-shrink: 0;
   border-radius: 22px;
   overflow: hidden;
-  background: linear-gradient(180deg, hsl(225 30% 10%), hsl(225 30% 5%));
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
-  animation: supportModalSlideIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  background: radial-gradient(
+      160% 140% at 0% 0%,
+      rgba(255, 255, 255, 0.12),
+      transparent 50%
+    ),
+    linear-gradient(180deg, hsl(225 30% 10%), hsl(225 30% 4%));
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  animation: supportSidePanelIn 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.support-modal-close {
+@keyframes supportSidePanelIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.support-side-panel-glass {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    200px 160px at 20% 10%,
+    rgba(255, 255, 255, 0.18),
+    rgba(255, 255, 255, 0.05) 50%,
+    transparent 80%
+  );
+  pointer-events: none;
+  animation: supportGlassShimmer 4s ease-in-out infinite alternate;
+}
+
+@keyframes supportGlassShimmer {
+  0% {
+    background: radial-gradient(
+      200px 160px at 20% 10%,
+      rgba(255, 255, 255, 0.18),
+      rgba(255, 255, 255, 0.05) 50%,
+      transparent 80%
+    );
+  }
+  50% {
+    background: radial-gradient(
+      200px 160px at 60% 30%,
+      rgba(255, 255, 255, 0.14),
+      rgba(255, 255, 255, 0.04) 50%,
+      transparent 80%
+    );
+  }
+  100% {
+    background: radial-gradient(
+      200px 160px at 30% 60%,
+      rgba(255, 255, 255, 0.16),
+      rgba(255, 255, 255, 0.05) 50%,
+      transparent 80%
+    );
+  }
+}
+
+.support-side-content {
+  position: relative;
+  z-index: 2;
+  padding: 24px;
+}
+
+.support-side-close {
   position: absolute;
   top: 16px;
   right: 16px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
   border: none;
   border-radius: 50%;
   width: 32px;
@@ -263,59 +315,62 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.5);
   cursor: pointer;
   transition: all 0.2s;
-  z-index: 2;
+  z-index: 3;
 }
 
-.support-modal-close:hover {
-  background: rgba(255, 255, 255, 0.18);
+.support-side-close:hover {
+  background: rgba(255, 255, 255, 0.15);
   color: #fff;
 }
 
-.support-modal-header {
+.support-side-header {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 28px 24px 0;
+  gap: 14px;
+  margin-bottom: 24px;
 }
 
-.support-modal-name {
+.support-side-name {
   color: #fff;
   font-weight: 700;
   font-size: 18px;
-  margin-bottom: 2px;
+  margin: 0 0 2px;
 }
 
-.support-modal-body {
-  padding: 20px 24px;
+.support-side-body {
+  margin-bottom: 24px;
+  padding: 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.support-modal-role {
-  font-size: 12px;
+.support-side-role {
+  font-size: 11px;
   color: hsl(330 80% 55%);
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   margin-bottom: 8px;
 }
 
-.support-modal-about {
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.65);
+.support-side-about {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
   line-height: 1.6;
   margin: 0;
 }
 
-.support-modal-actions {
+.support-side-actions {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 0 24px 24px;
 }
 
-.support-modal-btn {
+.support-side-btn {
   height: 44px;
   border-radius: 14px;
   display: flex;
@@ -328,21 +383,37 @@
   cursor: pointer;
   transition: all 0.2s;
   color: rgba(255, 255, 255, 0.6);
-  background: rgba(255, 255, 255, 0.08);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.1),
+    rgba(255, 255, 255, 0.04)
+  );
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
-.support-modal-btn:hover {
+.support-side-btn:hover {
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
 }
 
-.support-modal-btn.primary {
+.support-side-btn.primary {
   background: linear-gradient(135deg, hsl(330 80% 55%), hsl(330 80% 42%));
   color: #fff;
-  box-shadow: 0 8px 20px hsla(330, 80%, 50%, 0.3);
+  box-shadow: 0 8px 20px hsla(330, 80%, 50%, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
-.support-modal-btn.primary:hover {
+.support-side-btn.primary:hover {
   opacity: 0.9;
   box-shadow: 0 8px 24px hsla(330, 80%, 50%, 0.4);
+}
+
+/* Responsive: stack on small screens */
+@media (max-width: 900px) {
+  .support-layout {
+    flex-direction: column;
+  }
+  .support-side-panel {
+    width: 100%;
+  }
 }
