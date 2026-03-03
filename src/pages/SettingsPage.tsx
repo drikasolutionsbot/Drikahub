@@ -117,11 +117,16 @@ const SettingsPage = () => {
   };
 
   const toggleProvider = async (providerId: string, currentActive: boolean) => {
-    await supabase
-      .from("payment_providers")
-      .update({ active: !currentActive })
-      .eq("id", providerId);
-    refetchProviders();
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-payment-providers", {
+        body: { action: "toggle", tenant_id: tenantId, provider_id: providerId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      refetchProviders();
+    } catch (err: any) {
+      toast({ title: "Erro ao alternar gateway", description: err.message, variant: "destructive" });
+    }
   };
 
   const copyPixKey = () => {
