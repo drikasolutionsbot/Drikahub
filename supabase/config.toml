@@ -62,3 +62,6 @@ verify_jwt = false
 
 [functions.manage-products]
 verify_jwt = false
+
+[functions.manage-product-hooks]
+verify_jwt = false

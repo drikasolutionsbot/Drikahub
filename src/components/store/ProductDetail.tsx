@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProductDetailGeneral } from "./ProductDetailGeneral";
 import { ProductDetailFields } from "./ProductDetailFields";
+import { ProductDetailHooks } from "./ProductDetailHooks";
 import { PostMessageModal } from "./PostMessageModal";
 
 interface Product {
@@ -103,9 +104,7 @@ export const ProductDetail = ({ product, onBack, onSave }: ProductDetailProps) =
             </TabsContent>
 
             <TabsContent value="hooks" className="mt-0">
-              <div className="rounded-xl border border-border bg-card p-8 text-center text-muted-foreground">
-                Hooks de automação — em breve
-              </div>
+              <ProductDetailHooks productId={product.id} />
             </TabsContent>
           </div>
         </Tabs>

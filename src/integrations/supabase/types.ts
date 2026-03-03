@@ -410,6 +410,57 @@ export type Database = {
           },
         ]
       }
+      product_hooks: {
+        Row: {
+          active: boolean
+          config: Json
+          created_at: string
+          hook_type: Database["public"]["Enums"]["hook_type"]
+          id: string
+          product_id: string
+          sort_order: number | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          config?: Json
+          created_at?: string
+          hook_type: Database["public"]["Enums"]["hook_type"]
+          id?: string
+          product_id: string
+          sort_order?: number | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          config?: Json
+          created_at?: string
+          hook_type?: Database["public"]["Enums"]["hook_type"]
+          id?: string
+          product_id?: string
+          sort_order?: number | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_hooks_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_hooks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_stock_items: {
         Row: {
           content: string
@@ -1090,6 +1141,12 @@ export type Database = {
     Enums: {
       app_role: "owner" | "admin" | "support" | "super_admin"
       coupon_type: "percent" | "fixed"
+      hook_type:
+        | "add_role"
+        | "remove_role"
+        | "send_dm"
+        | "send_channel_message"
+        | "call_webhook"
       order_status:
         | "pending_payment"
         | "paid"
@@ -1228,6 +1285,13 @@ export const Constants = {
     Enums: {
       app_role: ["owner", "admin", "support", "super_admin"],
       coupon_type: ["percent", "fixed"],
+      hook_type: [
+        "add_role",
+        "remove_role",
+        "send_dm",
+        "send_channel_message",
+        "call_webhook",
+      ],
       order_status: [
         "pending_payment",
         "paid",
