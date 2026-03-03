@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTenantQuery } from "@/hooks/useSupabaseQuery";
 import { ProductList } from "@/components/store/ProductList";
 import { ProductDetail } from "@/components/store/ProductDetail";
+import { ProductSelectModal } from "@/components/store/ProductSelectModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { useQueryClient } from "@tanstack/react-query";
@@ -22,6 +23,7 @@ interface Product {
 const StorePage = () => {
   const [search, setSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectModalOpen, setSelectModalOpen] = useState(false);
   const { tenantId } = useTenant();
   const queryClient = useQueryClient();
 
@@ -50,7 +52,16 @@ const StorePage = () => {
     }
   };
 
-  const handleNewProduct = async () => {
+  const handleNewProduct = () => {
+    setSelectModalOpen(true);
+  };
+
+  const handleSelectProduct = (product: Product) => {
+    setSelectedProduct(product);
+    setSelectModalOpen(false);
+  };
+
+  const handleCreateNew = async () => {
     if (!tenantId) return;
     const { data, error } = await (supabase as any)
       .from("products")
@@ -63,6 +74,7 @@ const StorePage = () => {
     } else {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       setSelectedProduct(data as Product);
+      setSelectModalOpen(false);
     }
   };
 
@@ -120,6 +132,14 @@ const StorePage = () => {
           </div>
         </TabsContent>
       </Tabs>
+
+      <ProductSelectModal
+        open={selectModalOpen}
+        onOpenChange={setSelectModalOpen}
+        products={products}
+        onSelect={handleSelectProduct}
+        onCreateNew={handleCreateNew}
+      />
     </div>
   );
 };
