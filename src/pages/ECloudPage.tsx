@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useTenant } from "@/contexts/TenantContext";
 import { supabase } from "@/integrations/supabase/client";
 import { StatCard } from "@/components/dashboard/StatCard";
+import { ECloudCharts } from "@/components/ecloud/ECloudCharts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -222,6 +223,9 @@ const ECloudPage = () => {
           />
         </div>
       )}
+
+      {/* Charts */}
+      {tenantId && <ECloudCharts tenantId={tenantId} />}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Logs */}
