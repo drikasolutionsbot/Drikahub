@@ -21,7 +21,7 @@ const LoginPage = () => {
       });
 
       // Garante mínimo de 5s no loader
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      await new Promise(resolve => setTimeout(resolve, 3000));
 
       if (error || data?.error) {
         toast({ title: "Token inválido", description: data?.error || error?.message, variant: "destructive" });
