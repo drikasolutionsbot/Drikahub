@@ -22,34 +22,35 @@ import {
 const channelSections = [
   {
     title: "Sistema",
-    icon: Volume2,
+    description: "Canais para logs do sistema e operações",
     channels: [
-      { key: "logs_system", label: "Logs do Sistema" },
-      { key: "logs_commands", label: "Logs de Comandos" },
+      { key: "logs_system", label: "Sistema" },
+      { key: "logs_commands", label: "Comandos" },
     ],
   },
   {
     title: "Loja",
-    icon: Hash,
+    description: "Canais relacionados a transações e compras",
     channels: [
-      { key: "logs_sales", label: "Logs de Vendas" },
-      { key: "logs_events", label: "Eventos de Compra" },
+      { key: "logs_sales", label: "Compras" },
+      { key: "logs_events", label: "Eventos de Compras" },
       { key: "logs_feedback", label: "Feedback" },
     ],
   },
   {
     title: "Membros",
-    icon: Users,
+    description: "Canais para logs de atividades dos membros",
     channels: [
       { key: "welcome", label: "Boas-vindas" },
       { key: "member_join", label: "Entrada" },
       { key: "member_leave", label: "Saída" },
+      { key: "member_messages", label: "Mensagens" },
       { key: "traffic", label: "Tráfego" },
     ],
   },
   {
     title: "Moderação",
-    icon: Shield,
+    description: "Canais para logs de ações de moderação",
     channels: [
       { key: "logs_moderation_bans", label: "Bans" },
       { key: "logs_moderation_kicks", label: "Kicks" },
@@ -227,73 +228,22 @@ const ChannelsPage = () => {
         </div>
       </div>
 
-      {/* Discord channels overview */}
-      {loadingChannels && discordChannels.length === 0 ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map(i => <Skeleton key={i} className="h-12" />)}
-        </div>
-      ) : discordChannels.length > 0 ? (
-        <div className="rounded-xl border border-border bg-card">
-          <div className="flex items-center justify-between border-b border-border px-5 py-4">
-            <div className="flex items-center gap-2">
-              <Hash className="h-5 w-5 text-primary" />
-              <h2 className="font-display font-semibold">Canais do Servidor</h2>
-            </div>
-            <Badge variant="outline" className="text-xs">
-              {discordChannels.length} canais
-            </Badge>
-          </div>
-          <div className="p-3 space-y-3">
-            {uncategorized.length > 0 && (
-              <div className="space-y-1">
-                {uncategorized.map(ch => (
-                  <div key={ch.id} className="flex items-center gap-2 rounded-md px-3 py-2 bg-muted/50">
-                    <Hash className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="text-sm">{ch.name}</span>
-                    <span className="text-[10px] text-muted-foreground ml-auto font-mono">{ch.id}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-            {channelsByCategory.map(({ category, channels }) => (
-              channels.length > 0 && (
-                <div key={category.id} className="space-y-1">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-3 pt-2">
-                    {category.name}
-                  </p>
-                  {channels.map(ch => (
-                    <div key={ch.id} className="flex items-center gap-2 rounded-md px-3 py-2 bg-muted/50">
-                      <Hash className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-sm">{ch.name}</span>
-                      <span className="text-[10px] text-muted-foreground ml-auto font-mono">{ch.id}</span>
-                    </div>
-                  ))}
-                </div>
-              )
-            ))}
-          </div>
-        </div>
-      ) : null}
-
       {/* Channel config mapping */}
       {isLoading ? (
         <div className="space-y-4">{[1,2,3].map(i => <Skeleton key={i} className="h-32" />)}</div>
       ) : (
-        <div className="space-y-6">
-          <h2 className="font-display text-lg font-semibold">Mapeamento de Canais</h2>
+        <div className="space-y-8">
           {channelSections.map((section) => (
-            <div key={section.title} className="rounded-xl border border-border bg-card">
-              <div className="flex items-center gap-2 border-b border-border px-5 py-4">
-                <section.icon className="h-5 w-5 text-primary" />
-                <h2 className="font-display font-semibold">{section.title}</h2>
-              </div>
-              <div className="divide-y divide-border">
+            <div key={section.title} className="border-l-2 border-primary pl-5">
+              <h2 className="font-display text-lg font-bold text-foreground">{section.title}</h2>
+              <p className="text-sm text-muted-foreground mb-4">{section.description}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {section.channels.map((ch) => (
-                  <div key={ch.key} className="flex items-center justify-between px-5 py-3">
-                    <span className="text-sm">{ch.label}</span>
+                  <div key={ch.key} className="space-y-1.5">
+                    <span className="text-sm font-medium text-foreground">{ch.label}</span>
                     <Select value={getChannelValue(ch.key)} onValueChange={(v) => handleChange(ch.key, v)}>
-                      <SelectTrigger className="w-56 bg-muted border-none">
-                        <SelectValue placeholder="Selecionar canal" />
+                      <SelectTrigger className="bg-muted/50 border-border h-10">
+                        <SelectValue placeholder="Não configurado" />
                       </SelectTrigger>
                       <SelectContent>
                         {discordChannels.length > 0 ? (
