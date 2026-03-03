@@ -6,10 +6,22 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { Plus, Key, Copy, Trash2, Eye, EyeOff, Loader2, Users } from "lucide-react";
+import { Plus, Key, Copy, Trash2, Eye, EyeOff, Loader2, Users, Crown, Search, Settings } from "lucide-react";
+
+const PLANS = [
+  { value: "free", label: "Free", color: "text-muted-foreground bg-muted/50 border-border" },
+  { value: "starter", label: "Starter", color: "text-blue-500 bg-blue-500/10 border-blue-500" },
+  { value: "pro", label: "Pro", color: "text-emerald-500 bg-emerald-500/10 border-emerald-500" },
+  { value: "business", label: "Business", color: "text-amber-500 bg-amber-500/10 border-amber-500" },
+];
+
+const getPlanBadgeClass = (plan: string) => {
+  return PLANS.find((p) => p.value === plan)?.color || PLANS[0].color;
+};
 
 const AdminClientsPage = () => {
   const [tenants, setTenants] = useState<any[]>([]);
@@ -17,12 +29,19 @@ const AdminClientsPage = () => {
   const [loading, setLoading] = useState(true);
   const [expandedTenant, setExpandedTenant] = useState<string | null>(null);
   const [showTokens, setShowTokens] = useState<Record<string, boolean>>({});
+  const [searchQuery, setSearchQuery] = useState("");
+  const [planFilter, setPlanFilter] = useState("all");
 
   // New tenant form
   const [newTenantName, setNewTenantName] = useState("");
   const [newTenantGuildId, setNewTenantGuildId] = useState("");
+  const [newTenantPlan, setNewTenantPlan] = useState("free");
   const [creatingTenant, setCreatingTenant] = useState(false);
   const [tenantDialogOpen, setTenantDialogOpen] = useState(false);
+
+  // Plan editing
+  const [editingPlan, setEditingPlan] = useState<string | null>(null);
+  const [savingPlan, setSavingPlan] = useState(false);
 
   // Token generation
   const [tokenLabel, setTokenLabel] = useState("");
@@ -52,6 +71,21 @@ const AdminClientsPage = () => {
     fetchTenants();
   }, [fetchTenants]);
 
+  const filteredTenants = tenants.filter((t) => {
+    const matchesSearch =
+      !searchQuery.trim() ||
+      t.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.discord_guild_id?.includes(searchQuery) ||
+      t.id?.includes(searchQuery);
+    const matchesPlan = planFilter === "all" || (t.plan || "free") === planFilter;
+    return matchesSearch && matchesPlan;
+  });
+
+  const planStats = PLANS.map((p) => ({
+    ...p,
+    count: tenants.filter((t) => (t.plan || "free") === p.value).length,
+  }));
+
   const handleCreateTenant = async () => {
     if (!newTenantName.trim()) return;
     setCreatingTenant(true);
@@ -59,17 +93,38 @@ const AdminClientsPage = () => {
       const { error } = await supabase.from("tenants").insert({
         name: newTenantName.trim(),
         discord_guild_id: newTenantGuildId.trim() || null,
+        plan: newTenantPlan,
       });
       if (error) throw error;
       toast({ title: "Cliente criado com sucesso!" });
       setNewTenantName("");
       setNewTenantGuildId("");
+      setNewTenantPlan("free");
       setTenantDialogOpen(false);
       fetchTenants();
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
     }
     setCreatingTenant(false);
+  };
+
+  const handleChangePlan = async (tenantId: string, newPlan: string) => {
+    setSavingPlan(true);
+    try {
+      const { error } = await supabase
+        .from("tenants")
+        .update({ plan: newPlan })
+        .eq("id", tenantId);
+      if (error) throw error;
+      setTenants((prev) =>
+        prev.map((t) => (t.id === tenantId ? { ...t, plan: newPlan } : t))
+      );
+      toast({ title: "Plano atualizado!", description: `Alterado para ${PLANS.find((p) => p.value === newPlan)?.label}` });
+      setEditingPlan(null);
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    }
+    setSavingPlan(false);
   };
 
   const handleGenerateToken = async (tenantId: string) => {
@@ -127,7 +182,7 @@ const AdminClientsPage = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Clientes</h1>
-          <p className="text-muted-foreground">Gerencie clientes e tokens de acesso</p>
+          <p className="text-muted-foreground">Gerencie clientes, planos e tokens de acesso</p>
         </div>
         <Dialog open={tenantDialogOpen} onOpenChange={setTenantDialogOpen}>
           <DialogTrigger asChild>
@@ -158,6 +213,21 @@ const AdminClientsPage = () => {
                   className="bg-muted border-none"
                 />
               </div>
+              <div className="space-y-2">
+                <Label>Plano</Label>
+                <Select value={newTenantPlan} onValueChange={setNewTenantPlan}>
+                  <SelectTrigger className="bg-muted border-none">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PLANS.map((p) => (
+                      <SelectItem key={p.value} value={p.value}>
+                        {p.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <DialogFooter>
               <DialogClose asChild>
@@ -176,11 +246,51 @@ const AdminClientsPage = () => {
         </Dialog>
       </div>
 
+      {/* Plan Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {planStats.map((p) => (
+          <button
+            key={p.value}
+            onClick={() => setPlanFilter(planFilter === p.value ? "all" : p.value)}
+            className={`rounded-xl border p-4 text-left transition-all ${
+              planFilter === p.value
+                ? "ring-2 ring-primary border-primary"
+                : "border-border hover:border-primary/50"
+            } bg-card`}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className={`inline-flex items-center rounded-md border px-2 py-[2px] text-xs font-medium ${p.color}`}>
+                {p.label}
+              </span>
+              <Crown className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <p className="text-2xl font-bold text-foreground">{p.count}</p>
+            <p className="text-xs text-muted-foreground">clientes</p>
+          </button>
+        ))}
+      </div>
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Buscar por nome, Guild ID ou ID..."
+          className="pl-9 bg-card border-border"
+        />
+      </div>
+
       <Card className="bg-card border-border">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <Users className="h-5 w-5 text-primary" />
             Lista de Clientes
+            {filteredTenants.length !== tenants.length && (
+              <span className="text-sm font-normal text-muted-foreground">
+                ({filteredTenants.length} de {tenants.length})
+              </span>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -188,13 +298,15 @@ const AdminClientsPage = () => {
             <div className="flex justify-center py-8">
               <div className="h-6 w-6 animate-spin rounded-full border-4 border-primary border-t-transparent" />
             </div>
-          ) : tenants.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">Nenhum cliente cadastrado.</p>
+          ) : filteredTenants.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">Nenhum cliente encontrado.</p>
           ) : (
             <div className="space-y-3">
-              {tenants.map((tenant) => {
+              {filteredTenants.map((tenant) => {
                 const isExpanded = expandedTenant === tenant.id;
                 const tenantTokens = tokens[tenant.id] || [];
+                const currentPlan = tenant.plan || "free";
+                const planInfo = PLANS.find((p) => p.value === currentPlan) || PLANS[0];
 
                 return (
                   <div key={tenant.id} className="rounded-lg border border-border overflow-hidden">
@@ -212,8 +324,47 @@ const AdminClientsPage = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <Badge variant="secondary">{tenant.plan || "free"}</Badge>
-                        <span className="text-xs text-muted-foreground">
+                        {editingPlan === tenant.id ? (
+                          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                            <Select
+                              value={currentPlan}
+                              onValueChange={(val) => handleChangePlan(tenant.id, val)}
+                              disabled={savingPlan}
+                            >
+                              <SelectTrigger className="h-7 w-28 text-xs bg-muted border-border">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {PLANS.map((p) => (
+                                  <SelectItem key={p.value} value={p.value}>
+                                    {p.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7"
+                              onClick={() => setEditingPlan(null)}
+                            >
+                              ✕
+                            </Button>
+                          </div>
+                        ) : (
+                          <button
+                            className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-[2px] text-xs font-medium transition-colors hover:opacity-80 ${planInfo.color}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingPlan(tenant.id);
+                            }}
+                            title="Clique para alterar o plano"
+                          >
+                            <Settings className="h-3 w-3" />
+                            {planInfo.label}
+                          </button>
+                        )}
+                        <span className="text-xs text-muted-foreground hidden sm:inline">
                           {format(new Date(tenant.created_at), "dd/MM/yyyy")}
                         </span>
                         <Key className={`h-4 w-4 transition-transform ${isExpanded ? "text-primary" : "text-muted-foreground"}`} />
