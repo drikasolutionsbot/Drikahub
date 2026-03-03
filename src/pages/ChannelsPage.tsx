@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { Hash, Shield, Users, Volume2, Plus, Loader2, RefreshCw, Megaphone, Mic, MessageSquare } from "lucide-react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { Hash, Shield, Users, Volume2, Plus, Loader2, RefreshCw, Megaphone, Mic, MessageSquare, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -136,6 +136,33 @@ const ChannelsPage = () => {
   const [newParent, setNewParent] = useState<string>("");
   const [newTopic, setNewTopic] = useState("");
 
+  // Local draft state for channel mappings
+  const [draft, setDraft] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+
+  // Initialize draft from configs
+  useEffect(() => {
+    const initial: Record<string, string> = {};
+    configs.forEach(c => {
+      if (c.discord_channel_id) initial[c.channel_key] = c.discord_channel_id;
+    });
+    setDraft(initial);
+  }, [configs]);
+
+  // Check if draft differs from saved configs
+  const hasChanges = useMemo(() => {
+    const allKeys = new Set([
+      ...Object.keys(draft),
+      ...configs.map(c => c.channel_key),
+    ]);
+    for (const key of allKeys) {
+      const savedVal = configs.find(c => c.channel_key === key)?.discord_channel_id || "";
+      const draftVal = draft[key] || "";
+      if (savedVal !== draftVal) return true;
+    }
+    return false;
+  }, [draft, configs]);
+
   const guildId = tenant?.discord_guild_id;
 
   const fetchDiscordChannels = useCallback(async () => {
@@ -160,21 +187,35 @@ const ChannelsPage = () => {
     fetchDiscordChannels();
   }, [fetchDiscordChannels]);
 
-  const getChannelValue = (key: string) => {
-    const cfg = configs.find(c => c.channel_key === key);
-    return cfg?.discord_channel_id || undefined;
+  const getChannelValue = (key: string) => draft[key] || undefined;
+
+  const handleLocalChange = (channelKey: string, discordChannelId: string) => {
+    setDraft(prev => ({ ...prev, [channelKey]: discordChannelId }));
   };
 
-  const handleChange = async (channelKey: string, discordChannelId: string) => {
+  const handleSave = async () => {
     if (!tenantId) return;
-    const existing = configs.find(c => c.channel_key === channelKey);
-    if (existing) {
-      await (supabase as any).from("channel_configs").update({ discord_channel_id: discordChannelId }).eq("id", existing.id);
-    } else {
-      await (supabase as any).from("channel_configs").insert({ tenant_id: tenantId, channel_key: channelKey, discord_channel_id: discordChannelId });
+    setSaving(true);
+    try {
+      const allKeys = channelSections.flatMap(s => s.channels.map(c => c.key));
+      for (const key of allKeys) {
+        const draftVal = draft[key] || null;
+        const existing = configs.find(c => c.channel_key === key);
+        if (existing) {
+          if (existing.discord_channel_id !== draftVal) {
+            await (supabase as any).from("channel_configs").update({ discord_channel_id: draftVal }).eq("id", existing.id);
+          }
+        } else if (draftVal) {
+          await (supabase as any).from("channel_configs").insert({ tenant_id: tenantId, channel_key: key, discord_channel_id: draftVal });
+        }
+      }
+      await refetch();
+      toast({ title: "Configurações salvas! ✅" });
+    } catch (err: any) {
+      toast({ title: "Erro ao salvar", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
     }
-    refetch();
-    toast({ title: "Canal atualizado" });
   };
 
   const handleCreate = async () => {
@@ -263,6 +304,17 @@ const ChannelsPage = () => {
             <Plus className="h-4 w-4" />
             Criar Canal
           </Button>
+          {hasChanges && (
+            <Button
+              size="sm"
+              className="gap-2 gradient-pink text-primary-foreground border-none hover:opacity-90"
+              onClick={handleSave}
+              disabled={saving}
+            >
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Salvar
+            </Button>
+          )}
         </div>
       </div>
 
@@ -279,7 +331,7 @@ const ChannelsPage = () => {
                 {section.channels.map((ch) => (
                   <div key={ch.key} className="space-y-1.5">
                     <span className="text-sm font-medium text-foreground">{ch.label}</span>
-                    <Select value={getChannelValue(ch.key)} onValueChange={(v) => handleChange(ch.key, v)}>
+                    <Select value={getChannelValue(ch.key)} onValueChange={(v) => handleLocalChange(ch.key, v)}>
                       <SelectTrigger className="bg-muted/50 border-border h-10">
                         <SelectValue placeholder="Não configurado" />
                       </SelectTrigger>
