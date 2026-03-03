@@ -1,20 +1,25 @@
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
-import { Check, X, Clock, Package, User, DollarSign, RefreshCw, Search, Filter } from "lucide-react";
+import { Check, X, Clock, Package, User, DollarSign, RefreshCw, Search, Filter, Trash2, ChevronDown, ChevronUp, Hash, CreditCard, Calendar, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 const formatBRL = (cents: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
 
+const formatDate = (date: string) =>
+  new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(date));
+
 const statusLabels: Record<string, { label: string; color: string }> = {
   pending_payment: { label: "Pendente", color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
   paid: { label: "Pago", color: "bg-green-500/20 text-green-400 border-green-500/30" },
+  delivering: { label: "Entregando", color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
   delivered: { label: "Entregue", color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
   canceled: { label: "Cancelado", color: "bg-red-500/20 text-red-400 border-red-500/30" },
   refunded: { label: "Reembolsado", color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
@@ -36,10 +41,10 @@ async function invokeWithRetry(fnName: string, body: any, retries = 2) {
 
 export default function ApprovalsPage() {
   const { tenantId } = useTenant();
-  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("pending_payment");
   const [processing, setProcessing] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const { data: orders, isLoading, refetch } = useQuery({
     queryKey: ["approval-orders", tenantId, statusFilter],
@@ -66,21 +71,19 @@ export default function ApprovalsPage() {
     !search ||
     o.product_name.toLowerCase().includes(search.toLowerCase()) ||
     o.discord_username?.toLowerCase().includes(search.toLowerCase()) ||
-    String(o.order_number).includes(search)
+    String(o.order_number).includes(search) ||
+    o.discord_user_id.includes(search)
   );
 
   const handleApprove = async (orderId: string) => {
     setProcessing(orderId);
     try {
-      // Update order status to paid
       const { error } = await supabase
         .from("orders")
         .update({ status: "paid" as any, payment_provider: "manual_approval" })
         .eq("id", orderId);
-
       if (error) throw error;
 
-      // Trigger delivery
       try {
         await invokeWithRetry("deliver-order", { order_id: orderId });
       } catch (e) {
@@ -96,19 +99,36 @@ export default function ApprovalsPage() {
     }
   };
 
-  const handleReject = async (orderId: string) => {
+  const handleCancel = async (orderId: string) => {
     setProcessing(orderId);
     try {
       const { error } = await supabase
         .from("orders")
         .update({ status: "canceled" as any })
         .eq("id", orderId);
-
       if (error) throw error;
-      toast({ title: "❌ Pedido recusado", description: "O pedido foi cancelado." });
+      toast({ title: "❌ Pedido cancelado" });
       refetch();
     } catch (err: any) {
-      toast({ title: "Erro ao recusar", description: err.message, variant: "destructive" });
+      toast({ title: "Erro ao cancelar", description: err.message, variant: "destructive" });
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  const handleDelete = async (orderId: string) => {
+    setProcessing(orderId);
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .delete()
+        .eq("id", orderId);
+      if (error) throw error;
+      toast({ title: "🗑️ Pedido excluído" });
+      if (expandedId === orderId) setExpandedId(null);
+      refetch();
+    } catch (err: any) {
+      toast({ title: "Erro ao excluir", description: err.message, variant: "destructive" });
     } finally {
       setProcessing(null);
     }
@@ -148,7 +168,7 @@ export default function ApprovalsPage() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por produto, usuário ou número..."
+            placeholder="Buscar por produto, usuário, ID ou número..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="pl-9 bg-card/50 border-border/50"
@@ -164,6 +184,7 @@ export default function ApprovalsPage() {
             <SelectItem value="paid">Pagos</SelectItem>
             <SelectItem value="delivered">Entregues</SelectItem>
             <SelectItem value="canceled">Cancelados</SelectItem>
+            <SelectItem value="refunded">Reembolsados</SelectItem>
             <SelectItem value="all">Todos</SelectItem>
           </SelectContent>
         </Select>
@@ -193,18 +214,22 @@ export default function ApprovalsPage() {
             const status = statusLabels[order.status] || { label: order.status, color: "bg-muted text-muted-foreground" };
             const isPending = order.status === "pending_payment";
             const isProcessingThis = processing === order.id;
+            const isExpanded = expandedId === order.id;
 
             return (
               <div
                 key={order.id}
-                className={`rounded-xl border p-4 transition-all duration-200 ${
+                className={`rounded-xl border transition-all duration-200 ${
                   isPending
                     ? "bg-card/80 border-yellow-500/20 hover:border-yellow-500/40"
                     : "bg-card/40 border-border/30"
                 }`}
               >
-                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                  {/* Order info */}
+                {/* Main row */}
+                <div
+                  className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 cursor-pointer"
+                  onClick={() => setExpandedId(isExpanded ? null : order.id)}
+                >
                   <div className="flex-1 min-w-0 space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-mono text-sm font-bold text-foreground/80">
@@ -221,7 +246,7 @@ export default function ApprovalsPage() {
                       )}
                     </div>
 
-                    <div className="flex items-center gap-4 text-sm">
+                    <div className="flex items-center gap-4 text-sm flex-wrap">
                       <span className="flex items-center gap-1.5 text-foreground">
                         <Package className="h-3.5 w-3.5 text-muted-foreground" />
                         {order.product_name}
@@ -237,36 +262,131 @@ export default function ApprovalsPage() {
                     </div>
                   </div>
 
-                  {/* Actions */}
-                  {isPending && (
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Button
-                        size="sm"
-                        onClick={() => handleApprove(order.id)}
-                        disabled={isProcessingThis}
-                        className="bg-green-600 hover:bg-green-700 text-white gap-1.5"
-                      >
-                        <Check className="h-3.5 w-3.5" />
-                        Aprovar
-                      </Button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {/* Actions */}
+                    {isPending && (
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={e => { e.stopPropagation(); handleApprove(order.id); }}
+                          disabled={isProcessingThis}
+                          className="bg-green-600 hover:bg-green-700 text-white gap-1.5"
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                          Aprovar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={e => { e.stopPropagation(); handleCancel(order.id); }}
+                          disabled={isProcessingThis}
+                          className="border-red-500/30 text-red-400 hover:bg-red-500/10 gap-1.5"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                          Cancelar
+                        </Button>
+                      </>
+                    )}
+
+                    {!isPending && order.status !== "canceled" && (
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleReject(order.id)}
+                        onClick={e => { e.stopPropagation(); handleCancel(order.id); }}
                         disabled={isProcessingThis}
                         className="border-red-500/30 text-red-400 hover:bg-red-500/10 gap-1.5"
                       >
                         <X className="h-3.5 w-3.5" />
-                        Recusar
+                        Cancelar
                       </Button>
-                    </div>
-                  )}
+                    )}
+
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={e => e.stopPropagation()}
+                          disabled={isProcessingThis}
+                          className="text-muted-foreground hover:text-red-400"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent onClick={e => e.stopPropagation()}>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle className="flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-red-400" />
+                            Excluir pedido #{order.order_number}?
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Essa ação é irreversível. O pedido será removido permanentemente do banco de dados.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Voltar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDelete(order.id)}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                          >
+                            Excluir
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+
+                    {isExpanded ? (
+                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </div>
                 </div>
+
+                {/* Expanded details */}
+                {isExpanded && (
+                  <div className="border-t border-border/30 px-4 py-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm bg-muted/10">
+                    <DetailItem icon={Hash} label="ID do Pedido" value={order.id} mono />
+                    <DetailItem icon={Hash} label="Número" value={`#${order.order_number}`} />
+                    <DetailItem icon={User} label="Discord ID" value={order.discord_user_id} mono />
+                    <DetailItem icon={User} label="Username" value={order.discord_username || "—"} />
+                    <DetailItem icon={Package} label="Produto" value={order.product_name} />
+                    <DetailItem icon={Hash} label="Produto ID" value={order.product_id || "—"} mono />
+                    <DetailItem icon={DollarSign} label="Total" value={formatBRL(order.total_cents)} highlight />
+                    <DetailItem icon={CreditCard} label="Provedor" value={order.payment_provider || "—"} />
+                    <DetailItem icon={Hash} label="Payment ID" value={order.payment_id || "—"} mono />
+                    <DetailItem icon={Calendar} label="Criado em" value={formatDate(order.created_at)} />
+                    <DetailItem icon={Calendar} label="Atualizado em" value={formatDate(order.updated_at)} />
+                    <DetailItem icon={Hash} label="Cupom ID" value={order.coupon_id || "—"} mono />
+                    <DetailItem icon={Hash} label="Afiliado ID" value={order.affiliate_id || "—"} mono />
+                    <DetailItem icon={Hash} label="Field ID" value={order.field_id || "—"} mono />
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+function DetailItem({ icon: Icon, label, value, mono, highlight }: {
+  icon: any;
+  label: string;
+  value: string;
+  mono?: boolean;
+  highlight?: boolean;
+}) {
+  return (
+    <div className="flex items-start gap-2 min-w-0">
+      <Icon className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
+      <div className="min-w-0">
+        <p className="text-[11px] text-muted-foreground">{label}</p>
+        <p className={`truncate ${mono ? "font-mono text-xs" : "text-sm"} ${highlight ? "text-green-400 font-semibold" : "text-foreground"}`}>
+          {value}
+        </p>
+      </div>
     </div>
   );
 }
