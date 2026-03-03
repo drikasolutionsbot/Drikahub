@@ -59,6 +59,7 @@ const ECloudPage = () => {
   const [recentLogs, setRecentLogs] = useState<RecentLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [lastCheck, setLastCheck] = useState<Date | null>(null);
   const prevBotOnline = useRef<boolean | null>(null);
 
   // Track status changes and notify
@@ -155,13 +156,14 @@ const ECloudPage = () => {
       setBotOnline(false);
     } finally {
       setLoading(false);
+      setLastCheck(new Date());
     }
   };
 
   useEffect(() => {
     fetchData();
-    // Poll bot status every 60s (Discord API can't use Realtime)
-    const botInterval = setInterval(async () => {
+    // Poll bot status every 30s (Discord API can't use Realtime)
+    const checkBot = async () => {
       if (!tenant?.discord_guild_id) return;
       try {
         const { data: guild, error } = await supabase.functions.invoke("discord-guild-info", {
@@ -176,7 +178,9 @@ const ECloudPage = () => {
       } catch {
         setBotOnline(false);
       }
-    }, 60000);
+      setLastCheck(new Date());
+    };
+    const botInterval = setInterval(checkBot, 30000);
     return () => clearInterval(botInterval);
   }, [tenant?.discord_guild_id, tenantId]);
 
@@ -256,10 +260,17 @@ const ECloudPage = () => {
             </Badge>
           )}
         </div>
-        <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing} className="gap-2">
-          <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-          Atualizar
-        </Button>
+        <div className="flex items-center gap-3">
+          {lastCheck && (
+            <span className="text-xs text-muted-foreground hidden sm:inline">
+              Última verificação: {lastCheck.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+            </span>
+          )}
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing} className="gap-2">
+            <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+            Atualizar
+          </Button>
+        </div>
       </div>
 
       {/* Stats Grid */}
