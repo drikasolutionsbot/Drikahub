@@ -204,3 +204,85 @@
   color: hsl(0 0% 100% / 0.35);
   text-transform: capitalize;
 }
+
+/* =========== Sections (Withdraw + History) =========== */
+
+.wallet-section {
+  background: hsl(225 30% 7%);
+  border-radius: 18px;
+  border: 1px solid hsl(225 15% 14%);
+  padding: 24px;
+}
+
+.wallet-section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.wallet-section-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: hsl(225 20% 12%);
+}
+
+.wallet-input {
+  background: hsl(225 20% 10%) !important;
+  border: 1.5px solid hsl(225 15% 16%) !important;
+  color: #fff !important;
+  border-radius: 10px;
+  transition: border-color 0.2s;
+}
+
+.wallet-input:focus {
+  border-color: hsl(330 100% 71%) !important;
+  box-shadow: 0 0 0 2px hsl(330 100% 71% / 0.1) !important;
+}
+
+.wallet-input::placeholder {
+  color: hsl(0 0% 100% / 0.2);
+}
+
+/* Transaction rows */
+
+.wallet-tx-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: hsl(225 20% 10%);
+  transition: background 0.2s;
+}
+
+.wallet-tx-row:hover {
+  background: hsl(225 20% 13%);
+}
+
+.wallet-tx-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.wallet-tx-badge.completed {
+  background: hsl(150 60% 40% / 0.15);
+  color: hsl(150 60% 65%);
+}
+
+.wallet-tx-badge.pending {
+  background: hsl(45 100% 50% / 0.12);
+  color: hsl(45 90% 60%);
+}
+
+.wallet-tx-badge.rejected {
+  background: hsl(0 60% 50% / 0.15);
+  color: hsl(0 70% 70%);
+}

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
+// Badge replaced by custom wallet-tx-badge CSS
 import { toast } from "@/hooks/use-toast";
 import {
   Wallet,
@@ -260,36 +260,38 @@ export const WalletTab = () => {
       </div>
 
       {/* ---- Withdraw Form ---- */}
-      <div className="rounded-xl border border-border bg-card p-6 space-y-4">
-        <h3 className="font-display font-semibold flex items-center gap-2">
-          <ArrowUpRight className="h-5 w-5 text-primary" />
-          Solicitar Saque
-        </h3>
-        <div className="grid gap-4 sm:grid-cols-2">
+      <div className="wallet-section">
+        <div className="wallet-section-header">
+          <div className="wallet-section-icon">
+            <ArrowUpRight className="h-4 w-4 text-primary" />
+          </div>
+          <h3 className="text-white font-display font-semibold text-sm">Solicitar Saque</h3>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 mt-4">
           <div className="space-y-2">
-            <Label>Valor (R$)</Label>
+            <Label className="text-white/50 text-xs uppercase tracking-wider">Valor (R$)</Label>
             <Input
               placeholder="0,00"
               value={withdrawAmount}
               onChange={(e) => setWithdrawAmount(e.target.value)}
-              className="bg-muted border-none font-mono text-lg"
+              className="wallet-input font-mono text-lg"
             />
           </div>
           <div className="space-y-2">
-            <Label>Chave PIX para receber</Label>
+            <Label className="text-white/50 text-xs uppercase tracking-wider">Chave PIX para receber</Label>
             <Input
               placeholder="CPF, email, telefone ou chave aleatória"
               value={withdrawPix}
               onChange={(e) => setWithdrawPix(e.target.value)}
-              className="bg-muted border-none font-mono"
+              className="wallet-input font-mono"
             />
           </div>
         </div>
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-muted-foreground">
+        <div className="flex items-center justify-between mt-4">
+          <p className="text-[11px] text-white/30">
             Saques são processados pelo administrador em até 24h.
           </p>
-          <Button onClick={handleWithdraw} disabled={submitting} className="gap-2">
+          <Button onClick={handleWithdraw} disabled={submitting} className="gap-2 gradient-pink border-none text-primary-foreground hover:opacity-90">
             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUpRight className="h-4 w-4" />}
             Sacar
           </Button>
@@ -297,47 +299,49 @@ export const WalletTab = () => {
       </div>
 
       {/* ---- Transaction History ---- */}
-      <div className="rounded-xl border border-border bg-card">
-        <div className="border-b border-border p-5">
-          <h3 className="font-display font-semibold">Histórico de Transações</h3>
+      <div className="wallet-section">
+        <div className="wallet-section-header mb-4">
+          <div className="wallet-section-icon">
+            <DollarSign className="h-4 w-4 text-primary" />
+          </div>
+          <h3 className="text-white font-display font-semibold text-sm">Histórico de Transações</h3>
         </div>
         {transactions.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-10">
+          <p className="text-sm text-white/30 text-center py-10">
             Nenhuma transação ainda
           </p>
         ) : (
-          <div className="divide-y divide-border">
+          <div className="space-y-2">
             {transactions.map((tx) => (
-              <div key={tx.id} className="flex items-center justify-between px-5 py-3">
+              <div key={tx.id} className="wallet-tx-row">
                 <div className="flex items-center gap-3">
                   <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${
-                    tx.type === "deposit" ? "bg-emerald-500/10" : "bg-orange-500/10"
+                    tx.type === "deposit" ? "bg-emerald-500/15" : "bg-orange-500/15"
                   }`}>
                     {tx.type === "deposit" ? (
-                      <ArrowDownLeft className="h-4 w-4 text-emerald-500" />
+                      <ArrowDownLeft className="h-4 w-4 text-emerald-400" />
                     ) : (
-                      <ArrowUpRight className="h-4 w-4 text-orange-500" />
+                      <ArrowUpRight className="h-4 w-4 text-orange-400" />
                     )}
                   </div>
                   <div>
-                    <p className="text-sm font-medium">
+                    <p className="text-sm font-medium text-white">
                       {tx.type === "deposit" ? "Depósito" : "Saque"}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-[11px] text-white/30">
                       {tx.description || "—"} · {formatDistanceToNow(new Date(tx.created_at), { addSuffix: true, locale: ptBR })}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className={`text-sm font-bold ${tx.type === "deposit" ? "text-emerald-500" : "text-orange-500"}`}>
+                  <span className={`text-sm font-bold ${tx.type === "deposit" ? "text-emerald-400" : "text-orange-400"}`}>
                     {tx.type === "deposit" ? "+" : "−"}{fmt(tx.amount_cents)}
                   </span>
-                  <Badge
-                    variant={tx.status === "completed" ? "default" : tx.status === "pending" ? "secondary" : "destructive"}
-                    className="text-[10px]"
-                  >
+                  <span className={`wallet-tx-badge ${
+                    tx.status === "completed" ? "completed" : tx.status === "pending" ? "pending" : "rejected"
+                  }`}>
                     {tx.status === "completed" ? "Concluído" : tx.status === "pending" ? "Pendente" : "Rejeitado"}
-                  </Badge>
+                  </span>
                 </div>
               </div>
             ))}
