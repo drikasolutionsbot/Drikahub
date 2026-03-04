@@ -475,9 +475,7 @@ const LandingPage = () => {
 
             {/* Pro */}
             <ScrollReveal delay={0.15}>
-              <div className="pricing-card pricing-card--pro group relative h-full transition-all duration-300 hover:scale-[1.03] ring-2 ring-primary/50 scale-[1.02] pt-4 overflow-visible bg-white">
-                {/* Glow highlight */}
-                <div className="absolute -inset-[1px] rounded-[.5rem_2rem] bg-gradient-to-r from-primary/40 to-pink-500/40 blur-sm -z-10" />
+              <div className="pricing-card group relative h-full transition-all duration-300 hover:scale-[1.03] scale-[1.02] pt-4 overflow-visible bg-white">
                 {/* Popular badge */}
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20">
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FF2849] px-5 py-1.5 text-[11px] font-bold text-white uppercase tracking-wider shadow-[0_0_25px_rgba(255,40,73,0.5)] animate-pulse-glow whitespace-nowrap">
