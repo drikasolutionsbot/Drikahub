@@ -101,25 +101,91 @@ Deno.serve(async (req) => {
 
     // ---- DISCORD SYNC ----
     if (action === "sync_to_discord") {
-      // Fetch all enabled settings for the tenant
+      // Fetch all settings and whitelist
       const { data: settings } = await supabase
         .from("protection_settings")
         .select("*")
-        .eq("tenant_id", tenant_id)
-        .eq("enabled", true);
+        .eq("tenant_id", tenant_id);
 
       const { data: whitelist } = await supabase
         .from("protection_whitelist")
         .select("*")
         .eq("tenant_id", tenant_id);
 
-      // Return the full protection config for the bot to consume
+      // Get tenant info for bot token and log channel
+      const { data: tenantData } = await supabase
+        .from("tenants")
+        .select("discord_guild_id, bot_token_encrypted")
+        .eq("id", tenant_id)
+        .single();
+
+      // Get log channel config
+      const { data: channelConfig } = await supabase
+        .from("channel_configs")
+        .select("discord_channel_id")
+        .eq("tenant_id", tenant_id)
+        .eq("channel_key", "protection_logs")
+        .maybeSingle();
+
+      const enabledSettings = (settings || []).filter((s: any) => s.enabled);
+      const disabledSettings = (settings || []).filter((s: any) => !s.enabled);
+      const syncedAt = new Date().toISOString();
+
+      // Send sync notification to Discord log channel if configured
+      const botToken = Deno.env.get("DISCORD_BOT_TOKEN");
+      const logChannelId = channelConfig?.discord_channel_id;
+
+      if (botToken && logChannelId) {
+        const moduleLines = enabledSettings.map((s: any) => `✅ **${s.module_key}**`).join("\n");
+        const disabledLines = disabledSettings.map((s: any) => `❌ ~~${s.module_key}~~`).join("\n");
+        const whitelistCount = (whitelist || []).length;
+
+        const embed = {
+          title: "🛡️ Proteção Sincronizada",
+          description: `As configurações de proteção foram atualizadas via painel.`,
+          color: 0x57F287,
+          fields: [
+            {
+              name: `Módulos Ativos (${enabledSettings.length})`,
+              value: moduleLines || "Nenhum",
+              inline: true,
+            },
+            {
+              name: `Módulos Inativos (${disabledSettings.length})`,
+              value: disabledLines || "Nenhum",
+              inline: true,
+            },
+            {
+              name: "Whitelist",
+              value: `${whitelistCount} entrada(s)`,
+              inline: true,
+            },
+          ],
+          footer: { text: `Sincronizado em` },
+          timestamp: syncedAt,
+        };
+
+        try {
+          await fetch(`https://discord.com/api/v10/channels/${logChannelId}/messages`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bot ${botToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ embeds: [embed] }),
+          });
+        } catch (e) {
+          console.error("Failed to send Discord sync message:", e);
+        }
+      }
+
       return json({
         success: true,
         protection_config: {
           settings: settings || [],
           whitelist: whitelist || [],
-          synced_at: new Date().toISOString(),
+          synced_at: syncedAt,
+          guild_id: tenantData?.discord_guild_id,
         },
       });
     }

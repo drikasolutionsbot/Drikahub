@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Shield, ShieldAlert, ShieldCheck, ShieldOff, Ban, Users, MessageSquare,
   Zap, Link2, UserX, AlertTriangle, Clock, RefreshCw, Plus, Trash2,
@@ -235,6 +235,7 @@ const ProtectionPage = () => {
   const [logs, setLogs] = useState<ProtectionLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
 
   // Whitelist form
@@ -304,7 +305,8 @@ const ProtectionPage = () => {
         config: existing?.config || defaultConfig,
       });
       toast.success(enabled ? "Módulo ativado" : "Módulo desativado", { description: mod.name });
-      fetchData();
+      await fetchData();
+      autoSync();
     } catch (err: any) { toast.error(err.message); }
   };
 
@@ -322,20 +324,27 @@ const ProtectionPage = () => {
         enabled: existing?.enabled ?? false,
         config: merged,
       });
-      fetchData();
+      await fetchData();
+      autoSync();
     } catch (err: any) { toast.error(err.message); }
   };
 
-  const syncToDiscord = async () => {
+  const syncToDiscord = useCallback(async (silent = false) => {
     setSyncing(true);
     try {
       const result = await invoke({ action: "sync_to_discord" });
       if (result?.success) {
-        toast.success("🛡️ Proteção sincronizada", { description: "Configurações enviadas ao bot do Discord" });
+        setLastSyncedAt(result.protection_config?.synced_at || new Date().toISOString());
+        if (!silent) toast.success("🛡️ Proteção sincronizada", { description: "Configurações enviadas ao Discord" });
       }
-    } catch (err: any) { toast.error(err.message); }
+    } catch (err: any) { if (!silent) toast.error(err.message); }
     finally { setSyncing(false); }
-  };
+  }, [invoke]);
+
+  // Auto-sync helper — debounced
+  const autoSync = useCallback(() => {
+    syncToDiscord(true);
+  }, [syncToDiscord]);
 
   const addWhitelist = async () => {
     if (!wlForm.discord_id.trim()) { toast.error("ID obrigatório"); return; }
@@ -344,7 +353,8 @@ const ProtectionPage = () => {
       await invoke({ action: "add_whitelist", ...wlForm });
       toast.success("Adicionado à whitelist");
       setWlDialogOpen(false);
-      fetchData();
+      await fetchData();
+      autoSync();
     } catch (err: any) { toast.error(err.message); }
     finally { setSavingWl(false); }
   };
@@ -353,7 +363,8 @@ const ProtectionPage = () => {
     try {
       await invoke({ action: "remove_whitelist", whitelist_id: id });
       toast.success("Removido da whitelist");
-      fetchData();
+      await fetchData();
+      autoSync();
     } catch (err: any) { toast.error(err.message); }
   };
 
@@ -410,10 +421,15 @@ const ProtectionPage = () => {
           <Button variant="outline" size="sm" onClick={fetchData} className="gap-2">
             <RefreshCw className="h-4 w-4" /> Atualizar
           </Button>
-          <Button size="sm" onClick={syncToDiscord} disabled={syncing} className="gap-2 glow-pink">
+          <Button size="sm" onClick={() => syncToDiscord(false)} disabled={syncing} className="gap-2 glow-pink">
             <Zap className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
-            {syncing ? "Sincronizando..." : "Sincronizar com Discord"}
+            {syncing ? "Sincronizando..." : "Sincronizar"}
           </Button>
+          {lastSyncedAt && (
+            <span className="text-[10px] text-muted-foreground self-center">
+              Sync: {formatDistanceToNow(new Date(lastSyncedAt), { addSuffix: true, locale: ptBR })}
+            </span>
+          )}
         </div>
       </div>
 
