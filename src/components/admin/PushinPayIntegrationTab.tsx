@@ -11,7 +11,7 @@ import { toast } from "sonner";
 
 const PLANS_PREVIEW = [
   { name: "Drika Solutions Free", price: "Grátis", features: ["Recursos básicos", "1 servidor"] },
-  { name: "Drika Solutions Pro", price: "—", features: ["Recursos avançados", "Servidores ilimitados", "Suporte prioritário"] },
+  { name: "Drika Solutions Pro", price: "R$ 26,90/mês", features: ["Recursos avançados", "1 servidor", "Suporte prioritário"] },
 ];
 
 const PushinPayIntegrationTab = () => {
