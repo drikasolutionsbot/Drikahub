@@ -45,32 +45,40 @@ Deno.serve(async (req) => {
       (existing || []).map((c: any) => [c.channel_key, c])
     );
 
-    const upserts: any[] = [];
+    const updates: any[] = [];
+    const inserts: any[] = [];
     const deletes: string[] = [];
 
     for (const [key, value] of Object.entries(channels)) {
       const ex = existingMap.get(key);
       if (ex) {
-        // Update if changed
         if (ex.discord_channel_id !== value) {
           if (value) {
-            upserts.push({ id: ex.id, tenant_id, channel_key: key, discord_channel_id: value });
+            updates.push({ id: ex.id, tenant_id, channel_key: key, discord_channel_id: value });
           } else {
-            // Clear: delete the row
             deletes.push(ex.id);
           }
         }
       } else if (value) {
-        // Insert new
-        upserts.push({ tenant_id, channel_key: key, discord_channel_id: value });
+        inserts.push({ tenant_id, channel_key: key, discord_channel_id: value });
       }
     }
 
-    if (upserts.length > 0) {
-      const { error: upsertErr } = await supabase
+    if (updates.length > 0) {
+      for (const up of updates) {
+        const { error: upErr } = await supabase
+          .from("channel_configs")
+          .update({ discord_channel_id: up.discord_channel_id })
+          .eq("id", up.id);
+        if (upErr) throw upErr;
+      }
+    }
+
+    if (inserts.length > 0) {
+      const { error: insErr } = await supabase
         .from("channel_configs")
-        .upsert(upserts, { onConflict: "id" });
-      if (upsertErr) throw upsertErr;
+        .insert(inserts);
+      if (insErr) throw insErr;
     }
 
     if (deletes.length > 0) {
@@ -82,11 +90,12 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, updated: upserts.length, deleted: deletes.length }),
+      JSON.stringify({ success: true, updated: updates.length + inserts.length, deleted: deletes.length }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
+  } catch (error: any) {
+    const message = error?.message || error?.msg || (typeof error === "string" ? error : JSON.stringify(error));
+    console.error("manage-channel-configs error:", message, error);
     return new Response(JSON.stringify({ error: message }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
