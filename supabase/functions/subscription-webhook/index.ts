@@ -51,6 +51,15 @@ serve(async (req) => {
       });
     }
 
+    // Check admin config for auto_activate
+    const { data: config } = await supabase
+      .from("landing_config")
+      .select("auto_activate_plan")
+      .limit(1)
+      .single();
+
+    const autoActivate = config?.auto_activate_plan !== false;
+
     // Mark as paid
     const now = new Date();
     const periodEnd = new Date(now);
@@ -67,18 +76,22 @@ serve(async (req) => {
       })
       .eq("id", subPayment.id);
 
-    // Activate the tenant's plan
-    await supabase
-      .from("tenants")
-      .update({
-        plan: "pro",
-        plan_started_at: now.toISOString(),
-        plan_expires_at: periodEnd.toISOString(),
-        updated_at: now.toISOString(),
-      })
-      .eq("id", subPayment.tenant_id);
+    // Activate the tenant's plan only if auto_activate is enabled
+    if (autoActivate) {
+      await supabase
+        .from("tenants")
+        .update({
+          plan: "pro",
+          plan_started_at: now.toISOString(),
+          plan_expires_at: periodEnd.toISOString(),
+          updated_at: now.toISOString(),
+        })
+        .eq("id", subPayment.tenant_id);
 
-    console.log(`Subscription activated for tenant ${subPayment.tenant_id} until ${periodEnd.toISOString()}`);
+      console.log(`Subscription activated for tenant ${subPayment.tenant_id} until ${periodEnd.toISOString()}`);
+    } else {
+      console.log(`Payment recorded for tenant ${subPayment.tenant_id} but auto-activate is disabled`);
+    }
 
     return new Response(
       JSON.stringify({ success: true, tenant_id: subPayment.tenant_id, plan: "pro", expires_at: periodEnd.toISOString() }),

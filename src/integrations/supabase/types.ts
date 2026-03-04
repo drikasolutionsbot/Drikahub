@@ -436,6 +436,7 @@ export type Database = {
       }
       landing_config: {
         Row: {
+          auto_activate_plan: boolean
           created_at: string
           id: string
           pro_price_cents: number
@@ -447,11 +448,13 @@ export type Database = {
           stat_sales_label: string
           stat_servers: number
           stat_servers_label: string
+          suspend_on_expire: boolean
           updated_at: string
           video_type: string
           video_url: string | null
         }
         Insert: {
+          auto_activate_plan?: boolean
           created_at?: string
           id?: string
           pro_price_cents?: number
@@ -463,11 +466,13 @@ export type Database = {
           stat_sales_label?: string
           stat_servers?: number
           stat_servers_label?: string
+          suspend_on_expire?: boolean
           updated_at?: string
           video_type?: string
           video_url?: string | null
         }
         Update: {
+          auto_activate_plan?: boolean
           created_at?: string
           id?: string
           pro_price_cents?: number
@@ -479,6 +484,7 @@ export type Database = {
           stat_sales_label?: string
           stat_servers?: number
           stat_servers_label?: string
+          suspend_on_expire?: boolean
           updated_at?: string
           video_type?: string
           video_url?: string | null
