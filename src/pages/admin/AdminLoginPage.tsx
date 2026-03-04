@@ -55,11 +55,7 @@ const AdminLoginPage = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 h-80 w-80 rounded-full bg-primary/5 blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 h-80 w-80 rounded-full bg-secondary/5 blur-3xl" />
-      </div>
+    <div className="flex min-h-screen items-center justify-center admin-pattern-bg">
 
       <div className="relative z-10 w-full max-w-md space-y-8 px-4">
         <div className="flex flex-col items-center space-y-4 animate-fade-in">
