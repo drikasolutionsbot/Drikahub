@@ -138,7 +138,7 @@ const LandingPage = () => {
           <ScrollReveal>
             <div className="pricing-card group relative h-full transition-all duration-300 hover:scale-[1.03]">
               <div className="pricing-card-img overflow-hidden rounded-[.5rem_2rem] absolute inset-0">
-                <div className="w-full h-full bg-gradient-to-r from-[#1a0a12] to-[#33001b] transition-transform duration-300 group-hover:scale-[1.15]" />
+                <div className="w-full h-full bg-gradient-to-r from-[#33001b] to-[#ff0084] transition-transform duration-300 group-hover:scale-[1.15]" />
               </div>
               <div className="relative z-10 p-5 flex flex-col h-full">
                 <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-1">Free</h3>
