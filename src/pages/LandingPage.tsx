@@ -283,8 +283,15 @@ const LandingPage = () => {
             </button>
           </div>
 
+          {/* Login link */}
+          <div className="mt-6 animate-fade-in" style={{ animationDelay: "0.25s" }}>
+            <button onClick={() => navigate("/login")} className="text-sm text-white/60 hover:text-white transition-colors bg-transparent border-none cursor-pointer font-medium underline underline-offset-4 decoration-white/30 hover:decoration-white/60">
+              Já tenho um token — Entrar
+            </button>
+          </div>
+
           {/* Social proof */}
-          <div className="mt-8 animate-fade-in" style={{ animationDelay: "0.3s" }}>
+          <div className="mt-4 animate-fade-in" style={{ animationDelay: "0.3s" }}>
             <p className="text-xs text-white/40 font-medium">
               Usado por <span className="text-primary font-bold">+120 servidores</span> no Discord
             </p>
