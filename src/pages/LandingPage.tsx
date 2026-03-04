@@ -362,18 +362,19 @@ const LandingPage = () => {
 
             {/* Pro */}
             <ScrollReveal delay={0.15}>
-              <div className="pricing-card pricing-card--pro group relative h-full transition-all duration-300 hover:scale-[1.03] ring-2 ring-primary/50 scale-[1.02]">
+              <div className="pricing-card pricing-card--pro group relative h-full transition-all duration-300 hover:scale-[1.03] ring-2 ring-primary/50 scale-[1.02] pt-4">
                 <div className="pricing-card-img overflow-hidden rounded-[.5rem_2rem] absolute inset-0">
                   <div className="w-full h-full bg-gradient-to-r from-[#33001b] to-[#ff0084] transition-transform duration-300 group-hover:scale-[1.15]" />
                 </div>
                 {/* Glow highlight */}
                 <div className="absolute -inset-[1px] rounded-[.5rem_2rem] bg-gradient-to-r from-primary/40 to-pink-500/40 blur-sm -z-10" />
-                <div className="relative z-10 p-5 flex flex-col h-full">
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FF2849] px-4 py-1.5 text-[11px] font-bold text-white uppercase tracking-wider shadow-[0_0_25px_rgba(255,40,73,0.5)] animate-pulse-glow">
-                      <Crown className="h-3 w-3" /> Popular
-                    </span>
-                  </div>
+                {/* Popular badge */}
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FF2849] px-5 py-1.5 text-[11px] font-bold text-white uppercase tracking-wider shadow-[0_0_25px_rgba(255,40,73,0.5)] animate-pulse-glow whitespace-nowrap">
+                    <Crown className="h-3 w-3" /> Popular
+                  </span>
+                </div>
+                <div className="relative z-10 p-5 pt-3 flex flex-col h-full">
                   <h3 className="text-xs font-semibold text-primary uppercase tracking-wider mb-1">Pro</h3>
                   <div className="text-2xl font-extrabold font-display mb-0.5">R$ 26,90</div>
                   <p className="text-xs text-white/40 mb-4">por mês</p>
