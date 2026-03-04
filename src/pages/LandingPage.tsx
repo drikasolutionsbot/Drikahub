@@ -133,55 +133,69 @@ const LandingPage = () => {
 
       {/* ===== PRICING ===== */}
       <section className="relative z-10 py-16 px-4 pb-24">
-        <div className="max-w-xl mx-auto grid md:grid-cols-2 gap-4">
+        <div className="max-w-xl mx-auto grid md:grid-cols-2 gap-6">
           {/* Free */}
           <ScrollReveal>
-            <div className="rounded-2xl border border-white/10 bg-black/40 backdrop-blur-md p-5 flex flex-col h-full">
-              <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-1">Free</h3>
-              <div className="text-2xl font-extrabold font-display mb-0.5">R$ 0</div>
-              <p className="text-xs text-white/40 mb-4">4 dias grátis</p>
-              <ul className="space-y-1.5 mb-5 flex-1">
-                {["Painel completo", "1 servidor", "Loja com PIX", "Suporte via ticket"].map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-xs text-white/50">
-                    <Check className="h-3 w-3 text-white/30 shrink-0" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <button
-                onClick={() => navigate("/signup")}
-                className="w-full py-2 rounded-full border border-white/20 bg-white/5 hover:bg-white/10 text-white font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 text-sm"
-              >
-                Começar <ArrowRight className="h-3.5 w-3.5" />
-              </button>
+            <div className="pricing-card group relative h-full transition-all duration-300 hover:scale-[1.03]">
+              <div className="pricing-card-img overflow-hidden rounded-[.5rem_2rem] absolute inset-0">
+                <div className="w-full h-full bg-gradient-to-r from-[#1a0a12] to-[#33001b] transition-transform duration-300 group-hover:scale-[1.15]" />
+              </div>
+              <div className="relative z-10 p-5 flex flex-col h-full">
+                <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-1">Free</h3>
+                <div className="text-2xl font-extrabold font-display mb-0.5">R$ 0</div>
+                <p className="text-xs text-white/40 mb-4">4 dias grátis</p>
+                <ul className="space-y-1.5 mb-5 flex-1">
+                  {["Painel completo", "1 servidor", "Loja com PIX", "Suporte via ticket"].map((f) => (
+                    <li key={f} className="flex items-center gap-2 text-xs text-white/50">
+                      <Check className="h-3 w-3 text-white/30 shrink-0" />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <div className="pricing-card-label backdrop-blur-sm bg-black/20 rounded-[.5rem_2rem] p-3 transition-all duration-500 hover:translate-x-1 hover:[perspective:100px] hover:[transform:perspective(100px)_translateX(7px)_rotateX(3deg)_rotateY(3deg)]">
+                  <button
+                    onClick={() => navigate("/signup")}
+                    className="w-full py-2 rounded-full border border-white/20 bg-white/5 hover:bg-white/10 text-white font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 text-sm"
+                  >
+                    Começar <ArrowRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
             </div>
           </ScrollReveal>
 
           {/* Pro */}
           <ScrollReveal delay={0.15}>
-            <div className="rounded-2xl border-2 border-primary/40 bg-black/50 backdrop-blur-md p-5 flex flex-col relative glow-pink h-full">
-              <div className="absolute top-3 right-3">
-                <span className="inline-flex items-center gap-1 rounded-full bg-primary/20 border border-primary/30 px-2 py-0.5 text-[10px] font-bold text-primary uppercase tracking-wider">
-                  <Crown className="h-2.5 w-2.5" /> Popular
-                </span>
+            <div className="pricing-card pricing-card--pro group relative h-full transition-all duration-300 hover:scale-[1.03]">
+              <div className="pricing-card-img overflow-hidden rounded-[.5rem_2rem] absolute inset-0">
+                <div className="w-full h-full bg-gradient-to-r from-[#33001b] to-[#ff0084] transition-transform duration-300 group-hover:scale-[1.15]" />
               </div>
-              <h3 className="text-xs font-semibold text-primary uppercase tracking-wider mb-1">Pro</h3>
-              <div className="text-2xl font-extrabold font-display mb-0.5">R$ 26,90</div>
-              <p className="text-xs text-white/40 mb-4">por mês</p>
-              <ul className="space-y-1.5 mb-5 flex-1">
-                {["Tudo do Free", "Sem limite de tempo", "Segurança avançada", "Suporte prioritário"].map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-xs text-white/70">
-                    <Check className="h-3 w-3 text-primary shrink-0" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <button
-                onClick={() => navigate("/signup?plan=pro")}
-                className="w-full py-2 rounded-full bg-[#FF2849] hover:bg-[#e52441] text-white font-semibold transition-all cursor-pointer border-none flex items-center justify-center gap-2 text-sm shadow-[0_0_20px_rgba(255,40,73,0.3)]"
-              >
-                Assinar Pro <ArrowRight className="h-3.5 w-3.5" />
-              </button>
+              <div className="relative z-10 p-5 flex flex-col h-full">
+                <div className="absolute top-3 right-3 z-20">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/20 border border-primary/30 px-2 py-0.5 text-[10px] font-bold text-primary uppercase tracking-wider backdrop-blur-sm">
+                    <Crown className="h-2.5 w-2.5" /> Popular
+                  </span>
+                </div>
+                <h3 className="text-xs font-semibold text-primary uppercase tracking-wider mb-1">Pro</h3>
+                <div className="text-2xl font-extrabold font-display mb-0.5">R$ 26,90</div>
+                <p className="text-xs text-white/40 mb-4">por mês</p>
+                <ul className="space-y-1.5 mb-5 flex-1">
+                  {["Tudo do Free", "Sem limite de tempo", "Segurança avançada", "Suporte prioritário"].map((f) => (
+                    <li key={f} className="flex items-center gap-2 text-xs text-white/70">
+                      <Check className="h-3 w-3 text-primary shrink-0" />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <div className="pricing-card-label backdrop-blur-sm bg-black/20 rounded-[.5rem_2rem] p-3 transition-all duration-500 hover:translate-x-1 hover:[perspective:100px] hover:[transform:perspective(100px)_translateX(7px)_rotateX(3deg)_rotateY(3deg)]">
+                  <button
+                    onClick={() => navigate("/signup?plan=pro")}
+                    className="w-full py-2 rounded-full bg-[#FF2849] hover:bg-[#e52441] text-white font-semibold transition-all cursor-pointer border-none flex items-center justify-center gap-2 text-sm shadow-[0_0_20px_rgba(255,40,73,0.3)]"
+                  >
+                    Assinar Pro <ArrowRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
             </div>
           </ScrollReveal>
         </div>
