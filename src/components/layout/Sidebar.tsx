@@ -41,7 +41,7 @@ const navGroups = [
       { label: "Canais", icon: Hash, path: "/channels" },
       { label: "Cargos", icon: ShieldCheck, path: "/roles" },
       { label: "Loja", icon: Store, path: "/store" },
-      { label: "Ações Automáticas", icon: Zap, path: "/automations" },
+      
       { label: "Sorteios", icon: Gift, path: "/giveaways" },
       { label: "VIPs", icon: Crown, path: "/vips" },
       { label: "Tickets", icon: Ticket, path: "/tickets" },
