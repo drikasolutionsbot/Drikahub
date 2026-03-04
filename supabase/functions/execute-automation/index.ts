@@ -172,9 +172,9 @@ async function executeAction(
   const username = triggerData?.discord_username || "usuário";
 
   // Replace variables in text
-  const replaceVars = (text: string): string => {
+  const replaceVars = (text: string, extraVars?: Record<string, string>): string => {
     if (!text) return text;
-    return text
+    let result = text
       .replace(/\{user\}/g, userId ? `<@${userId}>` : username)
       .replace(/\{username\}/g, username)
       .replace(/\{server\}/g, tenant?.name || "servidor")
@@ -182,6 +182,13 @@ async function executeAction(
       .replace(/\{product\}/g, triggerData?.product_name || "")
       .replace(/\{order\}/g, triggerData?.order_number ? `#${triggerData.order_number}` : "")
       .replace(/\{channel\}/g, triggerData?.channel_id ? `<#${triggerData.channel_id}>` : "");
+    if (extraVars) {
+      for (const [k, v] of Object.entries(extraVars)) {
+        result = result.replace(new RegExp(`\\{${k}\\}`, "g"), v);
+      }
+    }
+    return result;
+  };
   };
 
   switch (action.type) {
@@ -293,9 +300,11 @@ async function executeAction(
       const method = (config.method || "POST").toUpperCase();
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (config.authorization) headers["Authorization"] = config.authorization;
+      const extraVars: Record<string, string> = {};
+      if (config.channel_id) extraVars["channel_id"] = config.channel_id;
       const payload = config.body_template
-        ? JSON.parse(replaceVars(config.body_template))
-        : { trigger_type: triggerData?.trigger_type, ...triggerData };
+        ? JSON.parse(replaceVars(config.body_template, extraVars))
+        : { trigger_type: triggerData?.trigger_type, channel_id: config.channel_id, ...triggerData };
       const fetchOpts: any = { method, headers };
       if (method !== "GET") fetchOpts.body = JSON.stringify(payload);
       const res = await fetch(config.url, fetchOpts);
