@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Plus, Key, Copy, Trash2, Eye, EyeOff, Loader2, Users, Crown, Search, Settings } from "lucide-react";
@@ -166,6 +167,25 @@ const AdminClientsPage = () => {
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast({ title: "Copiado!" });
+  };
+
+  const [deletingTenant, setDeletingTenant] = useState<string | null>(null);
+
+  const handleDeleteTenant = async (tenantId: string, tenantName: string) => {
+    setDeletingTenant(tenantId);
+    try {
+      const { data, error } = await supabase.functions.invoke("delete-tenant", {
+        body: { tenant_id: tenantId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: "Cliente excluído", description: `${tenantName} foi removido permanentemente.` });
+      setTenants((prev) => prev.filter((t) => t.id !== tenantId));
+      if (expandedTenant === tenantId) setExpandedTenant(null);
+    } catch (err: any) {
+      toast({ title: "Erro ao excluir", description: err.message, variant: "destructive" });
+    }
+    setDeletingTenant(null);
   };
 
   const toggleExpand = (tenantId: string) => {
@@ -367,6 +387,40 @@ const AdminClientsPage = () => {
                         <span className="text-xs text-muted-foreground hidden sm:inline">
                           {format(new Date(tenant.created_at), "dd/MM/yyyy")}
                         </span>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={(e) => e.stopPropagation()}
+                              disabled={deletingTenant === tenant.id}
+                            >
+                              {deletingTenant === tenant.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-3.5 w-3.5" />
+                              )}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent className="bg-card border-border" onClick={(e) => e.stopPropagation()}>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Excluir cliente permanentemente?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Todos os dados de <strong>{tenant.name}</strong> serão excluídos: produtos, pedidos, tokens, configurações e o usuário associado. Esta ação não pode ser desfeita.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                onClick={() => handleDeleteTenant(tenant.id, tenant.name)}
+                              >
+                                Excluir Permanentemente
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                         <Key className={`h-4 w-4 transition-transform ${isExpanded ? "text-primary" : "text-muted-foreground"}`} />
                       </div>
                     </div>
