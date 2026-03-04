@@ -220,8 +220,11 @@ const AutomationsPage = () => {
         supabase.functions.invoke("discord-channels", { body: { tenant_id: tenantId } }),
         supabase.functions.invoke("manage-roles", { body: { action: "list", tenant_id: tenantId } }),
       ]);
-      if (chData.data && Array.isArray(chData.data)) {
-        setChannels(chData.data.filter((c: any) => c.type === 0 || c.type === 5).sort((a: any, b: any) => a.name.localeCompare(b.name)));
+      const chResult = chData.data;
+      if (chResult?.channels && Array.isArray(chResult.channels)) {
+        setChannels(chResult.channels.filter((c: any) => c.type === undefined || c.type === 0 || c.type === 5).sort((a: any, b: any) => (a.name || "").localeCompare(b.name || "")));
+      } else if (Array.isArray(chResult)) {
+        setChannels(chResult.filter((c: any) => c.type === 0 || c.type === 5).sort((a: any, b: any) => (a.name || "").localeCompare(b.name || "")));
       }
       // Try to get Discord roles directly
       const guildInfo = await supabase.functions.invoke("discord-guild-info", { body: { tenant_id: tenantId } });
