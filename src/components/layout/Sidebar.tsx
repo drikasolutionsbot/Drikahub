@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import {
-  LayoutDashboard, DollarSign, Palette, Box, Hash, ShieldCheck,
+  LayoutDashboard, DollarSign, Palette, Box, Hash, ShieldCheck, Shield,
   Store, Zap, Gift, Crown, Ticket, Cloud, Headset, Settings,
   ChevronLeft, ChevronRight, ClipboardCheck,
 } from "lucide-react";
@@ -41,7 +41,7 @@ const navGroups = [
       { label: "Canais", icon: Hash, path: "/channels" },
       { label: "Cargos", icon: ShieldCheck, path: "/roles" },
       { label: "Loja", icon: Store, path: "/store" },
-      
+      { label: "Proteção", icon: Shield, path: "/protection" },
       { label: "Sorteios", icon: Gift, path: "/giveaways" },
       { label: "VIPs", icon: Crown, path: "/vips" },
       { label: "Tickets", icon: Ticket, path: "/tickets" },
