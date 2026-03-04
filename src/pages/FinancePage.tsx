@@ -18,7 +18,7 @@ import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from "recharts";
-import { format, subDays, startOfDay, endOfDay, parseISO, isWithinInterval } from "date-fns";
+import { format, subDays, startOfDay, endOfDay, parseISO, isWithinInterval, eachDayOfInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { toast } from "@/hooks/use-toast";
@@ -74,22 +74,22 @@ const FinancePage = () => {
     { select: "id,order_number,discord_username,product_name,total_cents,status,payment_provider,created_at", orderBy: "created_at", ascending: false }
   );
 
+  // Period range
+  const periodRange = useMemo(() => {
+    if (period === "custom" && dateFrom && dateTo) {
+      return { from: startOfDay(dateFrom), to: endOfDay(dateTo) };
+    }
+    const days = period === "7d" ? 7 : period === "90d" ? 90 : 30;
+    return { from: startOfDay(subDays(new Date(), days)), to: endOfDay(new Date()) };
+  }, [period, dateFrom, dateTo]);
+
   // Period filtering
   const periodFiltered = useMemo(() => {
-    let from: Date, to: Date;
-    if (period === "custom" && dateFrom && dateTo) {
-      from = startOfDay(dateFrom);
-      to = endOfDay(dateTo);
-    } else {
-      const days = period === "7d" ? 7 : period === "90d" ? 90 : 30;
-      from = startOfDay(subDays(new Date(), days));
-      to = endOfDay(new Date());
-    }
     return orders.filter(o => {
       const d = parseISO(o.created_at);
-      return isWithinInterval(d, { start: from, end: to });
+      return isWithinInterval(d, { start: periodRange.from, end: periodRange.to });
     });
-  }, [orders, period, dateFrom, dateTo]);
+  }, [orders, periodRange]);
 
   // Search + status filter
   const filtered = useMemo(() => {
@@ -113,22 +113,24 @@ const FinancePage = () => {
 
   // Compare with previous period for trend
   const prevPeriodOrders = useMemo(() => {
-    const days = period === "7d" ? 7 : period === "90d" ? 90 : 30;
-    const currentFrom = period === "custom" && dateFrom ? dateFrom : subDays(new Date(), days);
-    const currentTo = period === "custom" && dateTo ? dateTo : new Date();
-    const duration = currentTo.getTime() - currentFrom.getTime();
-    const prevFrom = new Date(currentFrom.getTime() - duration);
-    const prevTo = new Date(currentFrom.getTime() - 1);
+    const duration = periodRange.to.getTime() - periodRange.from.getTime();
+    const prevFrom = new Date(periodRange.from.getTime() - duration);
+    const prevTo = new Date(periodRange.from.getTime() - 1);
     return orders.filter(o => {
       const d = parseISO(o.created_at);
       return isWithinInterval(d, { start: startOfDay(prevFrom), end: endOfDay(prevTo) });
     });
-  }, [orders, period, dateFrom, dateTo]);
+  }, [orders, periodRange]);
 
   const prevPaidOrders = prevPeriodOrders.filter(o => o.status === "paid" || o.status === "delivered");
   const prevRevenue = prevPaidOrders.reduce((s, o) => s + o.total_cents, 0);
   const revenueTrend = prevRevenue > 0 ? Math.round(((totalRevenue - prevRevenue) / prevRevenue) * 100) : totalRevenue > 0 ? 100 : 0;
   const ordersTrend = prevPeriodOrders.length > 0 ? Math.round(((totalOrders - prevPeriodOrders.length) / prevPeriodOrders.length) * 100) : totalOrders > 0 ? 100 : 0;
+
+  // All days in the period
+  const allDays = useMemo(() => {
+    return eachDayOfInterval({ start: periodRange.from, end: periodRange.to }).map(d => format(d, "dd/MM"));
+  }, [periodRange]);
 
   // Chart data - Revenue over time
   const revenueChartData = useMemo(() => {
@@ -137,8 +139,8 @@ const FinancePage = () => {
       const day = format(parseISO(o.created_at), "dd/MM");
       map.set(day, (map.get(day) || 0) + o.total_cents);
     });
-    return Array.from(map.entries()).map(([date, value]) => ({ date, value: value / 100 })).reverse();
-  }, [paidOrders]);
+    return allDays.map(date => ({ date, value: (map.get(date) || 0) / 100 }));
+  }, [paidOrders, allDays]);
 
   // Chart data - Orders per day
   const ordersChartData = useMemo(() => {
@@ -147,8 +149,8 @@ const FinancePage = () => {
       const day = format(parseISO(o.created_at), "dd/MM");
       map.set(day, (map.get(day) || 0) + 1);
     });
-    return Array.from(map.entries()).map(([date, count]) => ({ date, count })).reverse();
-  }, [periodFiltered]);
+    return allDays.map(date => ({ date, count: map.get(date) || 0 }));
+  }, [periodFiltered, allDays]);
 
   // Pie chart data - Status distribution
   const pieData = useMemo(() => {
