@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Shield, Loader2, Mail, Lock } from "lucide-react";
+import { Shield, Loader2, LogIn } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import logo from "@/assets/logo.png";
 
@@ -78,43 +76,50 @@ const AdminLoginPage = () => {
 
         <form onSubmit={handleLogin} className="space-y-4 animate-fade-in" style={{ animationDelay: "0.2s" }}>
           <div className="space-y-3">
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
+            <div className="relative login-floating-input">
+              <input
                 type="email"
+                required
+                autoComplete="off"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email do administrador"
-                className="pl-9 bg-muted border-none h-12"
-                required
+                className="w-full text-base px-4 py-3 bg-transparent border-2 border-white/30 rounded-[20px] outline-none text-white transition-colors focus:border-primary"
               />
+              <label className="absolute left-0 px-4 py-3 ml-2 pointer-events-none text-white/70 font-semibold text-base tracking-wide transition-all duration-300">
+                Email do administrador
+              </label>
             </div>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
+            <div className="relative login-floating-input">
+              <input
                 type="password"
+                required
+                autoComplete="off"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Senha"
-                className="pl-9 bg-muted border-none h-12"
-                required
+                className="w-full text-base px-4 py-3 bg-transparent border-2 border-white/30 rounded-[20px] outline-none text-white transition-colors focus:border-primary"
               />
+              <label className="absolute left-0 px-4 py-3 ml-2 pointer-events-none text-white/70 font-semibold text-base tracking-wide transition-all duration-300">
+                Senha
+              </label>
             </div>
           </div>
 
-          <Button
+          <button
             type="submit"
             disabled={loading || !email.trim() || !password.trim()}
-            className="w-full h-12 gradient-pink text-primary-foreground border-none hover:opacity-90"
+            className="w-full h-10 flex items-center justify-center gap-2 rounded-full bg-[#FF2849] hover:bg-[#e52441] text-white font-medium text-base tracking-wide cursor-pointer border-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors group"
           >
             {loading ? (
               <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Entrando...</>
             ) : (
-              "Entrar"
+              <>
+                <LogIn className="h-5 w-5 group-hover:animate-[flickering_2s_linear_infinite]" />
+                <span>Entrar</span>
+              </>
             )}
-          </Button>
+          </button>
 
-          <p className="text-center text-xs text-muted-foreground">
+          <p className="text-center text-xs text-white/60">
             Apenas usuários com permissão de super admin podem acessar.
           </p>
         </form>
