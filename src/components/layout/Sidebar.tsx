@@ -75,7 +75,7 @@ const NavItem = ({ item, isActive, collapsed }: NavItemProps) => {
         collapsed ? "justify-center w-11 h-11 mx-auto" : "px-3 py-2.5",
         isActive
           ? "bg-primary/15 text-primary shadow-[0_0_16px_hsl(330_100%_71%/0.12)] border border-primary/20"
-          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground border border-transparent"
+          : "text-white/50 hover:bg-white/10 hover:text-white/90 border border-transparent"
       )}
     >
       {isActive && (
@@ -90,10 +90,10 @@ const NavItem = ({ item, isActive, collapsed }: NavItemProps) => {
           collapsed ? "h-[18px] w-[18px]" : "h-4 w-4",
           isActive
             ? "text-primary drop-shadow-[0_0_4px_hsl(330_100%_71%/0.4)]"
-            : "group-hover:text-foreground"
+            : "group-hover:text-white/90"
         )}
       />
-      {!collapsed && <span className="truncate">{item.label}</span>}
+      {!collapsed && <span className="truncate text-white/80">{item.label}</span>}
     </Link>
   );
 
@@ -123,13 +123,22 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
     <TooltipProvider delayDuration={0}>
       <aside
         className={cn(
-          "flex flex-col shrink-0 border-r border-primary/10 transition-all duration-300 bg-gradient-to-b from-[hsl(330_60%_95%)] via-[hsl(330_40%_93%)] to-[hsl(340_50%_90%)]",
+          "relative flex flex-col shrink-0 border-r border-primary/10 transition-all duration-300 overflow-hidden",
           collapsed ? "w-[68px] items-center" : "w-60"
         )}
       >
+        {/* Dark gradient background with pink vertical bars effect */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#1a0a12] via-[#2d0a1e] to-[#1a0a12]" />
+        <div className="absolute inset-0 opacity-30" style={{
+          backgroundImage: `repeating-linear-gradient(90deg, transparent, transparent 12px, hsl(330 80% 45% / 0.25) 12px, hsl(330 80% 45% / 0.12) 14px, transparent 14px, transparent 28px)`,
+        }} />
+        <div className="absolute inset-0 opacity-20" style={{
+          backgroundImage: `repeating-linear-gradient(90deg, transparent, transparent 35px, hsl(330 90% 55% / 0.3) 35px, hsl(330 90% 55% / 0.08) 38px, transparent 38px, transparent 60px)`,
+        }} />
+        <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-primary/10 to-transparent" />
         {/* Logo */}
         <div className={cn(
-          "flex items-center border-b border-border/50 transition-all duration-300",
+          "relative z-10 flex items-center border-b border-white/10 transition-all duration-300",
           collapsed ? "justify-center py-4 px-2" : "gap-3 px-4 py-4"
         )}>
           <Link to="/dashboard" className="group shrink-0">
@@ -144,10 +153,10 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
             <div className="flex flex-col min-w-0">
               <span className="text-sm font-bold leading-tight tracking-wide">
                 <span className="text-gradient-pink">DRIKA</span>{" "}
-                <span className="text-foreground/90">SOLUTIONS</span>
+                <span className="text-white/90">SOLUTIONS</span>
               </span>
               {tenant?.discord_guild_id && (
-                <span className="text-[10px] font-mono text-muted-foreground/70 truncate mt-0.5">
+                <span className="text-[10px] font-mono text-white/30 truncate mt-0.5">
                   {tenant.discord_guild_id}
                 </span>
               )}
@@ -157,7 +166,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
 
         {/* Navigation */}
         <nav className={cn(
-          "flex-1 overflow-y-auto scrollbar-none py-3",
+          "relative z-10 flex-1 overflow-y-auto scrollbar-none py-3",
           collapsed ? "px-2 space-y-1" : "px-2.5 space-y-5"
         )}>
           {collapsed ? (
@@ -174,7 +183,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
           ) : (
             navGroups.map((group) => (
               <div key={group.label}>
-                <p className="px-3 mb-2 text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/50">
+                <p className="px-3 mb-2 text-[10px] font-bold uppercase tracking-[0.15em] text-white/30">
                   {group.label}
                 </p>
                 <div className="space-y-0.5">
@@ -193,12 +202,12 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
         </nav>
 
         {/* Divider */}
-        <div className={cn("mx-auto", collapsed ? "w-6" : "w-[calc(100%-24px)]")}>
-          <div className="h-px bg-gradient-to-r from-transparent via-border/60 to-transparent" />
+        <div className={cn("relative z-10 mx-auto", collapsed ? "w-6" : "w-[calc(100%-24px)]")}>
+          <div className="h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
         </div>
 
         {/* Bottom section */}
-        <div className={cn("py-2.5", collapsed ? "px-2 space-y-1" : "px-2.5 space-y-0.5")}>
+        <div className={cn("relative z-10 py-2.5", collapsed ? "px-2 space-y-1" : "px-2.5 space-y-0.5")}>
           {bottomItems.map((item) => (
             <NavItem
               key={item.path}
@@ -213,7 +222,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
         <button
           onClick={onToggle}
           className={cn(
-            "flex items-center justify-center h-10 border-t border-border/50 text-muted-foreground/50 hover:text-primary hover:bg-primary/5 transition-all duration-200"
+            "relative z-10 flex items-center justify-center h-10 border-t border-white/10 text-white/30 hover:text-primary hover:bg-primary/10 transition-all duration-200"
           )}
         >
           {collapsed ? (
