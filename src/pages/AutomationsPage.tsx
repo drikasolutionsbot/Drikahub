@@ -156,7 +156,7 @@ const ACTIONS: ActionDef[] = [
     { key: "description", label: "Descrição", type: "textarea", placeholder: "Conteúdo do anúncio" },
     { key: "color", label: "Cor (hex)", type: "text", placeholder: "#FF69B4" },
   ]},
-  { key: "send_webhook", label: "Chamar Webhook / API", description: "Faz uma requisição HTTP para uma URL externa (ex: seu bot)", icon: Globe, color: "text-yellow-400 bg-yellow-500/10", configFields: [
+  { key: "send_webhook", label: "Chamar Webhook / API", description: "Faz uma requisição HTTP para uma URL externa (ex: seu bot no Railway)", icon: Globe, color: "text-yellow-400 bg-yellow-500/10", configFields: [
     { key: "url", label: "URL do Webhook", type: "text", placeholder: "https://drika-solutions24horas-production.up.railway.app/send" },
     { key: "method", label: "Método HTTP", type: "select", options: [
       { value: "POST", label: "POST" },
@@ -164,8 +164,9 @@ const ACTIONS: ActionDef[] = [
       { value: "PUT", label: "PUT" },
       { value: "PATCH", label: "PATCH" },
     ]},
-    { key: "authorization", label: "Authorization Header (opcional)", type: "text", placeholder: "Bearer SEU_SECRET" },
-    { key: "body_template", label: "Body (JSON)", type: "textarea", placeholder: '{"channelId": "123456789", "message": "✅ Pagamento confirmado! Pedido {order} do cliente {username}."}' },
+    { key: "authorization", label: "Authorization Header", type: "text", placeholder: "Bearer drika_bot_seguro_2026" },
+    { key: "channel_id", label: "Canal de destino (para {channel_id} no body)", type: "channel" },
+    { key: "body_template", label: "Body (JSON)", type: "textarea", placeholder: '{"channelId": "{channel_id}", "message": "✅ Pagamento confirmado! Pedido {order} do cliente {username}."}' },
   ]},
 ];
 
