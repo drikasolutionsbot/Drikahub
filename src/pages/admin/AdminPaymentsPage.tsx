@@ -4,77 +4,127 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { StatusBadge } from "@/components/ui/status-badge";
-import { Search, Filter, DollarSign, ShoppingCart, TrendingUp } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Search, Filter, DollarSign, CreditCard, TrendingUp, Crown, Clock, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { StatCard } from "@/components/dashboard/StatCard";
 
+interface SubscriptionPayment {
+  id: string;
+  tenant_id: string;
+  amount_cents: number;
+  plan: string;
+  status: string;
+  payment_provider: string;
+  payment_id: string | null;
+  payer_name: string | null;
+  payer_email: string | null;
+  period_start: string | null;
+  period_end: string | null;
+  paid_at: string | null;
+  created_at: string;
+  tenant_name?: string;
+}
+
+const STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; className: string }> = {
+  paid: { label: "Pago", icon: CheckCircle2, className: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" },
+  pending: { label: "Pendente", icon: Clock, className: "bg-amber-500/10 text-amber-500 border-amber-500/20" },
+  expired: { label: "Expirado", icon: AlertCircle, className: "bg-muted text-muted-foreground border-border" },
+  canceled: { label: "Cancelado", icon: XCircle, className: "bg-destructive/10 text-destructive border-destructive/20" },
+  refunded: { label: "Reembolsado", icon: XCircle, className: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
+};
+
+const PLAN_LABELS: Record<string, { label: string; color: string }> = {
+  free: { label: "Free", color: "bg-muted text-muted-foreground" },
+  starter: { label: "Starter", color: "bg-blue-500/10 text-blue-500" },
+  pro: { label: "Pro", color: "bg-emerald-500/10 text-emerald-500" },
+  business: { label: "Business", color: "bg-amber-500/10 text-amber-500" },
+};
+
 const AdminPaymentsPage = () => {
-  const [orders, setOrders] = useState<any[]>([]);
+  const [payments, setPayments] = useState<SubscriptionPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [dateFilter, setDateFilter] = useState("all");
+  const [planFilter, setPlanFilter] = useState("all");
 
   useEffect(() => {
-    const fetch = async () => {
-      const { data } = await supabase
-        .from("orders")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(500);
-      setOrders(data || []);
+    const fetchPayments = async () => {
+      // Fetch payments and tenants in parallel
+      const [paymentsRes, tenantsRes] = await Promise.all([
+        supabase.from("subscription_payments").select("*").order("created_at", { ascending: false }).limit(500),
+        supabase.from("tenants").select("id, name"),
+      ]);
+
+      const tenantMap = new Map((tenantsRes.data || []).map((t: any) => [t.id, t.name]));
+      const enriched = (paymentsRes.data || []).map((p: any) => ({
+        ...p,
+        tenant_name: tenantMap.get(p.tenant_id) || "Desconhecido",
+      }));
+
+      setPayments(enriched);
       setLoading(false);
     };
-    fetch();
+    fetchPayments();
   }, []);
 
   const filtered = useMemo(() => {
-    let result = orders;
+    let result = payments;
 
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(
-        (o) =>
-          o.product_name?.toLowerCase().includes(q) ||
-          o.discord_username?.toLowerCase().includes(q) ||
-          o.discord_user_id?.includes(q) ||
-          String(o.order_number).includes(q) ||
-          o.payment_provider?.toLowerCase().includes(q)
+        (p) =>
+          p.tenant_name?.toLowerCase().includes(q) ||
+          p.payer_name?.toLowerCase().includes(q) ||
+          p.payer_email?.toLowerCase().includes(q) ||
+          p.payment_id?.toLowerCase().includes(q)
       );
     }
 
-    if (statusFilter !== "all") {
-      result = result.filter((o) => o.status === statusFilter);
-    }
-
-    if (dateFilter !== "all") {
-      const now = new Date();
-      const cutoff = new Date();
-      if (dateFilter === "today") cutoff.setHours(0, 0, 0, 0);
-      else if (dateFilter === "7d") cutoff.setDate(now.getDate() - 7);
-      else if (dateFilter === "30d") cutoff.setDate(now.getDate() - 30);
-      result = result.filter((o) => new Date(o.created_at) >= cutoff);
-    }
+    if (statusFilter !== "all") result = result.filter((p) => p.status === statusFilter);
+    if (planFilter !== "all") result = result.filter((p) => p.plan === planFilter);
 
     return result;
-  }, [orders, search, statusFilter, dateFilter]);
+  }, [payments, search, statusFilter, planFilter]);
 
-  const totalRevenue = filtered.filter((o) => o.status === "paid" || o.status === "delivered").reduce((s, o) => s + o.total_cents, 0);
-  const paidCount = filtered.filter((o) => o.status === "paid" || o.status === "delivered").length;
+  const totalRevenue = filtered.filter((p) => p.status === "paid").reduce((s, p) => s + p.amount_cents, 0);
+  const paidCount = filtered.filter((p) => p.status === "paid").length;
+  const pendingCount = filtered.filter((p) => p.status === "pending").length;
+
+  const renderStatus = (status: string) => {
+    const config = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
+    const Icon = config.icon;
+    return (
+      <Badge variant="outline" className={`gap-1 ${config.className}`}>
+        <Icon className="h-3 w-3" />
+        {config.label}
+      </Badge>
+    );
+  };
+
+  const renderPlan = (plan: string) => {
+    const config = PLAN_LABELS[plan] || PLAN_LABELS.free;
+    return (
+      <Badge variant="secondary" className={`${config.color} border-none font-semibold`}>
+        {config.label}
+      </Badge>
+    );
+  };
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Pagamentos</h1>
-        <p className="text-muted-foreground">Todos os pedidos do sistema</p>
+        <h1 className="text-2xl font-bold text-foreground">Assinaturas</h1>
+        <p className="text-muted-foreground">Pagamentos de assinatura dos clientes do painel</p>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard title="Total de Pedidos" value={String(filtered.length)} icon={ShoppingCart} />
-        <StatCard title="Pagos / Entregues" value={String(paidCount)} icon={TrendingUp} change={`${orders.length > 0 ? ((paidCount / orders.length) * 100).toFixed(0) : 0}%`} changeType="positive" />
-        <StatCard title="Receita Total" value={`R$ ${(totalRevenue / 100).toFixed(2)}`} icon={DollarSign} />
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <StatCard title="Total de Pagamentos" value={String(filtered.length)} icon={CreditCard} />
+        <StatCard title="Pagos" value={String(paidCount)} icon={CheckCircle2} change={payments.length > 0 ? `${((paidCount / payments.length) * 100).toFixed(0)}%` : "0%"} changeType="positive" />
+        <StatCard title="Pendentes" value={String(pendingCount)} icon={Clock} />
+        <StatCard title="Receita Assinaturas" value={`R$ ${(totalRevenue / 100).toFixed(2)}`} icon={DollarSign} />
       </div>
 
       {/* Filters */}
@@ -84,7 +134,7 @@ const AdminPaymentsPage = () => {
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por produto, usuário, nº pedido..."
+            placeholder="Buscar por cliente, email, ID pagamento..."
             className="pl-9 bg-card border-border"
           />
         </div>
@@ -95,31 +145,35 @@ const AdminPaymentsPage = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos os status</SelectItem>
-            <SelectItem value="pending_payment">Pendente</SelectItem>
+            <SelectItem value="pending">Pendente</SelectItem>
             <SelectItem value="paid">Pago</SelectItem>
-            <SelectItem value="delivering">Entregando</SelectItem>
-            <SelectItem value="delivered">Entregue</SelectItem>
+            <SelectItem value="expired">Expirado</SelectItem>
             <SelectItem value="canceled">Cancelado</SelectItem>
             <SelectItem value="refunded">Reembolsado</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={dateFilter} onValueChange={setDateFilter}>
+        <Select value={planFilter} onValueChange={setPlanFilter}>
           <SelectTrigger className="w-full sm:w-40 bg-card border-border">
-            <SelectValue placeholder="Período" />
+            <Crown className="h-4 w-4 mr-2 text-muted-foreground" />
+            <SelectValue placeholder="Plano" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todo período</SelectItem>
-            <SelectItem value="today">Hoje</SelectItem>
-            <SelectItem value="7d">Últimos 7 dias</SelectItem>
-            <SelectItem value="30d">Últimos 30 dias</SelectItem>
+            <SelectItem value="all">Todos os planos</SelectItem>
+            <SelectItem value="starter">Starter</SelectItem>
+            <SelectItem value="pro">Pro</SelectItem>
+            <SelectItem value="business">Business</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
       <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="text-lg">
-            Pedidos {filtered.length !== orders.length && <span className="text-sm font-normal text-muted-foreground">({filtered.length} de {orders.length})</span>}
+          <CardTitle className="text-lg flex items-center gap-2">
+            <CreditCard className="h-5 w-5 text-primary" />
+            Pagamentos de Assinatura
+            {filtered.length !== payments.length && (
+              <span className="text-sm font-normal text-muted-foreground">({filtered.length} de {payments.length})</span>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -128,34 +182,51 @@ const AdminPaymentsPage = () => {
               <div className="h-6 w-6 animate-spin rounded-full border-4 border-primary border-t-transparent" />
             </div>
           ) : filtered.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">Nenhum pedido encontrado.</p>
+            <div className="text-center py-12">
+              <CreditCard className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+              <p className="text-muted-foreground">Nenhum pagamento de assinatura encontrado.</p>
+              <p className="text-xs text-muted-foreground mt-1">Os pagamentos aparecerão aqui quando os clientes assinarem um plano.</p>
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>#</TableHead>
-                    <TableHead>Produto</TableHead>
-                    <TableHead>Usuário</TableHead>
-                    <TableHead>Provedor</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Plano</TableHead>
                     <TableHead>Valor</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Provedor</TableHead>
+                    <TableHead>Período</TableHead>
                     <TableHead>Data</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((order) => (
-                    <TableRow key={order.id}>
-                      <TableCell className="font-mono text-xs">{order.order_number}</TableCell>
-                      <TableCell className="font-medium">{order.product_name}</TableCell>
-                      <TableCell>{order.discord_username || order.discord_user_id}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{order.payment_provider || "—"}</TableCell>
-                      <TableCell className="font-mono">R$ {(order.total_cents / 100).toFixed(2)}</TableCell>
+                  {filtered.map((payment) => (
+                    <TableRow key={payment.id}>
                       <TableCell>
-                        <StatusBadge status={order.status} />
+                        <div>
+                          <p className="font-medium text-sm">{payment.tenant_name}</p>
+                          {payment.payer_email && (
+                            <p className="text-xs text-muted-foreground">{payment.payer_email}</p>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>{renderPlan(payment.plan)}</TableCell>
+                      <TableCell className="font-mono font-medium">
+                        R$ {(payment.amount_cents / 100).toFixed(2)}
+                      </TableCell>
+                      <TableCell>{renderStatus(payment.status)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground capitalize">
+                        {payment.payment_provider}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                        {format(new Date(order.created_at), "dd/MM/yyyy HH:mm")}
+                        {payment.period_start && payment.period_end
+                          ? `${format(new Date(payment.period_start), "dd/MM")} — ${format(new Date(payment.period_end), "dd/MM/yy")}`
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                        {format(new Date(payment.created_at), "dd/MM/yyyy HH:mm")}
                       </TableCell>
                     </TableRow>
                   ))}

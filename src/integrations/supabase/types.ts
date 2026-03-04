@@ -1074,6 +1074,65 @@ export type Database = {
           },
         ]
       }
+      subscription_payments: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          id: string
+          paid_at: string | null
+          payer_email: string | null
+          payer_name: string | null
+          payment_id: string | null
+          payment_provider: string
+          period_end: string | null
+          period_start: string | null
+          plan: string
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount_cents?: number
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          payer_email?: string | null
+          payer_name?: string | null
+          payment_id?: string | null
+          payment_provider?: string
+          period_end?: string | null
+          period_start?: string | null
+          plan?: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          payer_email?: string | null
+          payer_name?: string | null
+          payment_id?: string | null
+          payment_provider?: string
+          period_end?: string | null
+          period_start?: string | null
+          plan?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_payments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_channels: {
         Row: {
           about: string
