@@ -118,6 +118,17 @@
   }
 }
 
+.scroll-hidden {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+}
+
+.scroll-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 @keyframes flickering {
   0%, 50%, 52%, 56%, 90%, 94%, 98%, 100% { opacity: 1; }
   54%, 92%, 96%, 99% { opacity: 0; }
