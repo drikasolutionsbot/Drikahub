@@ -465,7 +465,7 @@ const LandingPage = () => {
                     ))}
                   </ul>
                   <div className="pricing-card-label rounded-[.5rem_2rem] p-3 transition-all duration-500 hover:translate-x-1 hover:[transform:perspective(100px)_translateX(7px)_rotateX(3deg)_rotateY(3deg)]">
-                    <button onClick={() => navigate("/signup")} className="w-full py-2 rounded-full bg-primary hover:bg-primary/90 text-white font-semibold transition-all cursor-pointer border-none flex items-center justify-center gap-2 text-sm shadow-[0_0_20px_hsl(330_100%_71%/0.3)]">
+                    <button onClick={() => navigate("/signup")} className="w-full py-2 rounded-full bg-gradient-to-r from-[#33001b] to-[#ff0084] hover:opacity-90 text-white font-semibold transition-all cursor-pointer border-none flex items-center justify-center gap-2 text-sm shadow-[0_0_20px_rgba(255,0,132,0.3)]">
                       Começar <ArrowRight className="h-3.5 w-3.5" />
                     </button>
                   </div>
@@ -495,7 +495,7 @@ const LandingPage = () => {
                     ))}
                   </ul>
                   <div className="pricing-card-label rounded-[.5rem_2rem] p-3 transition-all duration-500 hover:translate-x-1 hover:[transform:perspective(100px)_translateX(7px)_rotateX(3deg)_rotateY(3deg)]">
-                    <button onClick={handleProClick} className="w-full py-2 rounded-full bg-[#FF2849] hover:bg-[#e52441] text-white font-semibold transition-all cursor-pointer border-none flex items-center justify-center gap-2 text-sm shadow-[0_0_20px_rgba(255,40,73,0.3)]">
+                    <button onClick={handleProClick} className="w-full py-2 rounded-full bg-gradient-to-r from-[#33001b] to-[#ff0084] hover:opacity-90 text-white font-semibold transition-all cursor-pointer border-none flex items-center justify-center gap-2 text-sm shadow-[0_0_20px_rgba(255,0,132,0.3)]">
                       Assinar Pro <ArrowRight className="h-3.5 w-3.5" />
                     </button>
                   </div>
