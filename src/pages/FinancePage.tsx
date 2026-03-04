@@ -52,9 +52,9 @@ const statusPieColors: Record<string, string> = {
 };
 
 const PERIOD_OPTIONS = [
+  { value: "1d", label: "Hoje" },
   { value: "7d", label: "Últimos 7 dias" },
   { value: "30d", label: "Últimos 30 dias" },
-  { value: "90d", label: "Últimos 90 dias" },
   { value: "custom", label: "Personalizado" },
 ];
 
@@ -79,7 +79,7 @@ const FinancePage = () => {
     if (period === "custom" && dateFrom && dateTo) {
       return { from: startOfDay(dateFrom), to: endOfDay(dateTo) };
     }
-    const days = period === "7d" ? 7 : period === "90d" ? 90 : 30;
+    const days = period === "1d" ? 0 : period === "7d" ? 7 : 30;
     return { from: startOfDay(subDays(new Date(), days)), to: endOfDay(new Date()) };
   }, [period, dateFrom, dateTo]);
 
@@ -231,7 +231,7 @@ const FinancePage = () => {
   const handlePeriodChange = (val: string) => {
     setPeriod(val);
     if (val !== "custom") {
-      const days = val === "7d" ? 7 : val === "90d" ? 90 : 30;
+      const days = val === "1d" ? 0 : val === "7d" ? 7 : 30;
       setDateFrom(subDays(new Date(), days));
       setDateTo(new Date());
     } else {
