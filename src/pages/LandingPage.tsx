@@ -448,7 +448,7 @@ const LandingPage = () => {
               <p className="text-xs text-white/40">Comece grátis, evolua quando quiser</p>
             </div>
           </ScrollReveal>
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-2 gap-6 pt-4 overflow-visible">
             {/* Free */}
             <ScrollReveal>
               <div className="pricing-card group relative h-full transition-all duration-300 hover:scale-[1.03]">
@@ -478,7 +478,7 @@ const LandingPage = () => {
 
             {/* Pro */}
             <ScrollReveal delay={0.15}>
-              <div className="pricing-card pricing-card--pro group relative h-full transition-all duration-300 hover:scale-[1.03] ring-2 ring-primary/50 scale-[1.02] pt-4">
+              <div className="pricing-card pricing-card--pro group relative h-full transition-all duration-300 hover:scale-[1.03] ring-2 ring-primary/50 scale-[1.02] pt-4 overflow-visible">
                 <div className="pricing-card-img overflow-hidden rounded-[.5rem_2rem] absolute inset-0">
                   <div className="w-full h-full bg-gradient-to-r from-[#33001b] to-[#ff0084] transition-transform duration-300 group-hover:scale-[1.15]" />
                 </div>
