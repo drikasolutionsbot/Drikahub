@@ -333,11 +333,31 @@ serve(async (req) => {
               "Content-Type": "application/json",
               Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
             },
-            body: JSON.stringify({ order_id: orderId }),
+            body: JSON.stringify({ order_id: orderId, tenant_id: order.tenant_id }),
           });
         } catch (e) {
           console.error("Auto-deliver error:", e);
         }
+
+        // Trigger order_paid automation
+        try {
+          await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/execute-automation`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
+            body: JSON.stringify({
+              tenant_id: order.tenant_id,
+              trigger_type: "order_paid",
+              trigger_data: {
+                discord_user_id: order.discord_user_id,
+                discord_username: order.discord_username,
+                order_id: orderId,
+                order_number: order.order_number,
+                product_name: order.product_name,
+                total_cents: order.total_cents,
+              },
+            }),
+          });
+        } catch (e) { console.error("Automation order_paid failed:", e); }
 
         // Notify buyer via DM
         try {
@@ -480,6 +500,26 @@ async function processPurchase(
     .single();
 
   if (orderErr) throw new Error(`Erro ao criar pedido: ${orderErr.message}`);
+
+  // Trigger order_created automation
+  try {
+    await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/execute-automation`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
+      body: JSON.stringify({
+        tenant_id: tenantId,
+        trigger_type: "order_created",
+        trigger_data: {
+          discord_user_id: userId,
+          discord_username: username,
+          order_id: order.id,
+          order_number: order.order_number,
+          product_name: orderName,
+          total_cents: priceCents,
+        },
+      }),
+    });
+  } catch (e) { console.error("Automation order_created failed:", e); }
 
   // Generate PIX
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;

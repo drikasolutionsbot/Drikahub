@@ -88,6 +88,7 @@ interface TriggerDef {
   color: string;
   category: string;
   configFields: FieldDef[];
+  auto?: boolean; // true = funciona automaticamente sem bot externo
 }
 
 interface ActionDef {
@@ -100,6 +101,8 @@ interface ActionDef {
 }
 
 const TRIGGERS: TriggerDef[] = [
+  { key: "order_created", label: "Pedido Criado", description: "Quando um novo pedido é criado na loja", icon: Tag, color: "text-yellow-400 bg-yellow-500/10", category: "Loja", auto: true, configFields: [] },
+  { key: "order_paid", label: "Pagamento Confirmado", description: "Quando um pedido é pago", icon: Award, color: "text-emerald-400 bg-emerald-500/10", category: "Loja", auto: true, configFields: [] },
   { key: "member_join", label: "Membro Entrou", description: "Quando um novo membro entra no servidor", icon: UserPlus, color: "text-emerald-400 bg-emerald-500/10", category: "Membros", configFields: [] },
   { key: "member_leave", label: "Membro Saiu", description: "Quando um membro sai do servidor", icon: UserMinus, color: "text-red-400 bg-red-500/10", category: "Membros", configFields: [] },
   { key: "member_boost", label: "Membro Boostou", description: "Quando um membro impulsiona o servidor", icon: Star, color: "text-pink-400 bg-pink-500/10", category: "Membros", configFields: [] },
@@ -111,9 +114,7 @@ const TRIGGERS: TriggerDef[] = [
     { key: "emoji", label: "Emoji específico (opcional)", type: "text", placeholder: "✅ ou nome do emoji" },
     { key: "message_id", label: "ID da Mensagem (opcional)", type: "text", placeholder: "ID da mensagem" },
   ]},
-  { key: "order_created", label: "Pedido Criado", description: "Quando um novo pedido é criado na loja", icon: Tag, color: "text-yellow-400 bg-yellow-500/10", category: "Loja", configFields: [] },
-  { key: "order_paid", label: "Pagamento Confirmado", description: "Quando um pedido é pago", icon: Award, color: "text-emerald-400 bg-emerald-500/10", category: "Loja", configFields: [] },
-  { key: "ticket_created", label: "Ticket Criado", description: "Quando um ticket de suporte é aberto", icon: Bell, color: "text-blue-400 bg-blue-500/10", category: "Suporte", configFields: [] },
+  { key: "ticket_created", label: "Ticket Criado", description: "Quando um ticket de suporte é aberto", icon: Bell, color: "text-blue-400 bg-blue-500/10", category: "Suporte", auto: true, configFields: [] },
   { key: "scheduled", label: "Agendado", description: "Executa em intervalos regulares", icon: Clock, color: "text-purple-400 bg-purple-500/10", category: "Sistema", configFields: [
     { key: "interval_minutes", label: "Intervalo (minutos)", type: "number", placeholder: "60" },
     { key: "start_time", label: "Horário inicial (HH:MM)", type: "text", placeholder: "08:00" },
@@ -677,8 +678,15 @@ const AutomationsPage = () => {
                       className={`flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${selected ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}
                     >
                       <div className={`rounded-lg p-2 ${t.color}`}><TIcon className="h-4 w-4"/></div>
-                      <div>
-                        <p className="text-sm font-medium">{t.label}</p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-medium">{t.label}</p>
+                          {t.auto ? (
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 bg-emerald-500/10 text-emerald-400 border-emerald-500/20">Auto</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 bg-muted text-muted-foreground">Bot</Badge>
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground">{t.description}</p>
                       </div>
                     </button>

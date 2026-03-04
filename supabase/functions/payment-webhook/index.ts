@@ -181,19 +181,21 @@ serve(async (req) => {
 
     console.log(`Webhook ${provider}/${tenantId}:`, JSON.stringify(result));
 
-    // If payment was confirmed, trigger auto-delivery
+    // If payment was confirmed, trigger auto-delivery + automations
     if (result?.handled && (result?.order_status === "paid" || result?.status === "approved" || (result as any)?.txid)) {
       try {
         // Find the order that was just paid
         const { data: paidOrders } = await supabase
           .from("orders")
-          .select("id")
+          .select("id, order_number, product_name, discord_user_id, discord_username, total_cents")
           .eq("tenant_id", tenantId)
           .eq("status", "paid")
           .order("updated_at", { ascending: false })
           .limit(1);
 
         if (paidOrders && paidOrders.length > 0) {
+          const paidOrder = paidOrders[0];
+
           // Call deliver-order function
           const deliverRes = await fetch(
             `${supabaseUrl}/functions/v1/deliver-order`,
@@ -204,13 +206,36 @@ serve(async (req) => {
                 Authorization: `Bearer ${serviceRoleKey}`,
               },
               body: JSON.stringify({
-                order_id: paidOrders[0].id,
+                order_id: paidOrder.id,
                 tenant_id: tenantId,
               }),
             }
           );
           const deliverResult = await deliverRes.json();
           console.log("Auto-delivery result:", JSON.stringify(deliverResult));
+
+          // Trigger order_paid automations
+          try {
+            await fetch(`${supabaseUrl}/functions/v1/execute-automation`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceRoleKey}` },
+              body: JSON.stringify({
+                tenant_id: tenantId,
+                trigger_type: "order_paid",
+                trigger_data: {
+                  discord_user_id: paidOrder.discord_user_id,
+                  discord_username: paidOrder.discord_username,
+                  order_id: paidOrder.id,
+                  order_number: paidOrder.order_number,
+                  product_name: paidOrder.product_name,
+                  total_cents: paidOrder.total_cents,
+                },
+              }),
+            });
+            console.log("Automation order_paid triggered");
+          } catch (autoErr) {
+            console.error("Automation trigger failed:", autoErr);
+          }
         }
       } catch (deliverErr) {
         console.error("Auto-delivery failed:", deliverErr);
