@@ -13,6 +13,8 @@ import { supabase } from "@/integrations/supabase/client";
 const PushinPayIntegrationTab = () => {
   const [apiKey, setApiKey] = useState("");
   const [proPriceCents, setProPriceCents] = useState(2690);
+  const [autoActivate, setAutoActivate] = useState(true);
+  const [suspendOnExpire, setSuspendOnExpire] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -38,6 +40,8 @@ const PushinPayIntegrationTab = () => {
         if (d.pro_price_cents) {
           setProPriceCents(d.pro_price_cents);
         }
+        setAutoActivate(d.auto_activate_plan ?? true);
+        setSuspendOnExpire(d.suspend_on_expire ?? true);
       }
       setLoading(false);
     };
@@ -103,6 +107,8 @@ const PushinPayIntegrationTab = () => {
           pushinpay_api_key: apiKey.trim(),
           pushinpay_active: isConnected,
           pro_price_cents: proPriceCents,
+          auto_activate_plan: autoActivate,
+          suspend_on_expire: suspendOnExpire,
           updated_at: new Date().toISOString(),
         } as any)
         .eq("id", configId);
@@ -243,14 +249,14 @@ const PushinPayIntegrationTab = () => {
                   <p className="text-sm font-medium">Ativar plano automaticamente</p>
                   <p className="text-xs text-muted-foreground">Ativa o plano do cliente assim que o pagamento for confirmado</p>
                 </div>
-                <Switch defaultChecked />
+                <Switch checked={autoActivate} onCheckedChange={setAutoActivate} />
               </div>
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium">Suspender ao expirar</p>
                   <p className="text-xs text-muted-foreground">Suspende acesso quando o pagamento não é renovado</p>
                 </div>
-                <Switch defaultChecked />
+                <Switch checked={suspendOnExpire} onCheckedChange={setSuspendOnExpire} />
               </div>
             </div>
           </CardContent>
