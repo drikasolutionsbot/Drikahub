@@ -64,11 +64,11 @@ const AdminLoginPage = () => {
           ) : (
             <div className="flex h-28 w-28 items-center justify-center rounded-2xl bg-primary/10 text-4xl font-bold text-primary">A</div>
           )}
-          <div className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-primary" />
-            <h1 className="font-display text-2xl font-bold">
+          <div className="flex items-center gap-3">
+            <Shield className="h-6 w-6 text-primary" />
+            <h1 className="text-3xl font-extrabold tracking-widest uppercase">
               <span className="text-gradient-pink">ADMIN</span>{" "}
-              <span className="text-foreground">PANEL</span>
+              <span className="text-gradient-gold">PANEL</span>
             </h1>
           </div>
           <p className="text-center text-sm text-muted-foreground">
