@@ -13,6 +13,17 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Plus, Key, Copy, Trash2, Eye, EyeOff, Loader2, Users, Crown, Search, Settings, Mail, Phone, Calendar, CalendarClock, ShieldCheck, ShieldOff, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+
+const logAudit = async (action: string, entity_type: string, entity_id: string | null, entity_name: string | null, details?: Record<string, any>) => {
+  try {
+    await (supabase as any).from("admin_audit_logs").insert({
+      admin_email: (await supabase.auth.getUser()).data.user?.email || null,
+      admin_user_id: (await supabase.auth.getUser()).data.user?.id || null,
+      action, entity_type, entity_id, entity_name, details: details || {},
+    });
+  } catch {}
+};
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -99,6 +110,7 @@ const AdminClientsPage = () => {
         plan: newTenantPlan,
       });
       if (error) throw error;
+      await logAudit("tenant_created", "tenant", null, newTenantName.trim(), { plan: newTenantPlan });
       toast({ title: "Cliente criado com sucesso!" });
       setNewTenantName("");
       setNewTenantGuildId("");
@@ -132,6 +144,9 @@ const AdminClientsPage = () => {
         .update(updateData)
         .eq("id", tenantId);
       if (error) throw error;
+      const tenantName = tenants.find(t => t.id === tenantId)?.name || tenantId;
+      const oldPlan = tenants.find(t => t.id === tenantId)?.plan || "free";
+      await logAudit("plan_changed", "tenant", tenantId, tenantName, { from: oldPlan, to: newPlan });
       setTenants((prev) =>
         prev.map((t) => (t.id === tenantId ? { ...t, ...updateData } : t))
       );
@@ -157,6 +172,8 @@ const AdminClientsPage = () => {
         .update(updateData)
         .eq("id", tenantId);
       if (error) throw error;
+      const tenantName = tenants.find(t => t.id === tenantId)?.name || tenantId;
+      await logAudit("plan_changed", "tenant", tenantId, tenantName, { action: "renew_30d" });
       setTenants((prev) =>
         prev.map((t) => (t.id === tenantId ? { ...t, ...updateData } : t))
       );
@@ -218,6 +235,7 @@ const AdminClientsPage = () => {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
+      await logAudit("tenant_deleted", "tenant", tenantId, tenantName);
       toast({ title: "Cliente excluído", description: `${tenantName} foi removido permanentemente.` });
       setTenants((prev) => prev.filter((t) => t.id !== tenantId));
       if (expandedTenant === tenantId) setExpandedTenant(null);
