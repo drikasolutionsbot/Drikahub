@@ -18,6 +18,7 @@ import AdminSupportPage from "./pages/admin/AdminSupportPage";
 import AdminLandingConfigPage from "./pages/admin/AdminLandingConfigPage";
 import AdminAnalyticsPage from "./pages/admin/AdminAnalyticsPage";
 import AdminAuditLogsPage from "./pages/admin/AdminAuditLogsPage";
+import AdminPermissionsPage from "./pages/admin/AdminPermissionsPage";
 import OnboardingPage from "./pages/OnboardingPage";
 import DashboardPage from "./pages/DashboardPage";
 import StorePage from "./pages/StorePage";
@@ -80,6 +81,7 @@ const AppRoutes = () => (
       <Route path="/admin/landing" element={<AdminLandingConfigPage />} />
       <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
       <Route path="/admin/logs" element={<AdminAuditLogsPage />} />
+      <Route path="/admin/permissoes" element={<AdminPermissionsPage />} />
     </Route>
 
     {/* Dashboard routes */}

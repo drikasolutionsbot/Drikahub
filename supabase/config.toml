@@ -131,3 +131,6 @@ verify_jwt = false
 
 [functions.ai-assistant]
 verify_jwt = false
+
+[functions.manage-admin-users]
+verify_jwt = false
