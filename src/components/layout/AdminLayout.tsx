@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Outlet, Navigate, Link, useLocation } from "react-router-dom";
 import { useAdmin } from "@/contexts/AdminContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { LayoutDashboard, CreditCard, Users, LogOut, Headphones, Globe, Bell, Crown, UserPlus, Inbox, CheckCircle, BarChart3 } from "lucide-react";
+import { LayoutDashboard, CreditCard, Users, LogOut, Headphones, Globe, Bell, Crown, UserPlus, Inbox, CheckCircle, BarChart3, ClipboardList } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +17,7 @@ const navItems = [
   { label: "Suporte", icon: Headphones, path: "/admin/suporte" },
   { label: "Landing Page", icon: Globe, path: "/admin/landing" },
   { label: "Analytics", icon: BarChart3, path: "/admin/analytics" },
+  { label: "Logs", icon: ClipboardList, path: "/admin/logs" },
 ];
 
 interface AdminNotif {
