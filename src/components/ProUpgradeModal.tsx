@@ -4,7 +4,7 @@ import { Crown, Copy, Check, ExternalLink } from "lucide-react";
 import { useTenant } from "@/contexts/TenantContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import drikaLogo from "@/assets/drika_logo_crown.png";
+import drikaLogo from "@/assets/DRIKA_HUB_SEM_FUNDO.png";
 
 const ProUpgradeModal = () => {
   const [open, setOpen] = useState(false);

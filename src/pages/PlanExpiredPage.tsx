@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useTenant } from "@/contexts/TenantContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import drikaLogo from "@/assets/drika_logo_crown.png";
+import drikaLogo from "@/assets/DRIKA_HUB_SEM_FUNDO.png";
 
 const PlanExpiredPage = () => {
   const { tenant, refetch } = useTenant();
