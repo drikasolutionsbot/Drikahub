@@ -213,14 +213,36 @@ serve(async (req) => {
       }
     }
 
-    // 6. Update order status to delivered
+    // 6. Auto-assign customer role if configured
+    const { data: storeConfigForRole } = await supabase
+      .from("store_configs")
+      .select("customer_role_id")
+      .eq("tenant_id", tenant_id)
+      .single();
+
+    if (storeConfigForRole?.customer_role_id && tenant?.discord_guild_id) {
+      try {
+        const roleRes = await fetch(
+          `${DISCORD_API}/guilds/${tenant.discord_guild_id}/members/${order.discord_user_id}/roles/${storeConfigForRole.customer_role_id}`,
+          {
+            method: "PUT",
+            headers: { Authorization: `Bot ${botToken}` },
+          }
+        );
+        console.log(`Auto-assign customer role ${storeConfigForRole.customer_role_id}: ${roleRes.status}`);
+      } catch (roleErr) {
+        console.error("Failed to assign customer role:", roleErr);
+      }
+    }
+
+    // 7. Update order status to delivered
     await supabase
       .from("orders")
       .update({ status: "delivered", updated_at: new Date().toISOString() })
       .eq("id", order_id)
       .eq("tenant_id", tenant_id);
 
-    // 7. Log to store logs channel if configured
+    // 8. Log to store logs channel if configured
     const { data: storeConfig } = await supabase
       .from("store_configs")
       .select("logs_channel_id")

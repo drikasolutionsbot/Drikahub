@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Save, Loader2, Hash, Palette, Truck, ShoppingBag, Eye } from "lucide-react";
+import { Save, Loader2, Hash, Palette, Truck, ShoppingBag, Eye, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "@/hooks/use-toast";
@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ImageUploadField from "@/components/customization/ImageUploadField";
 import ChannelSelectWithCreate from "@/components/channels/ChannelSelectWithCreate";
 
@@ -30,6 +31,7 @@ interface StoreConfig {
   purchase_embed_footer: string;
   purchase_embed_image_url: string;
   purchase_embed_thumbnail_url: string;
+  customer_role_id: string;
 }
 
 const defaultConfig: StoreConfig = {
@@ -49,6 +51,7 @@ const defaultConfig: StoreConfig = {
   purchase_embed_footer: "",
   purchase_embed_image_url: "",
   purchase_embed_thumbnail_url: "",
+  customer_role_id: "",
 };
 
 const StoreGeneralSettings = () => {
@@ -58,6 +61,7 @@ const StoreGeneralSettings = () => {
   const [saving, setSaving] = useState(false);
   const [channels, setChannels] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [discordRoles, setDiscordRoles] = useState<any[]>([]);
 
   const fetchChannels = useCallback(async () => {
     if (!tenantId) return;
@@ -69,6 +73,18 @@ const StoreGeneralSettings = () => {
       const cats = Array.isArray(data?.categories) ? data.categories : [];
       setChannels(ch.sort((a: any, b: any) => (a.position ?? 0) - (b.position ?? 0)));
       setCategories(cats.sort((a: any, b: any) => (a.position ?? 0) - (b.position ?? 0)));
+    } catch {}
+  }, [tenantId]);
+
+  const fetchDiscordRoles = useCallback(async () => {
+    if (!tenantId) return;
+    try {
+      const { data } = await supabase.functions.invoke("discord-guild-info", {
+        body: { tenant_id: tenantId },
+      });
+      if (data?.roles) {
+        setDiscordRoles(data.roles.filter((r: any) => !r.managed && r.name !== "@everyone").sort((a: any, b: any) => b.position - a.position));
+      }
     } catch {}
   }, [tenantId]);
 
@@ -93,7 +109,8 @@ const StoreGeneralSettings = () => {
   useEffect(() => {
     fetchConfig();
     fetchChannels();
-  }, [fetchConfig, fetchChannels]);
+    fetchDiscordRoles();
+  }, [fetchConfig, fetchChannels, fetchDiscordRoles]);
 
   const handleSave = async () => {
     if (!tenantId) return;
@@ -213,6 +230,47 @@ const StoreGeneralSettings = () => {
                 rows={3}
                 className="mt-1"
               />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Cargo de Cliente */}
+        <Card className="border-border/50">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Shield className="h-4 w-4 text-primary" />
+              Cargo de Cliente
+            </CardTitle>
+            <CardDescription>Cargo atribuído automaticamente a quem comprar qualquer produto</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label>Cargo do Discord</Label>
+              <Select
+                value={config.customer_role_id || "none"}
+                onValueChange={(v) => update("customer_role_id", v === "none" ? "" : v)}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Selecione um cargo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum (desativado)</SelectItem>
+                  {discordRoles.map((role) => (
+                    <SelectItem key={role.id} value={role.id}>
+                      <span className="flex items-center gap-2">
+                        <span
+                          className="w-3 h-3 rounded-full inline-block"
+                          style={{ backgroundColor: role.color ? `#${role.color.toString(16).padStart(6, "0")}` : "#99AAB5" }}
+                        />
+                        {role.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Após cada compra confirmada, o comprador receberá este cargo automaticamente
+              </p>
             </div>
           </CardContent>
         </Card>
