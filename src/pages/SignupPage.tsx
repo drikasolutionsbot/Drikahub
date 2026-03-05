@@ -189,7 +189,7 @@ const SignupPage = () => {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full text-base px-4 py-3 bg-transparent border-2 border-white/30 rounded-[20px] outline-none text-white transition-colors focus:border-primary"
+                className="w-full text-base px-4 py-3 bg-white/10 border-2 border-white/30 rounded-[20px] outline-none text-white transition-colors focus:border-primary"
               />
               <label className="absolute left-0 px-4 py-3 ml-2 pointer-events-none text-white/70 font-semibold text-base tracking-wide transition-all duration-300">
                 Email
@@ -204,7 +204,7 @@ const SignupPage = () => {
                 autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full text-base px-4 py-3 pr-12 bg-transparent border-2 border-white/30 rounded-[20px] outline-none text-white transition-colors focus:border-primary"
+                className="w-full text-base px-4 py-3 pr-12 bg-white/10 border-2 border-white/30 rounded-[20px] outline-none text-white transition-colors focus:border-primary"
               />
               <label className="absolute left-0 px-4 py-3 ml-2 pointer-events-none text-white/70 font-semibold text-base tracking-wide transition-all duration-300">
                 Senha
@@ -226,7 +226,7 @@ const SignupPage = () => {
                 autoComplete="tel"
                 value={whatsapp}
                 onChange={(e) => setWhatsapp(formatWhatsapp(e.target.value))}
-                className="w-full text-base px-4 py-3 bg-transparent border-2 border-white/30 rounded-[20px] outline-none text-white transition-colors focus:border-primary"
+                className="w-full text-base px-4 py-3 bg-white/10 border-2 border-white/30 rounded-[20px] outline-none text-white transition-colors focus:border-primary"
               />
               <label className="absolute left-0 px-4 py-3 ml-2 pointer-events-none text-white/70 font-semibold text-base tracking-wide transition-all duration-300">
                 WhatsApp
