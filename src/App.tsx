@@ -40,6 +40,7 @@ import ApprovalsPage from "./pages/ApprovalsPage";
 import TermsPage from "./pages/TermsPage";
 import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
+import PresentationPage from "./pages/PresentationPage";
 
 const queryClient = new QueryClient();
 
@@ -68,6 +69,7 @@ const AppRoutes = () => (
     <Route path="/admin/login" element={<AdminLoginPage />} />
     <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
     <Route path="/" element={<LandingPage />} />
+    <Route path="/apresentacao" element={<PresentationPage />} />
 
     {/* Admin routes - completely separate */}
     <Route element={<ProtectedRoute><AdminProvider><AdminLayout /></AdminProvider></ProtectedRoute>}>
