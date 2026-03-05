@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { LogIn } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import WifiLoader from "@/components/ui/wifi-loader";
-import drikaLogo from "@/assets/drika_logo_crown.png";
+import drikaLogo from "@/assets/DRIKA_HUB_SEM_FUNDO.png";
 import TermsModal from "@/components/TermsModal";
 
 const LoginPage = () => {

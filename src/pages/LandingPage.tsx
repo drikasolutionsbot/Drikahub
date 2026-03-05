@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { Crown, Zap, Check, ArrowRight, ShoppingCart, Shield, Lock, Users, TrendingUp, Package, ChevronDown, MessageSquare, Bot, Settings, Play, X, Copy, Loader2 } from "lucide-react";
-import drikaLogo from "@/assets/drika_logo_crown.png";
+import drikaLogo from "@/assets/DRIKA_HUB_SEM_FUNDO.png";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
