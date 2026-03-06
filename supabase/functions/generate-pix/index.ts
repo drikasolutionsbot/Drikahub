@@ -303,7 +303,7 @@ serve(async (req) => {
           result = await generateViaPushinPay(apiKey, amount_cents, webhookUrl);
           break;
         case "efi":
-          result = await generateViaEfi(apiKey, secretKey, amount, externalRef, webhookUrl);
+          result = await generateViaEfi(apiKey, secretKey, amount, externalRef, webhookUrl, activeProvider.efi_cert_pem, activeProvider.efi_key_pem, activeProvider.efi_pix_key);
           break;
         case "misticpay":
           result = await generateViaMisticPay(apiKey, amount_cents, externalRef, webhookUrl);
