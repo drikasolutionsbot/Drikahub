@@ -211,7 +211,7 @@ interface ProviderFormProps {
   provider: typeof providers[0];
   config?: PaymentProvider;
   tenantId: string | null;
-  onSave: (key: string, api: string, secret: string) => void;
+  onSave: (key: string, api: string, secret: string, extra?: { efi_cert_pem?: string; efi_key_pem?: string; efi_pix_key?: string }) => void;
   onToggle: (id: string, active: boolean) => void;
 }
 
@@ -223,10 +223,20 @@ const ProviderForm = ({ provider, config, tenantId, onSave, onToggle }: Provider
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [efiPixKey, setEfiPixKey] = useState("");
+  const [efiCertPem, setEfiCertPem] = useState("");
+  const [efiKeyPem, setEfiKeyPem] = useState("");
+  const [certFileName, setCertFileName] = useState<string | null>(null);
+
+  const isEfi = provider.key === "efi";
 
   useEffect(() => {
     setApiKey(config?.api_key_encrypted || "");
     setSecretKey(config?.secret_key_encrypted || "");
+    setEfiPixKey(config?.efi_pix_key || "");
+    setEfiCertPem(config?.efi_cert_pem || "");
+    setEfiKeyPem(config?.efi_key_pem || "");
+    setCertFileName(config?.efi_cert_pem ? "Certificado carregado ✓" : null);
     setTestResult(null);
   }, [config?.id]);
 
