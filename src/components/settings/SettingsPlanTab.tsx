@@ -14,6 +14,7 @@ interface Props {
 const SettingsPlanTab = ({ tenant, tenantId, refetchTenant }: Props) => {
   const [loading, setLoading] = useState(false);
   const [pixCode, setPixCode] = useState<string | null>(null);
+  const [qrCodeBase64, setQrCodeBase64] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   const isExpired = tenant.plan === "expired" || (tenant.plan_expires_at && new Date(tenant.plan_expires_at) < new Date());
