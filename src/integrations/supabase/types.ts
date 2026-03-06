@@ -474,6 +474,10 @@ export type Database = {
         Row: {
           auto_activate_plan: boolean
           created_at: string
+          efi_active: boolean
+          efi_client_id: string | null
+          efi_client_secret: string | null
+          efi_pix_key: string | null
           id: string
           pro_price_cents: number
           pushinpay_active: boolean
@@ -492,6 +496,10 @@ export type Database = {
         Insert: {
           auto_activate_plan?: boolean
           created_at?: string
+          efi_active?: boolean
+          efi_client_id?: string | null
+          efi_client_secret?: string | null
+          efi_pix_key?: string | null
           id?: string
           pro_price_cents?: number
           pushinpay_active?: boolean
@@ -510,6 +518,10 @@ export type Database = {
         Update: {
           auto_activate_plan?: boolean
           created_at?: string
+          efi_active?: boolean
+          efi_client_id?: string | null
+          efi_client_secret?: string | null
+          efi_pix_key?: string | null
           id?: string
           pro_price_cents?: number
           pushinpay_active?: boolean

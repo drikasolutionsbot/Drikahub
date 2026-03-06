@@ -11,8 +11,10 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { logAudit } from "@/lib/auditLog";
 
-const PushinPayIntegrationTab = () => {
-  const [apiKey, setApiKey] = useState("");
+const EfiIntegrationTab = () => {
+  const [clientId, setClientId] = useState("");
+  const [clientSecret, setClientSecret] = useState("");
+  const [pixKey, setPixKey] = useState("");
   const [proPriceCents, setProPriceCents] = useState(2690);
   const [priceDisplay, setPriceDisplay] = useState("26.90");
   const [autoActivate, setAutoActivate] = useState(true);
@@ -34,10 +36,11 @@ const PushinPayIntegrationTab = () => {
         .single();
       if (data) {
         setConfigId(data.id);
-        if (data.pushinpay_api_key) {
-          setApiKey(data.pushinpay_api_key);
-          setIsConnected(data.pushinpay_active || false);
-        }
+        const d = data as any;
+        if (d.efi_client_id) setClientId(d.efi_client_id);
+        if (d.efi_client_secret) setClientSecret(d.efi_client_secret);
+        if (d.efi_pix_key) setPixKey(d.efi_pix_key);
+        setIsConnected(d.efi_active || false);
         if (data.pro_price_cents) {
           setProPriceCents(data.pro_price_cents);
           setPriceDisplay((data.pro_price_cents / 100).toFixed(2));
@@ -51,8 +54,7 @@ const PushinPayIntegrationTab = () => {
   }, []);
 
   const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setPriceDisplay(val);
+    setPriceDisplay(e.target.value);
   };
 
   const handlePriceBlur = () => {
@@ -72,14 +74,14 @@ const PushinPayIntegrationTab = () => {
   };
 
   const handleTestConnection = async () => {
-    if (!apiKey.trim()) {
-      toast.error("Insira a API Key primeiro");
+    if (!clientId.trim() || !clientSecret.trim()) {
+      toast.error("Insira o Client ID e Client Secret");
       return;
     }
     setTesting(true);
     try {
       const { data, error } = await supabase.functions.invoke("test-payment", {
-        body: { provider_key: "pushinpay", api_key: apiKey.trim() },
+        body: { provider_key: "efi", api_key: clientId.trim(), secret_key: clientSecret.trim() },
       });
       if (error) throw error;
       if (data?.success) {
@@ -90,7 +92,7 @@ const PushinPayIntegrationTab = () => {
         toast.error(data?.message || "Falha na validação");
       }
     } catch {
-      toast.error("Falha ao conectar com PushinPay");
+      toast.error("Falha ao conectar com Efí");
       setIsConnected(false);
     } finally {
       setTesting(false);
@@ -98,8 +100,8 @@ const PushinPayIntegrationTab = () => {
   };
 
   const handleSave = async () => {
-    if (!apiKey.trim()) {
-      toast.error("Insira a API Key");
+    if (!clientId.trim() || !clientSecret.trim()) {
+      toast.error("Insira o Client ID e Client Secret");
       return;
     }
     if (!configId) {
@@ -111,17 +113,19 @@ const PushinPayIntegrationTab = () => {
       const { error } = await supabase
         .from("landing_config")
         .update({
-          pushinpay_api_key: apiKey.trim(),
-          pushinpay_active: isConnected,
+          efi_client_id: clientId.trim(),
+          efi_client_secret: clientSecret.trim(),
+          efi_pix_key: pixKey.trim() || null,
+          efi_active: isConnected,
           pro_price_cents: proPriceCents,
           auto_activate_plan: autoActivate,
           suspend_on_expire: suspendOnExpire,
           updated_at: new Date().toISOString(),
-        })
+        } as any)
         .eq("id", configId);
-      
+
       if (error) throw error;
-      await logAudit("config_updated", "config", configId, "PushinPay Integration", {
+      await logAudit("config_updated", "config", configId, "Efí Integration", {
         pro_price: `R$ ${(proPriceCents / 100).toFixed(2)}`,
         auto_activate: autoActivate,
         suspend_on_expire: suspendOnExpire,
@@ -129,7 +133,7 @@ const PushinPayIntegrationTab = () => {
       toast.success("Configurações salvas com sucesso!");
     } catch (err: any) {
       console.error("Save error:", err);
-      toast.error("Erro ao salvar configurações: " + (err.message || "Verifique as permissões"));
+      toast.error("Erro ao salvar: " + (err.message || "Verifique as permissões"));
     } finally {
       setSaving(false);
     }
@@ -152,16 +156,16 @@ const PushinPayIntegrationTab = () => {
             <>
               <CheckCircle2 className="h-5 w-5 text-emerald-500" />
               <div>
-                <p className="font-medium text-emerald-500">PushinPay conectado</p>
-                <p className="text-xs text-muted-foreground">Cobranças de assinatura ativas na landing page</p>
+                <p className="font-medium text-emerald-500">Efí conectado</p>
+                <p className="text-xs text-muted-foreground">Cobranças de assinatura ativas via PIX Efí</p>
               </div>
             </>
           ) : (
             <>
               <AlertCircle className="h-5 w-5 text-amber-500" />
               <div>
-                <p className="font-medium text-amber-500">PushinPay não configurado</p>
-                <p className="text-xs text-muted-foreground">Configure a API Key para ativar cobranças do plano Pro</p>
+                <p className="font-medium text-amber-500">Efí não configurado</p>
+                <p className="text-xs text-muted-foreground">Configure as credenciais para ativar cobranças do plano Pro</p>
               </div>
             </>
           )}
@@ -169,30 +173,49 @@ const PushinPayIntegrationTab = () => {
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* API Key Config */}
+        {/* Credentials */}
         <Card className="bg-card border-border">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Key className="h-5 w-5 text-primary" />
               Credenciais da API
             </CardTitle>
-            <CardDescription>Configure sua API Key do PushinPay para processar pagamentos do plano Pro</CardDescription>
+            <CardDescription>Configure suas credenciais OAuth2 da Efí (Gerencianet)</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>API Key</Label>
+              <Label>Client ID</Label>
               <Input
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="pk_live_..."
+                type="text"
+                value={clientId}
+                onChange={(e) => setClientId(e.target.value)}
+                placeholder="Client_Id_xxxxxxxxxxxxxxx"
                 className="bg-background border-border font-mono text-sm"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Client Secret</Label>
+              <Input
+                type="password"
+                value={clientSecret}
+                onChange={(e) => setClientSecret(e.target.value)}
+                placeholder="Client_Secret_xxxxxxxxxxxxxxx"
+                className="bg-background border-border font-mono text-sm"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Chave PIX (registrada na Efí)</Label>
+              <Input
+                type="text"
+                value={pixKey}
+                onChange={(e) => setPixKey(e.target.value)}
+                placeholder="sua-chave-pix@email.com"
+                className="bg-background border-border text-sm"
+              />
               <p className="text-xs text-muted-foreground">
-                Encontre sua API Key no{" "}
-                <a href="https://dashboard.pushinpay.com.br" target="_blank" rel="noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">
-                  painel do PushinPay <ExternalLink className="h-3 w-3" />
-                </a>
+                A chave PIX cadastrada na sua conta Efí
               </p>
             </div>
 
@@ -211,25 +234,24 @@ const PushinPayIntegrationTab = () => {
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                Valor em reais. Será convertido para centavos automaticamente ({proPriceCents} centavos)
+                Valor em reais ({proPriceCents} centavos)
               </p>
             </div>
 
+            <p className="text-xs text-muted-foreground">
+              Obtenha suas credenciais no{" "}
+              <a href="https://app.efipay.com.br" target="_blank" rel="noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">
+                painel da Efí <ExternalLink className="h-3 w-3" />
+              </a>
+            </p>
+
             <div className="flex gap-2">
-              <Button variant="outline" onClick={handleTestConnection} disabled={testing || !apiKey.trim()} className="flex-1">
-                {testing ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <Zap className="h-4 w-4 mr-2" />
-                )}
+              <Button variant="outline" onClick={handleTestConnection} disabled={testing || !clientId.trim() || !clientSecret.trim()} className="flex-1">
+                {testing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Zap className="h-4 w-4 mr-2" />}
                 Testar Conexão
               </Button>
-              <Button onClick={handleSave} disabled={saving || !apiKey.trim()} className="flex-1">
-                {saving ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <Shield className="h-4 w-4 mr-2" />
-                )}
+              <Button onClick={handleSave} disabled={saving || !clientId.trim() || !clientSecret.trim()} className="flex-1">
+                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Shield className="h-4 w-4 mr-2" />}
                 Salvar
               </Button>
             </div>
@@ -243,7 +265,7 @@ const PushinPayIntegrationTab = () => {
               <Webhook className="h-5 w-5 text-primary" />
               Webhook
             </CardTitle>
-            <CardDescription>Configure este URL no painel do PushinPay para receber notificações de pagamento</CardDescription>
+            <CardDescription>Configure este URL no painel da Efí para receber confirmações PIX</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -255,7 +277,7 @@ const PushinPayIntegrationTab = () => {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Cole esta URL nas configurações de webhook do PushinPay
+                Cole esta URL nas configurações de webhook PIX da Efí
               </p>
             </div>
 
@@ -285,7 +307,7 @@ const PushinPayIntegrationTab = () => {
       <Card className="bg-card border-border">
         <CardHeader>
           <CardTitle className="text-lg">Planos Disponíveis</CardTitle>
-          <CardDescription>O botão "Assinar Pro" na landing page gerará um PIX automaticamente</CardDescription>
+          <CardDescription>O botão "Assinar Pro" na landing page gerará um PIX automaticamente via Efí</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -324,4 +346,4 @@ const PushinPayIntegrationTab = () => {
   );
 };
 
-export default PushinPayIntegrationTab;
+export default EfiIntegrationTab;
