@@ -30,6 +30,7 @@ const SettingsPlanTab = ({ tenant, tenantId, refetchTenant }: Props) => {
       });
       if (error || data?.error) throw new Error(data?.error || error?.message || "Erro ao gerar PIX");
       setPixCode(data.brcode || data.qr_code || "");
+      setQrCodeBase64(data.qr_code_base64 || null);
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
     } finally {
