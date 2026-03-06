@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import "@/components/wallet/wallet-card.css";
+import SettingsPlanTab from "@/components/settings/SettingsPlanTab";
 
 interface UserRole {
   id: string;
