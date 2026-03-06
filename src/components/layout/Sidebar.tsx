@@ -51,6 +51,7 @@ const navGroups = [
 ];
 
 const bottomItems = [
+  { label: "Tutoriais", icon: BookOpen, path: "/tutorials" },
   { label: "Suporte", icon: Headset, path: "/support" },
   { label: "Configurações", icon: Settings, path: "/settings" },
 ];

@@ -20,6 +20,7 @@ const navItems = [
   { label: "Analytics", icon: BarChart3, path: "/admin/analytics" },
   { label: "Logs", icon: ClipboardList, path: "/admin/logs" },
   { label: "Permissões", icon: Shield, path: "/admin/permissoes" },
+  { label: "Tutoriais", icon: BookOpen, path: "/admin/tutoriais" },
 ];
 
 interface AdminNotif {
