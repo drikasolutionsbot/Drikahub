@@ -45,10 +45,12 @@ serve(async (req) => {
     const webhookUrl = `${supabaseUrl}/functions/v1/subscription-webhook`;
     const txId = `SUB${Date.now()}`;
 
-    // Create HTTP client with mTLS
+    // Normalize PEM line endings and create HTTP client with mTLS
+    const normalizedCert = (config.efi_cert_pem || '').replace(/\r\n/g, '\n').trim();
+    const normalizedKey = (config.efi_key_pem || '').replace(/\r\n/g, '\n').trim();
     const httpClient = Deno.createHttpClient({
-      certChain: config.efi_cert_pem,
-      privateKey: config.efi_key_pem,
+      certChain: normalizedCert,
+      privateKey: normalizedKey,
     });
 
     // Step 1: Get OAuth token
