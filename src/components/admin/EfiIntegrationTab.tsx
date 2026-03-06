@@ -28,6 +28,7 @@ const EfiIntegrationTab = () => {
   const [loading, setLoading] = useState(true);
   const [configId, setConfigId] = useState<string | null>(null);
   const [p12FileName, setP12FileName] = useState<string | null>(null);
+  const [togglingActive, setTogglingActive] = useState(false);
   const p12FileRef = useRef<HTMLInputElement>(null);
 
   const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/subscription-webhook`;
