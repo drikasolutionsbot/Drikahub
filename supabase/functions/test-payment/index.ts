@@ -76,10 +76,7 @@ async function testEfi(
   } catch (err) {
     console.error("Efí mTLS error:", err);
     const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes("certificate") || msg.includes("ssl") || msg.includes("tls")) {
-      return { success: false, message: "Certificado PEM inválido. Verifique se converteu o .p12 corretamente." };
-    }
-    return { success: false, message: `Erro de conexão: ${msg}` };
+    return { success: false, message: `Erro mTLS Efí: ${msg.substring(0, 200)}` };
   }
 }
 
