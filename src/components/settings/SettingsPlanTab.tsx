@@ -35,11 +35,35 @@ const SettingsPlanTab = ({ tenant, tenantId, refetchTenant }: Props) => {
       if (error || data?.error) throw new Error(data?.error || error?.message || "Erro ao gerar PIX");
       setPixCode(data.brcode || data.qr_code || "");
       setQrCodeBase64(data.qr_code_base64 || null);
+      setSecondsLeft(PIX_EXPIRATION_SECONDS);
+      setPixExpired(false);
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
+  };
+
+  // Timer countdown
+  useEffect(() => {
+    if (!pixCode || secondsLeft <= 0) return;
+    const interval = setInterval(() => {
+      setSecondsLeft((prev) => {
+        if (prev <= 1) {
+          setPixExpired(true);
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [pixCode, secondsLeft > 0]);
+
+  const formatTime = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m.toString().padStart(2, "0")}:${sec.toString().padStart(2, "0")}`;
   };
 
   const handleCopy = () => {
