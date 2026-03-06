@@ -307,87 +307,57 @@ const EfiIntegrationTab = () => {
 
         {/* Certificate + Webhook */}
         <div className="space-y-6">
-          {/* Certificate mTLS */}
-          <Card className="bg-card border-border">
+           <Card className="bg-card border-border">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <Shield className="h-5 w-5 text-primary" />
                 Certificado mTLS
               </CardTitle>
               <CardDescription>
-                A API PIX da Efí exige certificado mTLS. Converta seu .p12 para PEM e faça o upload.
+                A API PIX da Efí exige certificado mTLS. Faça upload do seu arquivo .p12 recebido da Efí.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+              <div className="rounded-lg border border-border bg-muted/30 p-3">
                 <div className="flex items-start gap-2">
                   <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                  <div className="text-xs text-muted-foreground space-y-1">
-                    <p className="font-medium">Como converter .p12 para PEM:</p>
-                    <code className="block bg-background rounded px-2 py-1 text-[10px]">
-                      openssl pkcs12 -in certificado.p12 -out cert.pem -clcerts -nokeys
-                    </code>
-                    <code className="block bg-background rounded px-2 py-1 text-[10px]">
-                      openssl pkcs12 -in certificado.p12 -out key.pem -nocerts -nodes
-                    </code>
-                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Faça o download do certificado .p12 no painel da Efí (API {'>'} Aplicações {'>'} Produção) e envie aqui. A conversão é automática.
+                  </p>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label>Certificado (.pem)</Label>
-                <div className="flex gap-2">
+                <Label>Certificado .p12</Label>
+                <div className="flex gap-2 items-center">
                   <Button
                     variant="outline"
-                    size="sm"
-                    onClick={() => certFileRef.current?.click()}
+                    onClick={() => p12FileRef.current?.click()}
                     className="gap-2"
                   >
-                    {certPem ? <FileCheck className="h-4 w-4 text-emerald-500" /> : <Upload className="h-4 w-4" />}
-                    {certPem ? "Certificado carregado" : "Upload cert.pem"}
+                    {certPem && keyPem ? (
+                      <FileCheck className="h-4 w-4 text-emerald-500" />
+                    ) : (
+                      <Upload className="h-4 w-4" />
+                    )}
+                    {certPem && keyPem
+                      ? p12FileName || "Certificado importado"
+                      : "Upload certificado .p12"}
                   </Button>
                   <input
-                    ref={certFileRef}
+                    ref={p12FileRef}
                     type="file"
-                    accept=".pem,.crt,.cer"
+                    accept=".p12,.pfx,.pem"
                     className="hidden"
-                    onChange={handleFileUpload("cert")}
+                    onChange={handleP12Upload}
                   />
                 </div>
-                <Textarea
-                  value={certPem}
-                  onChange={(e) => setCertPem(e.target.value)}
-                  placeholder="-----BEGIN CERTIFICATE-----&#10;...&#10;-----END CERTIFICATE-----"
-                  className="bg-background border-border font-mono text-[10px] h-20 resize-none"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Chave Privada (.pem)</Label>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => keyFileRef.current?.click()}
-                    className="gap-2"
-                  >
-                    {keyPem ? <FileCheck className="h-4 w-4 text-emerald-500" /> : <Upload className="h-4 w-4" />}
-                    {keyPem ? "Chave carregada" : "Upload key.pem"}
-                  </Button>
-                  <input
-                    ref={keyFileRef}
-                    type="file"
-                    accept=".pem,.key"
-                    className="hidden"
-                    onChange={handleFileUpload("key")}
-                  />
-                </div>
-                <Textarea
-                  value={keyPem}
-                  onChange={(e) => setKeyPem(e.target.value)}
-                  placeholder="-----BEGIN PRIVATE KEY-----&#10;...&#10;-----END PRIVATE KEY-----"
-                  className="bg-background border-border font-mono text-[10px] h-20 resize-none"
-                />
+                {certPem && keyPem && (
+                  <p className="text-xs text-emerald-500 flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Certificado e chave privada extraídos com sucesso
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
