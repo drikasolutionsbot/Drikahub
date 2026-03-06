@@ -45,10 +45,14 @@ async function testEfi(
   try {
     const credentials = btoa(`${clientId}:${clientSecret}`);
 
+    // Normalize PEM line endings
+    const normalizedCert = certPem.replace(/\r\n/g, '\n').trim();
+    const normalizedKey = keyPem.replace(/\r\n/g, '\n').trim();
+
     // Create HTTP client with mTLS certificate
     const httpClient = Deno.createHttpClient({
-      certChain: certPem,
-      privateKey: keyPem,
+      certChain: normalizedCert,
+      privateKey: normalizedKey,
     });
 
     const res = await fetch("https://pix.api.efipay.com.br/oauth/token", {
