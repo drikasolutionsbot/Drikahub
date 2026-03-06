@@ -245,20 +245,20 @@ export const CommandsTab = () => {
       opt.choices = (opt.choices || []).filter((c) => c.name.trim() && c.value.trim());
     }
 
-    setCommands((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        name: name.toLowerCase(),
-        description: newDesc.trim(),
-        category: newCategory,
-        enabled: true,
-        options: validOptions.length > 0 ? validOptions : undefined,
-      },
-    ]);
+    const newCmd: BotCommand = {
+      id: crypto.randomUUID(),
+      name: name.toLowerCase(),
+      description: newDesc.trim(),
+      category: newCategory,
+      enabled: true,
+      options: validOptions.length > 0 ? validOptions : undefined,
+    };
+    const updated = [...commands, newCmd];
+    setCommands(updated);
     resetForm();
     setCreateOpen(false);
     toast({ title: "Comando criado!" });
+    syncToDiscord(updated, true);
   };
 
   const removeCommand = (id: string) => {
