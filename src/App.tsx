@@ -44,6 +44,7 @@ import TermsPage from "./pages/TermsPage";
 import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
 import AIAssistantPage from "./pages/AIAssistantPage";
+import TutorialsPage from "./pages/TutorialsPage";
 
 const queryClient = new QueryClient();
 
