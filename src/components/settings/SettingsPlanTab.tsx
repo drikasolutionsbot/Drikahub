@@ -14,6 +14,7 @@ interface Props {
 const SettingsPlanTab = ({ tenant, tenantId, refetchTenant }: Props) => {
   const [loading, setLoading] = useState(false);
   const [pixCode, setPixCode] = useState<string | null>(null);
+  const [qrCodeBase64, setQrCodeBase64] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   const isExpired = tenant.plan === "expired" || (tenant.plan_expires_at && new Date(tenant.plan_expires_at) < new Date());
@@ -29,6 +30,7 @@ const SettingsPlanTab = ({ tenant, tenantId, refetchTenant }: Props) => {
       });
       if (error || data?.error) throw new Error(data?.error || error?.message || "Erro ao gerar PIX");
       setPixCode(data.brcode || data.qr_code || "");
+      setQrCodeBase64(data.qr_code_base64 || null);
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
     } finally {
@@ -118,6 +120,15 @@ const SettingsPlanTab = ({ tenant, tenantId, refetchTenant }: Props) => {
 
           {pixCode ? (
             <div className="space-y-3">
+              {qrCodeBase64 && (
+                <div className="flex justify-center">
+                  <img
+                    src={qrCodeBase64}
+                    alt="QR Code PIX"
+                    className="w-48 h-48 rounded-xl border border-border"
+                  />
+                </div>
+              )}
               <p className="text-sm text-muted-foreground text-center">Copie o código PIX e pague pelo seu banco:</p>
               <div className="rounded-xl border border-primary/20 bg-muted/50 p-4">
                 <code className="block text-xs font-mono text-primary break-all leading-relaxed text-center">
