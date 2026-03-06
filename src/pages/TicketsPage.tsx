@@ -189,52 +189,72 @@ const TicketsPage = () => {
         </Button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {(["open", "in_progress", "delivered", "closed"] as const).map((status) => {
-          const sc = statusConfig[status];
-          const Icon = sc.icon;
-          return (
-            <div key={status} className="rounded-xl border border-border bg-card p-4 flex items-center gap-3">
-              <div className={`rounded-lg p-2 ${sc.cls}`}>
-                <Icon className="h-4 w-4" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{counts[status]}</p>
-                <p className="text-xs text-muted-foreground">{sc.label}</p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por usuário ou produto..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-10"
-        />
-      </div>
-
-      {/* Tabs */}
-      <Tabs defaultValue="all">
+      {/* Top-level Tabs: Tickets | Configuração */}
+      <Tabs defaultValue="tickets">
         <TabsList className="bg-muted">
-          <TabsTrigger value="all">Todos ({counts.all})</TabsTrigger>
-          <TabsTrigger value="open">Abertos ({counts.open})</TabsTrigger>
-          <TabsTrigger value="in_progress">Em Andamento ({counts.in_progress})</TabsTrigger>
-          <TabsTrigger value="delivered">Entregues ({counts.delivered})</TabsTrigger>
-          <TabsTrigger value="closed">Fechados ({counts.closed})</TabsTrigger>
+          <TabsTrigger value="tickets" className="gap-1.5">
+            <Ticket className="h-3.5 w-3.5" />
+            Tickets
+          </TabsTrigger>
+          <TabsTrigger value="config" className="gap-1.5">
+            <Settings className="h-3.5 w-3.5" />
+            Configuração
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="all">{renderTickets(filtered)}</TabsContent>
-        {(["open", "in_progress", "delivered", "closed"] as const).map((status) => (
-          <TabsContent key={status} value={status}>
-            {renderTickets(filtered.filter((t) => t.status === status))}
-          </TabsContent>
-        ))}
+        <TabsContent value="tickets" className="space-y-6 mt-4">
+          {/* Stats */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {(["open", "in_progress", "delivered", "closed"] as const).map((status) => {
+              const sc = statusConfig[status];
+              const Icon = sc.icon;
+              return (
+                <div key={status} className="rounded-xl border border-border bg-card p-4 flex items-center gap-3">
+                  <div className={`rounded-lg p-2 ${sc.cls}`}>
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{counts[status]}</p>
+                    <p className="text-xs text-muted-foreground">{sc.label}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por usuário ou produto..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          {/* Status Tabs */}
+          <Tabs defaultValue="all">
+            <TabsList className="bg-muted">
+              <TabsTrigger value="all">Todos ({counts.all})</TabsTrigger>
+              <TabsTrigger value="open">Abertos ({counts.open})</TabsTrigger>
+              <TabsTrigger value="in_progress">Em Andamento ({counts.in_progress})</TabsTrigger>
+              <TabsTrigger value="delivered">Entregues ({counts.delivered})</TabsTrigger>
+              <TabsTrigger value="closed">Fechados ({counts.closed})</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="all">{renderTickets(filtered)}</TabsContent>
+            {(["open", "in_progress", "delivered", "closed"] as const).map((status) => (
+              <TabsContent key={status} value={status}>
+                {renderTickets(filtered.filter((t) => t.status === status))}
+              </TabsContent>
+            ))}
+          </Tabs>
+        </TabsContent>
+
+        <TabsContent value="config" className="mt-4">
+          <TicketEmbedConfig />
+        </TabsContent>
       </Tabs>
 
       {/* Ticket Detail Modal */}
