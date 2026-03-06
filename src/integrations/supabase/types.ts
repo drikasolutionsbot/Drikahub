@@ -1139,6 +1139,14 @@ export type Database = {
           store_logo_url: string | null
           store_title: string | null
           tenant_id: string
+          ticket_channel_id: string | null
+          ticket_embed_button_label: string | null
+          ticket_embed_color: string | null
+          ticket_embed_description: string | null
+          ticket_embed_footer: string | null
+          ticket_embed_image_url: string | null
+          ticket_embed_thumbnail_url: string | null
+          ticket_embed_title: string | null
           updated_at: string
         }
         Insert: {
@@ -1162,6 +1170,14 @@ export type Database = {
           store_logo_url?: string | null
           store_title?: string | null
           tenant_id: string
+          ticket_channel_id?: string | null
+          ticket_embed_button_label?: string | null
+          ticket_embed_color?: string | null
+          ticket_embed_description?: string | null
+          ticket_embed_footer?: string | null
+          ticket_embed_image_url?: string | null
+          ticket_embed_thumbnail_url?: string | null
+          ticket_embed_title?: string | null
           updated_at?: string
         }
         Update: {
@@ -1185,6 +1201,14 @@ export type Database = {
           store_logo_url?: string | null
           store_title?: string | null
           tenant_id?: string
+          ticket_channel_id?: string | null
+          ticket_embed_button_label?: string | null
+          ticket_embed_color?: string | null
+          ticket_embed_description?: string | null
+          ticket_embed_footer?: string | null
+          ticket_embed_image_url?: string | null
+          ticket_embed_thumbnail_url?: string | null
+          ticket_embed_title?: string | null
           updated_at?: string
         }
         Relationships: [
