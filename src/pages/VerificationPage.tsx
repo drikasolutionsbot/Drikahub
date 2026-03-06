@@ -60,10 +60,10 @@ const VerificationPage = () => {
 
       // Fetch roles from Discord
       const { data: roleData } = await supabase.functions.invoke("manage-roles", {
-        body: { action: "list", tenant_id: tenantId },
+        body: { action: "list_discord", tenant_id: tenantId },
       });
       if (Array.isArray(roleData?.roles)) {
-        setRoles(roleData.roles.filter((r: any) => r.name !== "@everyone").sort((a: any, b: any) => b.position - a.position));
+        setRoles(roleData.roles);
       }
 
       // Fetch tenant verify settings

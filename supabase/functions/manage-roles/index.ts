@@ -54,6 +54,30 @@ serve(async (req) => {
         });
       }
 
+      case "list_discord": {
+        const discordRes = await fetch(
+          `https://discord.com/api/v10/guilds/${guildId}/roles`,
+          {
+            headers: { Authorization: `Bot ${botToken}` },
+          }
+        );
+
+        if (!discordRes.ok) {
+          const text = await discordRes.text();
+          throw new Error(`Discord API error [${discordRes.status}]: ${text}`);
+        }
+
+        const discordRoles = await discordRes.json();
+        const roles = discordRoles
+          .filter((r: any) => r.name !== "@everyone")
+          .map((r: any) => ({ id: r.id, name: r.name, position: r.position, color: r.color }))
+          .sort((a: any, b: any) => b.position - a.position);
+
+        return new Response(JSON.stringify({ roles }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       case "create": {
         const { name, color = "#99AAB5" } = params;
         if (!name) throw new Error("Missing name");
