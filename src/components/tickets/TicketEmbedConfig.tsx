@@ -264,8 +264,7 @@ const TicketEmbedConfig = () => {
           {data.ticket_embed_button_label && (
             <div className="mt-3">
               <div
-                className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded text-sm font-medium text-white"
-                style={{ backgroundColor: data.ticket_embed_color || "#5865F2" }}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium text-[#dbdee1] bg-[#2b2d31] border border-[#3f4147] hover:bg-[#35373c] transition-colors"
               >
                 <MessageSquare className="h-3.5 w-3.5" />
                 {data.ticket_embed_button_label}
