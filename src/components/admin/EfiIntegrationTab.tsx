@@ -6,8 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
 import { Key, Webhook, CheckCircle2, AlertCircle, ExternalLink, Copy, Shield, Zap, Loader2, Upload, FileCheck, Info } from "lucide-react";
+import forge from "node-forge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { logAudit } from "@/lib/auditLog";
@@ -27,8 +27,8 @@ const EfiIntegrationTab = () => {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [configId, setConfigId] = useState<string | null>(null);
-  const certFileRef = useRef<HTMLInputElement>(null);
-  const keyFileRef = useRef<HTMLInputElement>(null);
+  const [p12FileName, setP12FileName] = useState<string | null>(null);
+  const p12FileRef = useRef<HTMLInputElement>(null);
 
   const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/subscription-webhook`;
 
@@ -80,16 +80,37 @@ const EfiIntegrationTab = () => {
     toast.success("URL do webhook copiada!");
   };
 
-  const handleFileUpload = (type: "cert" | "key") => async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleP12Upload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const text = await file.text();
-    if (type === "cert") {
-      setCertPem(text);
-      toast.success("Certificado PEM carregado!");
-    } else {
-      setKeyPem(text);
-      toast.success("Chave privada PEM carregada!");
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const binary = String.fromCharCode(...new Uint8Array(arrayBuffer));
+      const p12Der = forge.util.decode64(btoa(binary));
+      const p12Asn1 = forge.asn1.fromDer(p12Der);
+      const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, "");
+
+      const certBags = p12.getBags({ bagType: forge.pki.oids.certBag });
+      const keyBags = p12.getBags({ bagType: forge.pki.oids.pkcs8ShroudedKeyBag });
+
+      const certBag = (certBags[forge.pki.oids.certBag] || [])[0];
+      const keyBag = (keyBags[forge.pki.oids.pkcs8ShroudedKeyBag] || [])[0];
+
+      if (!certBag?.cert || !keyBag?.key) {
+        toast.error("Não foi possível extrair certificado/chave do .p12");
+        return;
+      }
+
+      const certPemStr = forge.pki.certificateToPem(certBag.cert);
+      const keyPemStr = forge.pki.privateKeyToPem(keyBag.key);
+
+      setCertPem(certPemStr);
+      setKeyPem(keyPemStr);
+      setP12FileName(file.name);
+      toast.success(`Certificado ${file.name} importado com sucesso!`);
+    } catch (err) {
+      console.error("P12 parse error:", err);
+      toast.error("Erro ao ler o arquivo .p12. Verifique se o arquivo está correto.");
     }
   };
 
@@ -286,87 +307,57 @@ const EfiIntegrationTab = () => {
 
         {/* Certificate + Webhook */}
         <div className="space-y-6">
-          {/* Certificate mTLS */}
-          <Card className="bg-card border-border">
+           <Card className="bg-card border-border">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <Shield className="h-5 w-5 text-primary" />
                 Certificado mTLS
               </CardTitle>
               <CardDescription>
-                A API PIX da Efí exige certificado mTLS. Converta seu .p12 para PEM e faça o upload.
+                A API PIX da Efí exige certificado mTLS. Faça upload do seu arquivo .p12 recebido da Efí.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+              <div className="rounded-lg border border-border bg-muted/30 p-3">
                 <div className="flex items-start gap-2">
                   <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                  <div className="text-xs text-muted-foreground space-y-1">
-                    <p className="font-medium">Como converter .p12 para PEM:</p>
-                    <code className="block bg-background rounded px-2 py-1 text-[10px]">
-                      openssl pkcs12 -in certificado.p12 -out cert.pem -clcerts -nokeys
-                    </code>
-                    <code className="block bg-background rounded px-2 py-1 text-[10px]">
-                      openssl pkcs12 -in certificado.p12 -out key.pem -nocerts -nodes
-                    </code>
-                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Faça o download do certificado .p12 no painel da Efí (API {'>'} Aplicações {'>'} Produção) e envie aqui. A conversão é automática.
+                  </p>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label>Certificado (.pem)</Label>
-                <div className="flex gap-2">
+                <Label>Certificado .p12</Label>
+                <div className="flex gap-2 items-center">
                   <Button
                     variant="outline"
-                    size="sm"
-                    onClick={() => certFileRef.current?.click()}
+                    onClick={() => p12FileRef.current?.click()}
                     className="gap-2"
                   >
-                    {certPem ? <FileCheck className="h-4 w-4 text-emerald-500" /> : <Upload className="h-4 w-4" />}
-                    {certPem ? "Certificado carregado" : "Upload cert.pem"}
+                    {certPem && keyPem ? (
+                      <FileCheck className="h-4 w-4 text-emerald-500" />
+                    ) : (
+                      <Upload className="h-4 w-4" />
+                    )}
+                    {certPem && keyPem
+                      ? p12FileName || "Certificado importado"
+                      : "Upload certificado .p12"}
                   </Button>
                   <input
-                    ref={certFileRef}
+                    ref={p12FileRef}
                     type="file"
-                    accept=".pem,.crt,.cer"
+                    accept=".p12,.pfx,.pem"
                     className="hidden"
-                    onChange={handleFileUpload("cert")}
+                    onChange={handleP12Upload}
                   />
                 </div>
-                <Textarea
-                  value={certPem}
-                  onChange={(e) => setCertPem(e.target.value)}
-                  placeholder="-----BEGIN CERTIFICATE-----&#10;...&#10;-----END CERTIFICATE-----"
-                  className="bg-background border-border font-mono text-[10px] h-20 resize-none"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Chave Privada (.pem)</Label>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => keyFileRef.current?.click()}
-                    className="gap-2"
-                  >
-                    {keyPem ? <FileCheck className="h-4 w-4 text-emerald-500" /> : <Upload className="h-4 w-4" />}
-                    {keyPem ? "Chave carregada" : "Upload key.pem"}
-                  </Button>
-                  <input
-                    ref={keyFileRef}
-                    type="file"
-                    accept=".pem,.key"
-                    className="hidden"
-                    onChange={handleFileUpload("key")}
-                  />
-                </div>
-                <Textarea
-                  value={keyPem}
-                  onChange={(e) => setKeyPem(e.target.value)}
-                  placeholder="-----BEGIN PRIVATE KEY-----&#10;...&#10;-----END PRIVATE KEY-----"
-                  className="bg-background border-border font-mono text-[10px] h-20 resize-none"
-                />
+                {certPem && keyPem && (
+                  <p className="text-xs text-emerald-500 flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Certificado e chave privada extraídos com sucesso
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
