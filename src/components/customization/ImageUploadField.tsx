@@ -79,7 +79,7 @@ const ImageUploadField = ({ label, value, onChange, folder = "embeds" }: ImageUp
           onError={e => (e.currentTarget.style.display = "none")}
         />
       )}
-      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+      <input ref={inputRef} type="file" accept="image/*,.gif" className="hidden" onChange={handleUpload} />
     </div>
   );
 };
