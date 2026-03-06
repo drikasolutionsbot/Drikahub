@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { action, tenant_id, provider_key, api_key, secret_key, provider_id } = await req.json();
+    const { action, tenant_id, provider_key, api_key, secret_key, provider_id, efi_cert_pem, efi_key_pem, efi_pix_key } = await req.json();
     if (!tenant_id) throw new Error("Missing tenant_id");
 
     const supabase = createClient(
