@@ -64,6 +64,7 @@ const providers = [
       { key: "secret_key", label: "Client Secret", placeholder: "Client_Secret_..." },
     ],
     instructions: "No painel Efí, acesse API > Aplicações > Credenciais de Produção e copie Client ID e Client Secret.",
+    requiresCert: true,
   },
   {
     key: "misticpay",
