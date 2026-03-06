@@ -163,7 +163,7 @@ div[style*="Edit with Lovable"],
 .login-pattern-bg {
   --sz: 15px;
   --c0: #000;
-  --c1: #1d4ed8;
+  --c1: #1a0a12;
   --ts: 50% / calc(var(--sz) * 8) calc(var(--sz) * 16);
   --dot: var(--c1) 0 calc(var(--sz) * 0.78), #fff0 calc(calc(var(--sz) * 0.78) + 1px) 100%;
   --dot2: radial-gradient(circle at 90% 0%, var(--dot)) var(--ts),
