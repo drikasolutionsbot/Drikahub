@@ -175,6 +175,7 @@ const ChannelsPage = () => {
   const [newTopic, setNewTopic] = useState("");
   const [creatingCategory, setCreatingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [createForKey, setCreateForKey] = useState<string | null>(null);
 
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
