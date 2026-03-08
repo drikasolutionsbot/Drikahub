@@ -19,6 +19,13 @@ const LoginPage = () => {
     if (!token.trim()) return;
     setValidating(true);
     try {
+      // Sign out any existing Supabase Auth session (e.g., admin session)
+      if (user) {
+        await signOut();
+      }
+      // Also clear any previous token session
+      sessionStorage.removeItem("token_session");
+
       const { data, error } = await supabase.functions.invoke("validate-token", {
         body: { token: token.trim() },
       });
