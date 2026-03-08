@@ -15,6 +15,8 @@ Deno.serve(async (req) => {
   const clientSecret = Deno.env.get("DISCORD_CLIENT_SECRET")!;
   const redirectUri = `${supabaseUrl}/functions/v1/verify-member`;
 
+  console.log("verify-member init", { tenantId, hasCode: Boolean(code), clientId, redirectUri });
+
   // ─── Step 1: No code yet → redirect to Discord OAuth2 ────
   if (!code) {
     if (!tenantId) {
