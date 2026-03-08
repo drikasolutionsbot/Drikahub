@@ -257,6 +257,7 @@ const VerificationPage = () => {
                   categories={categories}
                   onChannelCreated={fetchData}
                   tenantId={tenantId}
+                  guildId={tenant?.discord_guild_id}
                   placeholder="Selecione o canal"
                   defaultNewName="verificação"
                 />
