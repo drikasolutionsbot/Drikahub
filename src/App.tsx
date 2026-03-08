@@ -72,7 +72,7 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 
 const AppRoutes = () => (
   <Routes>
-    <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+    <Route path="/login" element={<LoginPage />} />
     <Route path="/signup" element={<SignupPage />} />
     <Route path="/termos" element={<TermsPage />} />
     <Route path="/admin/login" element={<AdminLoginPage />} />
