@@ -433,12 +433,12 @@ const LandingPage = () => {
       <nav className="sticky top-0 z-50 bg-black/60 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-4xl mx-auto flex items-center justify-between px-4 h-12">
           <div className="flex items-center gap-2">
-            <img src={drikaLogo} alt="Drika" className="h-7 w-auto" />
+            <img src={drikaLogo} alt="Drika" className="h-6 sm:h-7 w-auto" />
           </div>
-          <div className="flex items-center gap-4">
-            <button onClick={scrollToPlans} className="text-xs text-white/60 hover:text-white font-medium bg-transparent border-none cursor-pointer transition-colors">Planos</button>
-            <button onClick={() => navigate("/login")} className="text-xs text-white/60 hover:text-white font-medium bg-transparent border-none cursor-pointer transition-colors">Entrar</button>
-            <button onClick={() => navigate("/signup")} className="text-xs px-4 py-1.5 rounded-full bg-white text-black font-semibold cursor-pointer border-none hover:bg-white/90 transition-all">Começar</button>
+          <div className="flex items-center gap-2 sm:gap-4">
+            <button onClick={scrollToPlans} className="text-[11px] sm:text-xs text-white/60 hover:text-white font-medium bg-transparent border-none cursor-pointer transition-colors">Planos</button>
+            <button onClick={() => navigate("/login")} className="text-[11px] sm:text-xs text-white/60 hover:text-white font-medium bg-transparent border-none cursor-pointer transition-colors">Entrar</button>
+            <button onClick={() => navigate("/signup")} className="text-[11px] sm:text-xs px-3 sm:px-4 py-1.5 rounded-full bg-white text-black font-semibold cursor-pointer border-none hover:bg-white/90 transition-all">Começar</button>
           </div>
         </div>
       </nav>
