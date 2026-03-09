@@ -307,7 +307,7 @@ serve(async (req) => {
         const embed: any = {
           title: `ℹ️ ${product.name}`,
           description: product.description || "Sem descrição.",
-          color: 0x5865F2,
+          color: 0x2B2D31,
           fields: [
             { name: "💰 Preço", value: formatBRL(product.price_cents), inline: true },
             { name: "📦 Tipo", value: product.type === "digital_auto" ? "Digital" : product.type === "service" ? "Serviço" : "Híbrido", inline: true },
