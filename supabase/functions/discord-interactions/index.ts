@@ -557,10 +557,34 @@ serve(async (req) => {
         }
 
         // Determine the category to create the ticket channel in
-        // ticket_channel_id should point to a CATEGORY, not a text channel
-        const categoryId = targetChannelId || storeConfig?.ticket_channel_id || null;
+        // ticket_channel_id may point to a category OR a text channel
+        // We need to resolve it to a category ID
+        let categoryId: string | null = null;
+        const configuredChannelId = targetChannelId || storeConfig?.ticket_channel_id || null;
 
-        console.log("Ticket open: categoryId =", categoryId, "targetChannelId =", targetChannelId);
+        if (configuredChannelId) {
+          // Check if the configured channel is a category (type 4) or a text channel
+          try {
+            const chInfoRes = await fetch(`${DISCORD_API}/channels/${configuredChannelId}`, {
+              headers: { Authorization: `Bot ${botToken}` },
+            });
+            if (chInfoRes.ok) {
+              const chInfo = await chInfoRes.json();
+              if (chInfo.type === 4) {
+                // It's already a category
+                categoryId = configuredChannelId;
+              } else if (chInfo.parent_id) {
+                // It's a text channel inside a category - use its parent
+                categoryId = chInfo.parent_id;
+              }
+              // If it's a text channel without a parent, categoryId stays null (create at root)
+            }
+          } catch (e) {
+            console.error("Error checking channel type:", e);
+          }
+        }
+
+        console.log("Ticket open: resolved categoryId =", categoryId, "from configuredChannelId =", configuredChannelId);
 
         // Create a private text channel under the category for this ticket
         const channelName = `ticket-${username || userId}`.toLowerCase().replace(/[^a-z0-9-_]/g, "").substring(0, 100);
