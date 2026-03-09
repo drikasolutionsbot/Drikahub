@@ -647,7 +647,7 @@ const LandingPage = () => {
                 </div>
                 <div className="relative z-10 p-5 pt-3 flex flex-col h-full">
                   <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-1">Pro</h3>
-                  <div className="text-2xl font-extrabold font-display mb-0.5 text-white">R$ 26,90</div>
+                  <div className="text-2xl font-extrabold font-display mb-0.5 text-white">R$ {((landingConfig?.pro_price_cents || 2690) / 100).toFixed(2).replace(".", ",")}</div>
                   <p className="text-xs text-white/40 mb-4">por mês</p>
                   <ul className="space-y-1.5 mb-5 flex-1">
                     {["Tudo do Free", "Sem limite de tempo", "Segurança avançada", "Suporte prioritário"].map((f) => (
