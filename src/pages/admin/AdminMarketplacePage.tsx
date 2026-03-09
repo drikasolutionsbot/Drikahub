@@ -256,7 +256,7 @@ const AdminMarketplacePage = () => {
                           )}
                         </div>
                         <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                          <span>Custo: {formatUSD(item.cost_cents)}</span>
+                          <span>Custo: {formatReais(item.cost_cents)}</span>
                           <span className="font-semibold text-foreground">Revenda: {formatBRL(item.resale_price_cents)}</span>
                           <span>LZT #{item.lzt_item_id}</span>
                         </div>
