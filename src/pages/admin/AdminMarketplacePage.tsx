@@ -251,7 +251,9 @@ const AdminMarketplacePage = () => {
                 <div className="space-y-2">
                   {tabItems.map((item) => (
                     <div key={item.id} className="rounded-lg border border-border bg-card p-4 flex items-center gap-4">
-                      <div className="flex-1 min-w-0">
+                      {item.image_url && (
+                        <img src={item.image_url} alt={item.title} className="h-12 w-12 rounded-lg object-cover shrink-0 border border-border" />
+                      )}
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className="text-sm font-semibold truncate">{item.title}</h3>
                           {item.category && (
