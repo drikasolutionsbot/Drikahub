@@ -123,6 +123,7 @@ const SubscriptionPaymentModal = ({ onClose, priceCents }: { onClose: () => void
   const [step, setStep] = useState<"form" | "pix" | "success">("form");
   const [loading, setLoading] = useState(false);
   const [brcode, setBrcode] = useState<string | null>(null);
+  const [qrSvg, setQrSvg] = useState<string>("");
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
