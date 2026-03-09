@@ -8,7 +8,7 @@ interface ThemeToggleProps {
 const ThemeToggle = ({ checked, onChange }: ThemeToggleProps) => {
   return (
     <StyledWrapper>
-      <div className="toggle-cont" style={{ containerType: "normal" }}>
+      <div className="toggle-cont">
         <input
           className="toggle-input"
           id="theme-toggle"
@@ -18,17 +18,6 @@ const ThemeToggle = ({ checked, onChange }: ThemeToggleProps) => {
         />
         <label className="toggle-label" htmlFor="theme-toggle">
           <div className="cont-icon">
-            {Array.from({ length: 24 }).map((_, i) => (
-              <span
-                key={i}
-                className="sparkle"
-                style={{
-                  "--deg": `${i * 15}`,
-                  "--duration": `${20 + i * 2}`,
-                  "--width": `${10 + (i % 5) * 3}`,
-                } as React.CSSProperties}
-              />
-            ))}
             <svg
               className="icon"
               xmlns="http://www.w3.org/2000/svg"
@@ -53,13 +42,9 @@ const StyledWrapper = styled.div`
     --light: #d9d9d9;
     --dark: #121212;
     --gray: #414344;
-
     position: relative;
-    z-index: 10;
-
     width: fit-content;
-    height: 32px;
-
+    height: 24px;
     border-radius: 9999px;
   }
 
@@ -68,152 +53,48 @@ const StyledWrapper = styled.div`
   }
 
   .toggle-cont .toggle-label {
-    --gap: 3px;
-    --width: 32px;
-
+    --gap: 2px;
+    --width: 24px;
     cursor: pointer;
-
     position: relative;
     display: inline-block;
-
-    padding: 0.3rem;
+    padding: 2px;
     width: calc((var(--width) + var(--gap)) * 2);
     height: 100%;
     background-color: var(--dark);
-
-    border: 1px solid #777777;
-    border-bottom: 0;
-
+    border: 1px solid #555;
     border-radius: 9999px;
     box-sizing: content-box;
     transition: all 0.3s ease-in-out;
-  }
-
-  .toggle-label::before {
-    content: "";
-
-    position: absolute;
-    z-index: -10;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-
-    width: calc(100% + 1rem);
-    height: calc(100% + 1rem);
-    background-color: var(--gray);
-
-    border: 1px solid #777777;
-    border-bottom: 0;
-    border-radius: 9999px;
-
-    transition: all 0.3s ease-in-out;
-  }
-
-  .toggle-label::after {
-    content: "";
-
-    position: absolute;
-    z-index: -10;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-
-    width: 100%;
-    height: 100%;
-    background-image: radial-gradient(
-      circle at 50% -100%,
-      rgb(58, 155, 252) 0%,
-      rgba(12, 12, 12, 1) 80%
-    );
-
-    border-radius: 9999px;
   }
 
   .toggle-cont .toggle-label .cont-icon {
     display: flex;
     justify-content: center;
     align-items: center;
-
     position: relative;
     width: var(--width);
-    height: 32px;
-    background-image: radial-gradient(
-      circle at 50% 0%,
-      #666666 0%,
-      var(--gray) 100%
-    );
-
-    border: 1px solid #aaaaaa;
-    border-bottom: 0;
+    height: 24px;
+    background-image: radial-gradient(circle at 50% 0%, #666 0%, var(--gray) 100%);
+    border: 1px solid #888;
     border-radius: 9999px;
-    box-shadow: inset 0 -0.1rem 0.1rem var(--primary),
-      inset 0 0 0.3rem 0.5rem var(--second);
-
     transition: transform 0.3s ease-in-out;
-    overflow: clip;
-  }
-
-  .cont-icon .sparkle {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-
-    display: block;
-
-    width: calc(var(--width) * 1px);
-    aspect-ratio: 1;
-    background-color: var(--light);
-
-    border-radius: 50%;
-    transform-origin: 50% 50%;
-    rotate: calc(1deg * var(--deg));
-    transform: translate(-50%, -50%);
-    animation: sparkle calc(100s / var(--duration)) linear
-      calc(0s / var(--duration)) infinite;
-  }
-
-  @keyframes sparkle {
-    to {
-      width: calc(var(--width) * 0.5px);
-      transform: translate(2000%, -50%);
-    }
   }
 
   .cont-icon .icon {
-    width: 0.9rem;
+    width: 0.75rem;
     fill: var(--light);
   }
 
-  /* Checked state */
   .toggle-input:checked + .toggle-label {
-    background-color: #41434400;
-    border: 1px solid #3d6970;
-    border-bottom: 0;
-  }
-
-  .toggle-input:checked + .toggle-label::before {
-    box-shadow: 0 0.7rem 1.5rem -1.2rem #0080ff;
+    background-color: transparent;
+    border-color: #3d6970;
   }
 
   .toggle-input:checked + .toggle-label .cont-icon {
-    overflow: visible;
-
-    background-image: radial-gradient(
-      circle at 50% 0%,
-      #045ab1 0%,
-      var(--primary) 100%
-    );
-
-    border: 1px solid var(--primary);
-    border-bottom: 0;
-
-    transform: translateX(calc((var(--gap) * 2) + 100%)) rotate(-225deg);
-  }
-
-  .toggle-input:checked + .toggle-label .cont-icon .sparkle {
-    z-index: -10;
-    width: calc(var(--width) * 1.5px);
-    background-color: #acacac;
+    background-image: radial-gradient(circle at 50% 0%, #045ab1 0%, var(--primary) 100%);
+    border-color: var(--primary);
+    transform: translateX(calc((var(--gap) * 2) + 100%));
   }
 `;
 
