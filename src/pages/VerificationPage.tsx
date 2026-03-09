@@ -288,6 +288,21 @@ const VerificationPage = () => {
                 </select>
                 <p className="text-[11px] text-muted-foreground mt-1">Cargo atribuído automaticamente ao membro após verificar</p>
               </div>
+              <div>
+                <Label>📋 Canal de Logs de Verificação</Label>
+                <ChannelSelectWithCreate
+                  value={config.verify_logs_channel_id}
+                  onChange={(v) => update("verify_logs_channel_id", v)}
+                  channels={channels}
+                  categories={categories}
+                  onChannelCreated={fetchData}
+                  tenantId={tenantId}
+                  guildId={tenant?.discord_guild_id}
+                  placeholder="Selecione o canal de logs"
+                  defaultNewName="logs-verificação"
+                />
+                <p className="text-[11px] text-muted-foreground mt-1">Logs com dados do membro verificado serão enviados aqui</p>
+              </div>
             </CardContent>
           </Card>
 
