@@ -176,22 +176,48 @@ serve(async (req) => {
           .order("sort_order", { ascending: true });
 
         if (fields && fields.length > 0) {
+          // Fetch stock counts for each field
+          const fieldIds = fields.map((f: any) => f.id);
+          const { data: stockCounts } = await supabase
+            .from("product_stock_items")
+            .select("field_id")
+            .in("field_id", fieldIds)
+            .eq("tenant_id", tenantId)
+            .eq("delivered", false);
+
+          const stockMap: Record<string, number> = {};
+          if (stockCounts) {
+            for (const item of stockCounts) {
+              stockMap[item.field_id] = (stockMap[item.field_id] || 0) + 1;
+            }
+          }
+
           // Show variation selector via select menu
-          const options = fields.map((f: any) => ({
-            label: f.name,
-            value: `buy_field:${productId}:${f.id}`,
-            description: formatBRL(f.price_cents),
-            emoji: f.emoji ? parseEmoji(f.emoji) : undefined,
-          }));
+          const options = fields.map((f: any) => {
+            const stock = stockMap[f.id] || 0;
+            return {
+              label: f.name,
+              value: `buy_field:${productId}:${f.id}`,
+              description: `Preço: ${formatBRL(f.price_cents)} | Estoque: ${stock}`,
+              emoji: f.emoji ? parseEmoji(f.emoji) : undefined,
+            };
+          });
 
           await editFollowup(interaction, botToken, {
-            content: "Escolha uma variação para comprar:",
+            content: "",
+            embeds: [{
+              title: product.name,
+              description: product.description || "",
+              color: 0x2B2D31,
+              image: product.banner_url ? { url: product.banner_url } : undefined,
+              thumbnail: product.icon_url ? { url: product.icon_url } : undefined,
+            }],
             components: [{
               type: 1,
               components: [{
                 type: 3, // String Select
                 custom_id: `select_variation:${productId}`,
-                placeholder: "Selecione uma variação...",
+                placeholder: "Clique aqui para ver as opções",
                 options: options.slice(0, 25),
               }],
             }],
@@ -259,7 +285,7 @@ serve(async (req) => {
         const embed = {
           title: `📋 Variações de ${product.name}`,
           description: fieldLines.join("\n"),
-          color: 0x5865F2,
+          color: 0x2B2D31,
         };
 
         return respondImmediate(interaction, { embeds: [embed] });
@@ -281,7 +307,7 @@ serve(async (req) => {
         const embed: any = {
           title: `ℹ️ ${product.name}`,
           description: product.description || "Sem descrição.",
-          color: 0x5865F2,
+          color: 0x2B2D31,
           fields: [
             { name: "💰 Preço", value: formatBRL(product.price_cents), inline: true },
             { name: "📦 Tipo", value: product.type === "digital_auto" ? "Digital" : product.type === "service" ? "Serviço" : "Híbrido", inline: true },
