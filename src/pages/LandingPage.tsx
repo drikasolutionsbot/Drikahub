@@ -434,7 +434,7 @@ const LandingPage = () => {
             <button onClick={handleProClick} className="group px-6 py-3 rounded-full bg-white/10 text-white font-semibold transition-all cursor-pointer border border-white/20 hover:bg-white/20">
               <span className="flex items-center justify-center gap-2">
                 <Crown className="h-4 w-4" />
-                Assinar Pro — R$ 26,90/mês
+                Assinar Pro — R$ {((landingConfig?.pro_price_cents || 2690) / 100).toFixed(2).replace(".", ",")}/mês
               </span>
             </button>
           </div>
