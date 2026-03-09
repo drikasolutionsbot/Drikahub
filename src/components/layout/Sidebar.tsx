@@ -3,6 +3,7 @@ import {
   LayoutDashboard, DollarSign, Palette, Box, Hash, ShieldCheck, Shield,
   Store, Ticket, Cloud, Headset, Settings,
   ChevronLeft, ChevronRight, ClipboardCheck, UserCheck, Sparkles, BookOpen,
+  ShoppingBag,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { cn } from "@/lib/utils";
@@ -42,6 +43,7 @@ const navGroups = [
       { label: "Canais", icon: Hash, path: "/channels" },
       { label: "Cargos", icon: ShieldCheck, path: "/roles" },
       { label: "Loja", icon: Store, path: "/store" },
+      { label: "Marketplace", icon: ShoppingBag, path: "/marketplace" },
       { label: "Proteção", icon: Shield, path: "/protection" },
       { label: "Verificação", icon: UserCheck, path: "/verification" },
       { label: "Tickets", icon: Ticket, path: "/tickets" },
