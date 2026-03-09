@@ -393,11 +393,7 @@ const LandingPage = () => {
     });
   }, []);
   const handleProClick = () => {
-    if (landingConfig?.pushinpay_active) {
-      setPaymentOpen(true);
-    } else {
-      navigate("/signup?plan=pro");
-    }
+    setPaymentOpen(true);
   };
 
   const scrollToPlans = () => {
