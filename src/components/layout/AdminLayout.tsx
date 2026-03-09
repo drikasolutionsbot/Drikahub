@@ -21,6 +21,7 @@ const navItems = [
   { label: "Logs", icon: ClipboardList, path: "/admin/logs" },
   { label: "Permissões", icon: Shield, path: "/admin/permissoes" },
   { label: "Tutoriais", icon: BookOpen, path: "/admin/tutoriais" },
+  { label: "Market Clientes", icon: Store, path: "/admin/marketplace" },
 ];
 
 interface AdminNotif {
