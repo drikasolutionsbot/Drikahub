@@ -65,6 +65,7 @@ const AdminLandingConfigPage = () => {
         stat_products_label: form.stat_products_label,
         video_url: form.video_url || null,
         video_type: form.video_type,
+        pro_price_cents: form.pro_price_cents,
         updated_at: new Date().toISOString(),
       } as any)
       .eq("id", configId);
