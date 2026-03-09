@@ -82,6 +82,9 @@ serve(async (req) => {
         const { name, color = "#99AAB5" } = params;
         if (!name) throw new Error("Missing name");
 
+        // Accept both hex string and number for color
+        const colorDecimal = typeof color === "number" ? color : hexToDecimal(String(color));
+
         const discordRes = await fetch(
           `https://discord.com/api/v10/guilds/${guildId}/roles`,
           {
@@ -92,7 +95,7 @@ serve(async (req) => {
             },
             body: JSON.stringify({
               name,
-              color: hexToDecimal(color),
+              color: colorDecimal,
               mentionable: false,
               hoist: false,
             }),
