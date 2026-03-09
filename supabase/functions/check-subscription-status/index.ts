@@ -153,7 +153,8 @@ async function checkEfiPayment(supabase: any, subPayment: any): Promise<boolean>
     } as any);
 
     if (!cobRes.ok) {
-      console.error("EFI cob check failed:", cobRes.status);
+      const errBody = await cobRes.text();
+      console.error("EFI cob check failed:", cobRes.status, errBody);
       return false;
     }
 
