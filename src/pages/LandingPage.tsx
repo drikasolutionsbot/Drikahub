@@ -245,7 +245,7 @@ const SubscriptionPaymentModal = ({ onClose, priceCents }: { onClose: () => void
             <div className="relative text-center">
               <img src={drikaLogo} alt="Drika" className="h-16 w-auto mx-auto mb-3 drop-shadow-[0_0_20px_rgba(255,0,100,0.3)]" />
               <h3 className="text-xl font-bold text-white tracking-tight">
-                {step === "success" ? "Conta Pro Ativada! 🎉" : "Assinar Drika Solutions Pro"}
+                {step === "success" ? "Conta Pro Ativada! 🎉" : "Assinar Drika Hub Pro"}
               </h3>
               {step !== "success" && (
                 <div className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary/20 to-primary/5 border border-primary/30 px-5 py-2 text-sm font-semibold text-primary mt-3 shadow-[0_0_15px_rgba(255,0,100,0.15)]">
