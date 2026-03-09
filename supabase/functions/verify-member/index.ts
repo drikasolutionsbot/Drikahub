@@ -169,11 +169,14 @@ Deno.serve(async (req) => {
 function htmlResponse(title: string, message: string, color: string, logoUrl?: string | null): Response {
   const isSuccess = color === "#57F287";
   const isError = color === "#ED4245";
-  const isWarning = color === "#FEE75C";
 
   const logo = logoUrl
     ? `<img src="${logoUrl}" alt="Logo" class="logo" />`
-    : "";
+    : `<div class="logo-placeholder">
+         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+           <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+         </svg>
+       </div>`;
 
   const icon = isSuccess 
     ? `<div class="icon-container success">
@@ -199,9 +202,9 @@ function htmlResponse(title: string, message: string, color: string, logoUrl?: s
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${title.replace(/[✅❌⚠️]/g, '').trim()}</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title.replace(/[✅❌⚠️]/g, '').trim()} - Drika Hub</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -213,7 +216,7 @@ function htmlResponse(title: string, message: string, color: string, logoUrl?: s
       display: flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+      background: #0d0d0d;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       color: #e0e0e0;
       padding: 20px;
@@ -227,8 +230,8 @@ function htmlResponse(title: string, message: string, color: string, logoUrl?: s
       left: -50%;
       width: 200%;
       height: 200%;
-      background: radial-gradient(circle at 30% 30%, rgba(88, 101, 242, 0.08) 0%, transparent 50%),
-                  radial-gradient(circle at 70% 70%, rgba(87, 242, 135, 0.05) 0%, transparent 50%);
+      background: radial-gradient(circle at 30% 30%, rgba(255, 0, 128, 0.08) 0%, transparent 50%),
+                  radial-gradient(circle at 70% 70%, rgba(255, 0, 128, 0.05) 0%, transparent 50%);
       animation: float 20s ease-in-out infinite;
       pointer-events: none;
     }
@@ -240,16 +243,16 @@ function htmlResponse(title: string, message: string, color: string, logoUrl?: s
     
     .card {
       position: relative;
-      background: rgba(22, 33, 62, 0.8);
+      background: rgba(20, 20, 20, 0.9);
       backdrop-filter: blur(20px);
       border-radius: 24px;
       padding: 48px 40px;
       max-width: 420px;
       width: 100%;
       text-align: center;
-      box-shadow: 0 25px 80px rgba(0,0,0,0.5),
-                  0 0 0 1px rgba(255,255,255,0.05),
-                  inset 0 1px 0 rgba(255,255,255,0.1);
+      box-shadow: 0 25px 80px rgba(0,0,0,0.6),
+                  0 0 0 1px rgba(255, 0, 128, 0.1),
+                  inset 0 1px 0 rgba(255,255,255,0.05);
       animation: slideUp 0.6s ease-out;
     }
     
@@ -259,29 +262,36 @@ function htmlResponse(title: string, message: string, color: string, logoUrl?: s
     }
     
     .logo {
-      width: 72px;
-      height: 72px;
+      width: 80px;
+      height: 80px;
       border-radius: 50%;
-      margin-bottom: 20px;
+      margin-bottom: 24px;
       object-fit: cover;
-      border: 3px solid rgba(255,255,255,0.1);
-      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-      animation: pulse 2s ease-in-out infinite;
+      border: 3px solid rgba(255, 0, 128, 0.3);
+      box-shadow: 0 8px 24px rgba(255, 0, 128, 0.2);
     }
     
-    @keyframes pulse {
-      0%, 100% { box-shadow: 0 8px 24px rgba(0,0,0,0.3), 0 0 0 0 rgba(88, 101, 242, 0); }
-      50% { box-shadow: 0 8px 24px rgba(0,0,0,0.3), 0 0 0 8px rgba(88, 101, 242, 0.1); }
+    .logo-placeholder {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      margin: 0 auto 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, rgba(255, 0, 128, 0.2), rgba(255, 0, 128, 0.05));
+      border: 3px solid rgba(255, 0, 128, 0.3);
+      color: #ff0080;
     }
     
     .icon-container {
-      width: 64px;
-      height: 64px;
+      width: 72px;
+      height: 72px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 0 auto 20px;
+      margin: 0 auto 24px;
       animation: scaleIn 0.5s ease-out 0.2s both;
     }
     
@@ -292,14 +302,14 @@ function htmlResponse(title: string, message: string, color: string, logoUrl?: s
     }
     
     .icon-container svg {
-      width: 32px;
-      height: 32px;
+      width: 36px;
+      height: 36px;
     }
     
     .icon-container.success {
-      background: linear-gradient(135deg, rgba(87, 242, 135, 0.2), rgba(87, 242, 135, 0.05));
-      color: #57F287;
-      box-shadow: 0 0 30px rgba(87, 242, 135, 0.2);
+      background: linear-gradient(135deg, rgba(255, 0, 128, 0.2), rgba(255, 0, 128, 0.05));
+      color: #ff0080;
+      box-shadow: 0 0 40px rgba(255, 0, 128, 0.3);
     }
     
     .icon-container.error {
@@ -314,8 +324,17 @@ function htmlResponse(title: string, message: string, color: string, logoUrl?: s
       box-shadow: 0 0 30px rgba(254, 231, 92, 0.2);
     }
     
+    .brand {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #ff0080;
+      margin-bottom: 8px;
+    }
+    
     h1 {
-      font-size: 22px;
+      font-size: 24px;
       font-weight: 700;
       margin-bottom: 12px;
       color: #ffffff;
@@ -338,21 +357,21 @@ function htmlResponse(title: string, message: string, color: string, logoUrl?: s
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      margin-top: 16px;
-      padding: 8px 16px;
-      background: rgba(87, 242, 135, 0.1);
-      border: 1px solid rgba(87, 242, 135, 0.2);
+      margin-top: 20px;
+      padding: 10px 20px;
+      background: rgba(255, 0, 128, 0.1);
+      border: 1px solid rgba(255, 0, 128, 0.3);
       border-radius: 100px;
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 500;
-      color: #57F287;
+      color: #ff0080;
     }
     
     .status-badge::before {
       content: '';
-      width: 6px;
-      height: 6px;
-      background: #57F287;
+      width: 8px;
+      height: 8px;
+      background: #ff0080;
       border-radius: 50%;
       animation: blink 1.5s ease-in-out infinite;
     }
@@ -369,19 +388,19 @@ function htmlResponse(title: string, message: string, color: string, logoUrl?: s
       gap: 10px;
       margin-top: 28px;
       padding: 14px 32px;
-      background: linear-gradient(135deg, #5865F2, #4752C4);
+      background: linear-gradient(135deg, #ff0080, #cc0066);
       color: white;
       border-radius: 12px;
       text-decoration: none;
       font-weight: 600;
       font-size: 14px;
       transition: all 0.3s ease;
-      box-shadow: 0 4px 20px rgba(88, 101, 242, 0.3);
+      box-shadow: 0 4px 20px rgba(255, 0, 128, 0.4);
     }
     
     .discord-btn:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 30px rgba(88, 101, 242, 0.4);
+      box-shadow: 0 8px 30px rgba(255, 0, 128, 0.5);
     }
     
     .discord-btn svg {
@@ -398,7 +417,7 @@ function htmlResponse(title: string, message: string, color: string, logoUrl?: s
     }
     
     .footer a {
-      color: #5865F2;
+      color: #ff0080;
       text-decoration: none;
     }
   </style>
@@ -406,10 +425,11 @@ function htmlResponse(title: string, message: string, color: string, logoUrl?: s
 <body>
   <div class="card">
     ${logo}
-    ${!logoUrl ? icon : ''}
+    ${icon}
+    <div class="brand">Drika Hub</div>
     <h1>${title.replace(/[✅❌⚠️]/g, '').trim()}</h1>
     <p class="subtitle">${message}</p>
-    ${isSuccess ? '<div class="status-badge">Cargo atribuído</div>' : ''}
+    ${isSuccess ? '<div class="status-badge">Verificado</div>' : ''}
     <a href="https://discord.com/channels/@me" class="discord-btn">
       <svg viewBox="0 0 24 24" fill="currentColor">
         <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515a.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0a12.64 12.64 0 0 0-.617-1.25a.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057a19.9 19.9 0 0 0 5.993 3.03a.078.078 0 0 0 .084-.028a14.09 14.09 0 0 0 1.226-1.994a.076.076 0 0 0-.041-.106a13.107 13.107 0 0 1-1.872-.892a.077.077 0 0 1-.008-.128a10.2 10.2 0 0 0 .372-.292a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127a12.299 12.299 0 0 1-1.873.892a.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028a19.839 19.839 0 0 0 6.002-3.03a.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.956-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.955-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.946 2.418-2.157 2.418z"/>
@@ -417,7 +437,7 @@ function htmlResponse(title: string, message: string, color: string, logoUrl?: s
       Voltar ao Discord
     </a>
     <div class="footer">
-      Verificação segura via <a href="https://discord.com" target="_blank">Discord OAuth2</a>
+      Powered by <a href="#">Drika Hub</a>
     </div>
   </div>
 </body>
