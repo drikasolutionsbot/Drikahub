@@ -146,9 +146,6 @@ const SettingsPage = () => {
               <TabsTrigger value="pix" className="gap-2 data-[state=active]:bg-card data-[state=active]:shadow-md px-3 sm:px-4 py-2 text-xs sm:text-sm">
                 <QrCode className="h-4 w-4" /> PIX
               </TabsTrigger>
-              <TabsTrigger value="users" className="gap-2 data-[state=active]:bg-card data-[state=active]:shadow-md px-3 sm:px-4 py-2 text-xs sm:text-sm">
-                <Users className="h-4 w-4" /> <span className="hidden sm:inline">Usuários</span><span className="sm:hidden">Users</span>
-              </TabsTrigger>
               <TabsTrigger value="plan" className="gap-2 data-[state=active]:bg-card data-[state=active]:shadow-md px-3 sm:px-4 py-2 text-xs sm:text-sm">
                 <Crown className="h-4 w-4" /> Plano
               </TabsTrigger>
