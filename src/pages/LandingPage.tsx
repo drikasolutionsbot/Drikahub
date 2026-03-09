@@ -184,6 +184,11 @@ const SubscriptionPaymentModal = ({ onClose, priceCents }: { onClose: () => void
       if (data?.brcode) {
         setBrcode(data.brcode);
         setPaymentId(data.payment_id);
+        // Generate QR code SVG
+        try {
+          const svg = await QRCode.toString(data.brcode, { type: "svg", width: 180, margin: 2, color: { dark: "#000000", light: "#ffffff" }, errorCorrectionLevel: "M" });
+          setQrSvg(svg);
+        } catch {}
         setStep("pix");
         startPolling(data.payment_id);
       }
