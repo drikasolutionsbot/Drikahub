@@ -4,6 +4,7 @@ import { Crown, Zap, Check, ArrowRight, ShoppingCart, Shield, Lock, Users, Trend
 import drikaLogo from "@/assets/DRIKA_HUB_SEM_FUNDO.png";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import QRCode from "qrcode";
 
 /* ── Scroll reveal ── */
 function useScrollReveal<T extends HTMLElement>(): RefObject<T> {
