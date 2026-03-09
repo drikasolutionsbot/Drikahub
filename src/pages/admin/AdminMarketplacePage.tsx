@@ -355,7 +355,7 @@ const AdminMarketplacePage = () => {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{getItemDisplayTitle(item)}</p>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span>${(item.price || 0).toFixed(2)}</span>
+                          <span>R$ {(item.price || 0).toFixed(2).replace('.', ',')}</span>
                           {item.title && item.title !== item.title_translated && (
                             <span className="truncate opacity-50" title={item.title}>({item.title})</span>
                           )}
