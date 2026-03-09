@@ -100,6 +100,7 @@ const AppRoutes = () => (
       <Route path="/dashboard" element={<DashboardPage />} />
       <Route path="/ai-assistant" element={<AIAssistantPage />} />
       <Route path="/store" element={<StorePage />} />
+      <Route path="/marketplace" element={<MarketplacePage />} />
       <Route path="/channels" element={<ChannelsPage />} />
       <Route path="/coupons" element={<CouponsPage />} />
       <Route path="/affiliates" element={<AffiliatesPage />} />
