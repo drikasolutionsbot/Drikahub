@@ -655,6 +655,10 @@ const LandingPage = () => {
                       {f}
                     </li>
                   ))}
+                  <li className="flex items-start gap-2 text-xs text-white/30">
+                    <Crown className="h-3.5 w-3.5 text-white/20 shrink-0 mt-0.5" />
+                    <span>Marketplace Atacadão <span className="text-[9px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full ml-1">PRO</span></span>
+                  </li>
                 </ul>
                 <button onClick={() => navigate("/signup")} className="w-full py-2.5 rounded-full bg-emerald-500 text-white font-semibold text-sm cursor-pointer border-none hover:bg-emerald-400 transition-all flex items-center justify-center gap-2">
                   Testar Grátis <ArrowRight className="h-3.5 w-3.5" />
@@ -690,6 +694,7 @@ const LandingPage = () => {
                     "Proteção anti-fraude avançada",
                     "Personalização completa",
                     "Verificação OAuth2",
+                    "Marketplace Atacadão",
                     "Suporte prioritário",
                   ].map((f) => (
                     <li key={f} className="flex items-start gap-2 text-xs text-white/60">
