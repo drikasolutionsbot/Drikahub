@@ -58,6 +58,7 @@ interface LztItem {
   description?: string;
   description_translated?: string;
   category_id?: number;
+  extracted_image_url?: string;
 }
 
 const AdminMarketplacePage = () => {
