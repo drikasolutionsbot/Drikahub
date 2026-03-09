@@ -203,11 +203,12 @@ serve(async (req) => {
             };
           });
 
+          const autoDelivery = product.auto_delivery ? "⚡ **Entrega Automática!**\n\n" : "";
           await editFollowup(interaction, botToken, {
             content: "",
             embeds: [{
               title: product.name,
-              description: product.description || "",
+              description: `${autoDelivery}${product.description || ""}`,
               color: 0x2B2D31,
               image: product.banner_url ? { url: product.banner_url } : undefined,
               thumbnail: product.icon_url ? { url: product.icon_url } : undefined,
@@ -304,9 +305,10 @@ serve(async (req) => {
           .eq("product_id", productId)
           .eq("tenant_id", product.tenant_id);
 
+        const autoDeliveryText = product.auto_delivery ? "⚡ **Entrega Automática!**\n\n" : "";
         const embed: any = {
           title: `ℹ️ ${product.name}`,
-          description: product.description || "Sem descrição.",
+          description: `${autoDeliveryText}${product.description || "Sem descrição."}`,
           color: 0x2B2D31,
           fields: [
             { name: "💰 Preço", value: formatBRL(product.price_cents), inline: true },

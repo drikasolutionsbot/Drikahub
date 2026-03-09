@@ -95,6 +95,11 @@ export const ProductDiscordPreview = ({ product, storeName, fields = [], embedCo
               {product.name || "Produto sem nome"}
             </p>
 
+            {/* Auto delivery badge */}
+            {product.auto_delivery && (
+              <p className="text-[#57F287] text-xs font-semibold">⚡ Entrega Automática!</p>
+            )}
+
             {/* Description */}
             {product.description && (
               <p className="text-[#dcddde] text-xs whitespace-pre-wrap line-clamp-4">

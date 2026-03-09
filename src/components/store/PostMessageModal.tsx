@@ -38,6 +38,7 @@ interface PostMessageModalProps {
     compare_price_cents?: number | null;
     icon_url?: string | null;
     banner_url?: string | null;
+    auto_delivery?: boolean;
   };
 }
 
@@ -84,9 +85,10 @@ export const PostMessageModal = ({
 
     setPosting(true);
     try {
+      const autoDeliveryLine = product.auto_delivery ? "⚡ **Entrega Automática!**\n\n" : "";
       const embed: Record<string, any> = {
         title: `${product.name}`,
-        description: product.description || "",
+        description: `${autoDeliveryLine}${product.description || ""}`,
         color: 0x2B2D31,
         fields: [
           ...(product.compare_price_cents && product.compare_price_cents > product.price_cents
