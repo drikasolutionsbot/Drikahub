@@ -285,7 +285,7 @@ serve(async (req) => {
         const embed = {
           title: `📋 Variações de ${product.name}`,
           description: fieldLines.join("\n"),
-          color: 0x5865F2,
+          color: 0x2B2D31,
         };
 
         return respondImmediate(interaction, { embeds: [embed] });
