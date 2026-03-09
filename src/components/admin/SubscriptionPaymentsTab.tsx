@@ -1,13 +1,15 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Search, Filter, DollarSign, CreditCard, Crown, Clock, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Search, Filter, DollarSign, CreditCard, Crown, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { StatCard } from "@/components/dashboard/StatCard";
+import { toast } from "@/hooks/use-toast";
 
 interface SubscriptionPayment {
   id: string;
@@ -23,6 +25,7 @@ interface SubscriptionPayment {
   period_end: string | null;
   paid_at: string | null;
   created_at: string;
+  metadata: any;
   tenant_name?: string;
 }
 
@@ -32,6 +35,7 @@ const STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; cl
   expired: { label: "Expirado", icon: AlertCircle, className: "bg-muted text-muted-foreground border-border" },
   canceled: { label: "Cancelado", icon: XCircle, className: "bg-destructive/10 text-destructive border-destructive/20" },
   refunded: { label: "Reembolsado", icon: XCircle, className: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
+  error: { label: "Erro", icon: XCircle, className: "bg-destructive/10 text-destructive border-destructive/20" },
 };
 
 const PLAN_LABELS: Record<string, { label: string; color: string }> = {
@@ -47,25 +51,125 @@ const SubscriptionPaymentsTab = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [planFilter, setPlanFilter] = useState("all");
+  const [checkingIds, setCheckingIds] = useState<Set<string>>(new Set());
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchPayments = useCallback(async () => {
+    const [paymentsRes, tenantsRes] = await Promise.all([
+      supabase.from("subscription_payments").select("*").order("created_at", { ascending: false }).limit(500),
+      supabase.from("tenants").select("id, name"),
+    ]);
+
+    const tenantMap = new Map((tenantsRes.data || []).map((t: any) => [t.id, t.name]));
+    const enriched = (paymentsRes.data || []).map((p: any) => ({
+      ...p,
+      tenant_name: tenantMap.get(p.tenant_id) || (p.tenant_id === "00000000-0000-0000-0000-000000000000" ? "Novo Assinante" : "Desconhecido"),
+    }));
+
+    setPayments(enriched);
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
-    const fetchPayments = async () => {
-      const [paymentsRes, tenantsRes] = await Promise.all([
-        supabase.from("subscription_payments").select("*").order("created_at", { ascending: false }).limit(500),
-        supabase.from("tenants").select("id, name"),
-      ]);
-
-      const tenantMap = new Map((tenantsRes.data || []).map((t: any) => [t.id, t.name]));
-      const enriched = (paymentsRes.data || []).map((p: any) => ({
-        ...p,
-        tenant_name: tenantMap.get(p.tenant_id) || "Desconhecido",
-      }));
-
-      setPayments(enriched);
-      setLoading(false);
-    };
     fetchPayments();
-  }, []);
+  }, [fetchPayments]);
+
+  // Auto-refresh every 15 seconds to catch confirmed payments
+  useEffect(() => {
+    const interval = setInterval(fetchPayments, 15000);
+    return () => clearInterval(interval);
+  }, [fetchPayments]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchPayments();
+    setRefreshing(false);
+  };
+
+  const handleCheckPayment = async (payment: SubscriptionPayment) => {
+    if (!payment.payment_id) return;
+    setCheckingIds(prev => new Set(prev).add(payment.id));
+    
+    try {
+      const { data, error } = await supabase.functions.invoke("check-subscription-status", {
+        body: { payment_id: payment.payment_id },
+      });
+      
+      if (error) throw error;
+      
+      if (data?.status === "paid") {
+        toast({ title: "Pagamento confirmado!", description: `Assinatura ativada com sucesso.` });
+        await fetchPayments();
+      } else {
+        toast({ title: "Status atual: " + (data?.status || "pendente"), description: "O pagamento ainda não foi identificado pelo provedor." });
+      }
+    } catch (err: any) {
+      toast({ title: "Erro ao verificar", description: err.message, variant: "destructive" });
+    }
+    
+    setCheckingIds(prev => {
+      const next = new Set(prev);
+      next.delete(payment.id);
+      return next;
+    });
+  };
+
+  const handleForceApprove = async (payment: SubscriptionPayment) => {
+    if (!confirm("Tem certeza que deseja aprovar manualmente este pagamento? Isso ativará o plano Pro.")) return;
+    
+    setCheckingIds(prev => new Set(prev).add(payment.id));
+    
+    try {
+      const now = new Date();
+      const periodEnd = new Date(now);
+      periodEnd.setDate(periodEnd.getDate() + 30);
+      const isNewSubscriber = payment.tenant_id === "00000000-0000-0000-0000-000000000000";
+
+      if (isNewSubscriber) {
+        // For new subscribers, trigger via check-subscription-status which handles the full flow
+        // We need to use the edge function to handle user creation
+        const { data, error } = await supabase.functions.invoke("check-subscription-status", {
+          body: { payment_id: payment.payment_id },
+        });
+        
+        if (data?.status !== "paid") {
+          // Force approve by directly updating + creating tenant via subscription-webhook logic
+          // Call subscription-webhook with the payment_id
+          const { error: whErr } = await supabase.functions.invoke("subscription-webhook", {
+            body: { id: payment.payment_id },
+          });
+          if (whErr) throw whErr;
+        }
+      } else {
+        // Existing tenant - just update payment and tenant
+        await supabase.from("subscription_payments").update({
+          status: "paid",
+          paid_at: now.toISOString(),
+          period_start: now.toISOString(),
+          period_end: periodEnd.toISOString(),
+          updated_at: now.toISOString(),
+        }).eq("id", payment.id);
+
+        await supabase.from("tenants").update({
+          plan: "pro",
+          plan_started_at: now.toISOString(),
+          plan_expires_at: periodEnd.toISOString(),
+          updated_at: now.toISOString(),
+        }).eq("id", payment.tenant_id);
+      }
+
+      toast({ title: "Pagamento aprovado!", description: "O plano Pro foi ativado manualmente." });
+      await fetchPayments();
+    } catch (err: any) {
+      toast({ title: "Erro ao aprovar", description: err.message, variant: "destructive" });
+    }
+    
+    setCheckingIds(prev => {
+      const next = new Set(prev);
+      next.delete(payment.id);
+      return next;
+    });
+  };
 
   const filtered = useMemo(() => {
     let result = payments;
@@ -148,6 +252,9 @@ const SubscriptionPaymentsTab = () => {
             <SelectItem value="business">Business</SelectItem>
           </SelectContent>
         </Select>
+        <Button variant="outline" size="icon" onClick={handleRefresh} disabled={refreshing}>
+          <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+        </Button>
       </div>
 
       <Card className="bg-card border-border">
@@ -183,31 +290,63 @@ const SubscriptionPaymentsTab = () => {
                     <TableHead>Provedor</TableHead>
                     <TableHead>Período</TableHead>
                     <TableHead>Data</TableHead>
+                    <TableHead>Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((payment) => (
-                    <TableRow key={payment.id}>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium text-sm">{payment.tenant_name}</p>
-                          {payment.payer_email && <p className="text-xs text-muted-foreground">{payment.payer_email}</p>}
-                        </div>
-                      </TableCell>
-                      <TableCell>{renderPlan(payment.plan)}</TableCell>
-                      <TableCell className="font-mono font-medium">R$ {(payment.amount_cents / 100).toFixed(2)}</TableCell>
-                      <TableCell>{renderStatus(payment.status)}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground capitalize">{payment.payment_provider}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                        {payment.period_start && payment.period_end
-                          ? `${format(new Date(payment.period_start), "dd/MM")} — ${format(new Date(payment.period_end), "dd/MM/yy")}`
-                          : "—"}
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                        {format(new Date(payment.created_at), "dd/MM/yyyy HH:mm")}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {filtered.map((payment) => {
+                    const isChecking = checkingIds.has(payment.id);
+                    return (
+                      <TableRow key={payment.id}>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium text-sm">{payment.tenant_name}</p>
+                            {(payment.payer_email || payment.metadata?.email) && (
+                              <p className="text-xs text-muted-foreground">{payment.payer_email || payment.metadata?.email}</p>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>{renderPlan(payment.plan)}</TableCell>
+                        <TableCell className="font-mono font-medium">R$ {(payment.amount_cents / 100).toFixed(2)}</TableCell>
+                        <TableCell>{renderStatus(payment.status)}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground capitalize">{payment.payment_provider}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                          {payment.period_start && payment.period_end
+                            ? `${format(new Date(payment.period_start), "dd/MM")} — ${format(new Date(payment.period_end), "dd/MM/yy")}`
+                            : "—"}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                          {format(new Date(payment.created_at), "dd/MM/yyyy HH:mm")}
+                        </TableCell>
+                        <TableCell>
+                          {payment.status === "pending" && (
+                            <div className="flex items-center gap-1">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs gap-1"
+                                onClick={() => handleCheckPayment(payment)}
+                                disabled={isChecking}
+                              >
+                                {isChecking ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                                Verificar
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="default"
+                                className="h-7 text-xs gap-1 bg-emerald-600 hover:bg-emerald-700"
+                                onClick={() => handleForceApprove(payment)}
+                                disabled={isChecking}
+                              >
+                                <CheckCircle2 className="h-3 w-3" />
+                                Aprovar
+                              </Button>
+                            </div>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
