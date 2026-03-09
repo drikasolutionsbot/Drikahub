@@ -17,6 +17,7 @@ interface VerifyConfig {
   verify_enabled: boolean;
   verify_role_id: string;
   verify_channel_id: string;
+  verify_logs_channel_id: string;
   verify_title: string;
   verify_description: string;
   verify_button_label: string;
@@ -29,6 +30,7 @@ const defaultConfig: VerifyConfig = {
   verify_enabled: false,
   verify_role_id: "",
   verify_channel_id: "",
+  verify_logs_channel_id: "",
   verify_title: "👑 Verificação",
   verify_description: "Clique no botão abaixo para se verificar em nosso servidor.\nA verificação é necessária para liberar acesso aos canais.",
   verify_button_label: "Verificar",
@@ -98,6 +100,7 @@ const VerificationPage = () => {
           verify_enabled: tenantData.verify_enabled ?? false,
           verify_role_id: tenantData.verify_role_id ?? "",
           verify_channel_id: tenantData.verify_channel_id ?? "",
+          verify_logs_channel_id: tenantData.verify_logs_channel_id ?? "",
           verify_title: tenantData.verify_title ?? defaultConfig.verify_title,
           verify_description: tenantData.verify_description ?? defaultConfig.verify_description,
           verify_button_label: tenantData.verify_button_label ?? defaultConfig.verify_button_label,
@@ -129,6 +132,7 @@ const VerificationPage = () => {
             verify_enabled: config.verify_enabled,
             verify_role_id: config.verify_role_id || null,
             verify_channel_id: config.verify_channel_id || null,
+            verify_logs_channel_id: config.verify_logs_channel_id || null,
             verify_title: config.verify_title,
             verify_description: config.verify_description,
             verify_button_label: config.verify_button_label,
@@ -283,6 +287,21 @@ const VerificationPage = () => {
                   ))}
                 </select>
                 <p className="text-[11px] text-muted-foreground mt-1">Cargo atribuído automaticamente ao membro após verificar</p>
+              </div>
+              <div>
+                <Label>📋 Canal de Logs de Verificação</Label>
+                <ChannelSelectWithCreate
+                  value={config.verify_logs_channel_id}
+                  onChange={(v) => update("verify_logs_channel_id", v)}
+                  channels={channels}
+                  categories={categories}
+                  onChannelCreated={fetchData}
+                  tenantId={tenantId}
+                  guildId={tenant?.discord_guild_id}
+                  placeholder="Selecione o canal de logs"
+                  defaultNewName="logs-verificação"
+                />
+                <p className="text-[11px] text-muted-foreground mt-1">Logs com dados do membro verificado serão enviados aqui</p>
               </div>
             </CardContent>
           </Card>
