@@ -301,9 +301,17 @@ const SubscriptionPaymentModal = ({ onClose, priceCents }: { onClose: () => void
             {/* Step 2: PIX Payment */}
             {step === "pix" && brcode && (
               <div className="space-y-4">
-                <p className="text-sm text-white/50 text-center">Copie o código PIX e pague pelo seu banco:</p>
-                <div className="rounded-xl border border-primary/20 bg-primary/[0.04] p-4">
-                  <code className="block text-xs font-mono text-primary break-all leading-relaxed text-center">
+                {/* QR Code */}
+                {qrSvg && (
+                  <div className="flex justify-center">
+                    <div className="rounded-2xl bg-white p-3 shadow-[0_0_30px_rgba(255,0,100,0.1)]">
+                      <div dangerouslySetInnerHTML={{ __html: qrSvg }} />
+                    </div>
+                  </div>
+                )}
+                <p className="text-xs text-white/40 text-center">Escaneie o QR Code ou copie o código abaixo:</p>
+                <div className="rounded-xl border border-primary/20 bg-primary/[0.04] p-3">
+                  <code className="block text-[10px] font-mono text-primary break-all leading-relaxed text-center">
                     {brcode}
                   </code>
                 </div>
