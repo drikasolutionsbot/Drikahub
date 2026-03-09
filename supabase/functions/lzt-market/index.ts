@@ -8,6 +8,35 @@ const corsHeaders = {
 
 const LZT_BASE = "https://prod-api.lzt.market";
 
+// Simple Russian → Portuguese translation map for common gaming/account terms
+const RU_PT_MAP: Record<string, string> = {
+  "Аккаунт": "Conta", "аккаунт": "conta", "Игра": "Jogo", "игра": "jogo",
+  "Почта": "E-mail", "почта": "e-mail", "Пароль": "Senha", "пароль": "senha",
+  "Баланс": "Saldo", "баланс": "saldo", "Уровень": "Nível", "уровень": "nível",
+  "Скины": "Skins", "скины": "skins", "Предметы": "Itens", "предметы": "itens",
+  "Подписка": "Assinatura", "подписка": "assinatura", "Премиум": "Premium", "премиум": "premium",
+  "Навсегда": "Para sempre", "навсегда": "para sempre",
+  "Полный доступ": "Acesso total", "полный доступ": "acesso total",
+  "Без привязки": "Sem vínculo", "без привязки": "sem vínculo",
+  "С привязкой": "Com vínculo", "с привязкой": "com vínculo",
+  "Гарантия": "Garantia", "гарантия": "garantia",
+  "Автовыдача": "Entrega automática", "автовыдача": "entrega automática",
+  "Смена данных": "Troca de dados", "смена данных": "troca de dados",
+  "Личный": "Pessoal", "личный": "pessoal",
+  "Рабочий": "Funcional", "рабочий": "funcional",
+  "Новый": "Novo", "новый": "novo",
+  "Старый": "Antigo", "старый": "antigo",
+};
+
+function translateRuToPt(text: string): string {
+  if (!text) return text;
+  let result = text;
+  for (const [ru, pt] of Object.entries(RU_PT_MAP)) {
+    result = result.replaceAll(ru, pt);
+  }
+  return result;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -17,7 +46,7 @@ serve(async (req) => {
     const token = Deno.env.get("LZT_MARKET_API_TOKEN");
     if (!token) throw new Error("LZT_MARKET_API_TOKEN not configured");
 
-    const { action, category, page, pmin, pmax, item_id } = await req.json();
+    const { action, category, page, pmin, pmax, item_id, title, url: itemUrl } = await req.json();
 
     const headers = {
       Authorization: `Bearer ${token}`,
@@ -34,12 +63,33 @@ serve(async (req) => {
       });
     }
 
+    // Get by URL (extract item_id from lzt.market URL)
+    if (action === "get_by_url") {
+      if (!itemUrl) throw new Error("Missing url");
+      // Extract ID from URLs like https://lzt.market/1234567/ or https://prod-api.lzt.market/1234567
+      const match = itemUrl.match(/(\d{5,})/);
+      if (!match) throw new Error("Could not extract item ID from URL");
+      const extractedId = match[1];
+      const res = await fetch(`${LZT_BASE}/${extractedId}`, { headers });
+      if (!res.ok) throw new Error(`LZT API error: ${res.status}`);
+      const data = await res.json();
+      // Translate item
+      if (data?.item) {
+        if (data.item.title) data.item.title_translated = translateRuToPt(data.item.title);
+        if (data.item.description) data.item.description_translated = translateRuToPt(data.item.description);
+      }
+      return new Response(JSON.stringify(data), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Search / list accounts by category
     if (action === "search") {
       const params = new URLSearchParams();
       if (page) params.set("page", String(page));
       if (pmin) params.set("pmin", String(pmin));
       if (pmax) params.set("pmax", String(pmax));
+      if (title) params.set("title", String(title));
 
       const categoryPath = category ? `/${category}` : "";
       const url = `${LZT_BASE}${categoryPath}?${params.toString()}`;
@@ -47,6 +97,16 @@ serve(async (req) => {
       const res = await fetch(url, { headers });
       if (!res.ok) throw new Error(`LZT API error: ${res.status}`);
       const data = await res.json();
+
+      // Translate all item titles
+      if (data?.items && typeof data.items === "object") {
+        for (const key of Object.keys(data.items)) {
+          const item = data.items[key];
+          if (item.title) item.title_translated = translateRuToPt(item.title);
+          if (item.description) item.description_translated = translateRuToPt(item.description);
+        }
+      }
+
       return new Response(JSON.stringify(data), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -58,6 +118,10 @@ serve(async (req) => {
       const res = await fetch(`${LZT_BASE}/${item_id}`, { headers });
       if (!res.ok) throw new Error(`LZT API error: ${res.status}`);
       const data = await res.json();
+      if (data?.item) {
+        if (data.item.title) data.item.title_translated = translateRuToPt(data.item.title);
+        if (data.item.description) data.item.description_translated = translateRuToPt(data.item.description);
+      }
       return new Response(JSON.stringify(data), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

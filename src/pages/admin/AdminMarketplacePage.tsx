@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, Plus, Trash2, DollarSign, Eye, EyeOff, ShoppingCart, Package } from "lucide-react";
+import { Plus, Trash2, Eye, EyeOff, Package, Search, Link } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -53,8 +53,10 @@ interface LztItem {
   item_id: number;
   title?: string;
   title_en?: string;
+  title_translated?: string;
   price?: number;
   description?: string;
+  description_translated?: string;
   category_id?: number;
 }
 
@@ -63,6 +65,11 @@ const AdminMarketplacePage = () => {
   const [importOpen, setImportOpen] = useState(false);
   const [lztCategory, setLztCategory] = useState("");
   const [lztPage, setLztPage] = useState(1);
+  const [searchTitle, setSearchTitle] = useState("");
+  const [searchUrl, setSearchUrl] = useState("");
+  const [searchMode, setSearchMode] = useState<"browse" | "url">("browse");
+  const [urlLoading, setUrlLoading] = useState(false);
+  const [urlItem, setUrlItem] = useState<LztItem | null>(null);
 
   // Marketplace items from DB
   const { data: items = [], isLoading } = useQuery<MarketplaceItem[]>({
@@ -76,25 +83,51 @@ const AdminMarketplacePage = () => {
     },
   });
 
-  // LZT search (only when import dialog open)
+  // LZT search (only when import dialog open and browse mode)
   const { data: lztData, isLoading: lztLoading, refetch: lztRefetch } = useQuery({
-    queryKey: ["lzt-search", lztCategory, lztPage],
+    queryKey: ["lzt-search", lztCategory, lztPage, searchTitle],
     queryFn: async () => {
       const body: Record<string, unknown> = { action: "search", page: lztPage };
       if (lztCategory) body.category = lztCategory;
+      if (searchTitle.trim()) body.title = searchTitle.trim();
       const { data, error } = await supabase.functions.invoke("lzt-market", { body });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       return data;
     },
-    enabled: importOpen,
+    enabled: importOpen && searchMode === "browse",
     staleTime: 60_000,
   });
 
   const lztItems: LztItem[] = lztData?.items ? Object.values(lztData.items) : [];
 
+  const handleSearchByUrl = async () => {
+    if (!searchUrl.trim()) return;
+    setUrlLoading(true);
+    setUrlItem(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("lzt-market", {
+        body: { action: "get_by_url", url: searchUrl.trim() },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (data?.item) {
+        setUrlItem(data.item);
+      } else {
+        toast({ title: "Item não encontrado", variant: "destructive" });
+      }
+    } catch (err) {
+      toast({ title: "Erro ao buscar", description: err instanceof Error ? err.message : "Erro", variant: "destructive" });
+    } finally {
+      setUrlLoading(false);
+    }
+  };
+
   const [importItem, setImportItem] = useState<{ item: LztItem; resalePrice: string } | null>(null);
   const [importing, setImporting] = useState(false);
+
+  const getItemDisplayTitle = (item: LztItem) =>
+    item.title_translated || item.title_en || item.title || `LZT #${item.item_id}`;
 
   const handleImport = async () => {
     if (!importItem) return;
@@ -111,8 +144,8 @@ const AdminMarketplacePage = () => {
           action: "import",
           item: {
             lzt_item_id: importItem.item.item_id,
-            title: importItem.item.title || importItem.item.title_en || `LZT #${importItem.item.item_id}`,
-            description: importItem.item.description,
+            title: getItemDisplayTitle(importItem.item),
+            description: importItem.item.description_translated || importItem.item.description,
             category: lztCategory || null,
             cost_cents: Math.round((importItem.item.price || 0) * 100),
             resale_price_cents: priceCents,
@@ -267,58 +300,127 @@ const AdminMarketplacePage = () => {
       </Tabs>
 
       {/* Import from LZT Dialog */}
-      <Dialog open={importOpen} onOpenChange={setImportOpen}>
+      <Dialog open={importOpen} onOpenChange={(open) => { setImportOpen(open); if (!open) { setUrlItem(null); setSearchUrl(""); } }}>
         <DialogContent className="bg-card border-border max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Importar do LZT Market</DialogTitle>
             <DialogDescription>Busque contas no LZT Market para adicionar ao catálogo de revenda</DialogDescription>
           </DialogHeader>
 
-          <div className="flex gap-2 mb-4">
-            <Select value={lztCategory || "all"} onValueChange={(v) => { setLztCategory(v === "all" ? "" : v); setLztPage(1); }}>
-              <SelectTrigger className="w-48 bg-muted border-border">
-                <SelectValue placeholder="Categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                {LZT_CATEGORIES.map((c) => (
-                  <SelectItem key={c.id || "all"} value={c.id || "all"}>{c.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button variant="outline" size="sm" onClick={() => lztRefetch()}>Buscar</Button>
-          </div>
+          {/* Search mode tabs */}
+          <Tabs value={searchMode} onValueChange={(v) => setSearchMode(v as "browse" | "url")} className="w-full">
+            <TabsList className="bg-muted w-full">
+              <TabsTrigger value="browse" className="flex-1 gap-1.5">
+                <Search className="h-3.5 w-3.5" />
+                Buscar por Nome
+              </TabsTrigger>
+              <TabsTrigger value="url" className="flex-1 gap-1.5">
+                <Link className="h-3.5 w-3.5" />
+                Importar por URL
+              </TabsTrigger>
+            </TabsList>
 
-          {lztLoading ? (
-            <div className="space-y-2">
-              {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-12 w-full rounded-lg" />)}
-            </div>
-          ) : lztItems.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">Nenhum item encontrado</p>
-          ) : (
-            <div className="space-y-2 max-h-[400px] overflow-y-auto">
-              {lztItems.map((item) => (
-                <div key={item.item_id} className="rounded-lg border border-border p-3 flex items-center gap-3 hover:border-primary/30 transition-colors">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{item.title || item.title_en || `#${item.item_id}`}</p>
-                    <p className="text-xs text-muted-foreground">${(item.price || 0).toFixed(2)}</p>
-                  </div>
-                  <Button
-                    size="sm"
-                    className="text-xs shrink-0"
-                    onClick={() => setImportItem({ item, resalePrice: "" })}
-                  >
-                    Importar
+            <TabsContent value="browse" className="mt-4 space-y-4">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Pesquisar por nome..."
+                  value={searchTitle}
+                  onChange={(e) => setSearchTitle(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { setLztPage(1); lztRefetch(); } }}
+                  className="bg-muted border-border flex-1"
+                />
+                <Select value={lztCategory || "all"} onValueChange={(v) => { setLztCategory(v === "all" ? "" : v); setLztPage(1); }}>
+                  <SelectTrigger className="w-40 bg-muted border-border">
+                    <SelectValue placeholder="Categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LZT_CATEGORIES.map((c) => (
+                      <SelectItem key={c.id || "all"} value={c.id || "all"}>{c.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" size="sm" onClick={() => { setLztPage(1); lztRefetch(); }}>Buscar</Button>
+              </div>
+
+              {lztLoading ? (
+                <div className="space-y-2">
+                  {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-12 w-full rounded-lg" />)}
+                </div>
+              ) : lztItems.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">Nenhum item encontrado</p>
+              ) : (
+                <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                  {lztItems.map((item) => (
+                    <div key={item.item_id} className="rounded-lg border border-border p-3 flex items-center gap-3 hover:border-primary/30 transition-colors">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{getItemDisplayTitle(item)}</p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>${(item.price || 0).toFixed(2)}</span>
+                          {item.title && item.title !== item.title_translated && (
+                            <span className="truncate opacity-50" title={item.title}>({item.title})</span>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        className="text-xs shrink-0"
+                        onClick={() => setImportItem({ item, resalePrice: "" })}
+                      >
+                        Importar
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex justify-center gap-2 mt-2">
+                <Button variant="outline" size="sm" disabled={lztPage <= 1} onClick={() => setLztPage((p) => p - 1)}>Anterior</Button>
+                <span className="text-sm text-muted-foreground flex items-center">Página {lztPage}</span>
+                <Button variant="outline" size="sm" onClick={() => setLztPage((p) => p + 1)}>Próxima</Button>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="url" className="mt-4 space-y-4">
+              <div className="space-y-2">
+                <Label>Cole a URL do produto no LZT Market</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="https://lzt.market/1234567/"
+                    value={searchUrl}
+                    onChange={(e) => setSearchUrl(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") handleSearchByUrl(); }}
+                    className="bg-muted border-border flex-1"
+                  />
+                  <Button onClick={handleSearchByUrl} disabled={urlLoading || !searchUrl.trim()}>
+                    {urlLoading ? "Buscando..." : "Buscar"}
                   </Button>
                 </div>
-              ))}
-            </div>
-          )}
+              </div>
 
-          <div className="flex justify-center gap-2 mt-2">
-            <Button variant="outline" size="sm" disabled={lztPage <= 1} onClick={() => setLztPage((p) => p - 1)}>Anterior</Button>
-            <span className="text-sm text-muted-foreground flex items-center">Página {lztPage}</span>
-            <Button variant="outline" size="sm" onClick={() => setLztPage((p) => p + 1)}>Próxima</Button>
-          </div>
+              {urlLoading && <Skeleton className="h-16 w-full rounded-lg" />}
+
+              {urlItem && (
+                <div className="rounded-lg border border-border p-4 space-y-3">
+                  <div>
+                    <p className="font-semibold">{getItemDisplayTitle(urlItem)}</p>
+                    {urlItem.title && urlItem.title !== urlItem.title_translated && (
+                      <p className="text-xs text-muted-foreground opacity-50">{urlItem.title}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <span>Preço: ${(urlItem.price || 0).toFixed(2)}</span>
+                    <span>ID: #{urlItem.item_id}</span>
+                  </div>
+                  <Button
+                    className="w-full gradient-pink text-primary-foreground border-none"
+                    onClick={() => setImportItem({ item: urlItem, resalePrice: "" })}
+                  >
+                    Importar este item
+                  </Button>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
 
@@ -328,7 +430,7 @@ const AdminMarketplacePage = () => {
           <DialogHeader>
             <DialogTitle>Definir preço de revenda</DialogTitle>
             <DialogDescription>
-              {importItem?.item.title || importItem?.item.title_en}
+              {importItem ? getItemDisplayTitle(importItem.item) : ""}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
