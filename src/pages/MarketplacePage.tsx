@@ -150,7 +150,7 @@ const MarketplaceCard = ({ item }: { item: MarketplaceItem }) => (
       {/* Stats */}
       <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
         <span className="flex items-center gap-1">
-          <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+          <Star className="h-3 w-3 text-accent fill-accent" />
           {item.rating}
         </span>
         <span className="flex items-center gap-1">
