@@ -78,7 +78,7 @@ const TicketEmbedConfig = () => {
     const load = async () => {
       const { data: config } = await supabase
         .from("store_configs")
-        .select("ticket_embed_title, ticket_embed_description, ticket_embed_color, ticket_embed_image_url, ticket_embed_thumbnail_url, ticket_embed_footer, ticket_embed_button_label, ticket_embed_button_style, ticket_channel_id")
+        .select("ticket_embed_title, ticket_embed_description, ticket_embed_color, ticket_embed_image_url, ticket_embed_thumbnail_url, ticket_embed_footer, ticket_embed_button_label, ticket_embed_button_style, ticket_channel_id, ticket_logs_channel_id")
         .eq("tenant_id", tenantId)
         .maybeSingle();
       if (config) {
