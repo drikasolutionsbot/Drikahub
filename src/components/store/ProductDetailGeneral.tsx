@@ -265,6 +265,16 @@ export const ProductDetailGeneral = ({ product, onChange, categories = [] }: Pro
           </div>
         </div>
       </section>
+
+      {/* Section: Aparência do Botão */}
+      <section className="space-y-5">
+        <h3 className="text-base font-bold text-foreground">Aparência do Embed</h3>
+        <DiscordButtonStylePicker
+          value={product.button_style || "success"}
+          onChange={(style) => onChange({ button_style: style })}
+          label="Estilo do Botão de Comprar"
+        />
+      </section>
     </div>
   );
 };
