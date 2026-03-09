@@ -556,42 +556,52 @@ serve(async (req) => {
           return ok();
         }
 
-        // Determine which channel to create the thread in
-        // Use the channel where the button was clicked (interaction.channel_id) as the primary source
-        const parentChannelId = targetChannelId || interaction.channel_id || storeConfig?.ticket_channel_id;
+        // Determine the category to create the ticket channel in
+        // ticket_channel_id should point to a CATEGORY, not a text channel
+        const categoryId = targetChannelId || storeConfig?.ticket_channel_id || null;
 
-        console.log("Ticket open: parentChannelId =", parentChannelId, "targetChannelId =", targetChannelId, "interaction.channel_id =", interaction.channel_id);
+        console.log("Ticket open: categoryId =", categoryId, "targetChannelId =", targetChannelId);
 
-        // Create a thread (topic) in the selected channel
-        const threadName = `Abrir ticket · ${username || "user"} · ${userId}`.substring(0, 100);
+        // Create a private text channel under the category for this ticket
+        const channelName = `ticket-${username || userId}`.toLowerCase().replace(/[^a-z0-9-_]/g, "").substring(0, 100);
 
-        const threadRes = await fetch(`${DISCORD_API}/channels/${parentChannelId}/threads`, {
+        const channelBody: any = {
+          name: channelName,
+          type: 0, // GUILD_TEXT
+          permission_overwrites: [
+            // Deny @everyone view
+            {
+              id: guildId, // @everyone role ID = guild ID
+              type: 0, // role
+              deny: "1024", // VIEW_CHANNEL
+            },
+            // Allow the ticket creator
+            {
+              id: userId,
+              type: 1, // member
+              allow: "1024", // VIEW_CHANNEL
+            },
+          ],
+        };
+
+        if (categoryId) channelBody.parent_id = categoryId;
+
+        const createChRes = await fetch(`${DISCORD_API}/guilds/${guildId}/channels`, {
           method: "POST",
           headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: threadName,
-            type: 12, // GUILD_PRIVATE_THREAD
-            invitable: false,
-            auto_archive_duration: 10080, // 7 days
-          }),
+          body: JSON.stringify(channelBody),
         });
 
-        console.log("Thread creation status:", threadRes.status);
+        console.log("Channel creation status:", createChRes.status);
 
-        if (!threadRes.ok) {
-          const errText = await threadRes.text();
-          console.error("Failed to create ticket thread:", errText);
-          await editFollowup(interaction, botToken, "❌ Não foi possível criar o tópico do ticket. Verifique as permissões do bot.");
+        if (!createChRes.ok) {
+          const errText = await createChRes.text();
+          console.error("Failed to create ticket channel:", errText);
+          await editFollowup(interaction, botToken, "❌ Não foi possível criar o canal do ticket. Verifique as permissões do bot.");
           return ok();
         }
 
-        const ticketThread = await threadRes.json();
-
-        // Add the user to the private thread
-        await fetch(`${DISCORD_API}/channels/${ticketThread.id}/thread-members/${userId}`, {
-          method: "PUT",
-          headers: { Authorization: `Bot ${botToken}` },
-        });
+        const ticketChannel = await createChRes.json();
 
         // Insert ticket in DB
         const { data: ticket, error: ticketErr } = await supabase
