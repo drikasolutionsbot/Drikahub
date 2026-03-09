@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Crown, Copy, Check, Loader2, QrCode } from "lucide-react";
+import { Crown, Loader2, QrCode, CheckCircle } from "lucide-react";
 import { useTenant } from "@/contexts/TenantContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -15,6 +15,7 @@ interface PixResult {
   provider: string | null;
   qr_code_base64: string | null;
   expires_at: string | null;
+  payment_id: string | null;
 }
 
 const ProUpgradeModal = () => {
@@ -23,8 +24,9 @@ const ProUpgradeModal = () => {
   const [loading, setLoading] = useState(false);
   const [pixResult, setPixResult] = useState<PixResult | null>(null);
   const [proPriceCents, setProPriceCents] = useState(2690);
+  const [confirmed, setConfirmed] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Fetch pro price from landing_config
   useEffect(() => {
     supabase.from("landing_config").select("pro_price_cents").limit(1).single().then(({ data }) => {
       if (data?.pro_price_cents) setProPriceCents(data.pro_price_cents);
@@ -43,13 +45,36 @@ const ProUpgradeModal = () => {
     checkPending();
     const handler = () => checkPending();
     window.addEventListener("pending_pro_upgrade", handler);
-    return () => window.removeEventListener("pending_pro_upgrade", handler);
+    return () => {
+      window.removeEventListener("pending_pro_upgrade", handler);
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
   }, [tenantId]);
+
+  const startPolling = (paymentId: string) => {
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = setInterval(async () => {
+      try {
+        const { data } = await supabase.functions.invoke("check-subscription-status", {
+          body: { payment_id: paymentId },
+        });
+        if (data?.status === "paid") {
+          if (pollRef.current) clearInterval(pollRef.current);
+          setConfirmed(true);
+          toast({ title: "Pagamento confirmado!", description: "Seu plano Pro foi ativado." });
+          // Reload after a moment to refresh plan status
+          setTimeout(() => window.location.reload(), 3000);
+        }
+      } catch { /* ignore */ }
+    }, 4000);
+  };
 
   const generatePix = async () => {
     if (!tenantId) return;
     setLoading(true);
     setPixResult(null);
+    setConfirmed(false);
+    if (pollRef.current) clearInterval(pollRef.current);
     try {
       const { data, error } = await supabase.functions.invoke("generate-subscription-pix", {
         body: { tenant_id: tenantId },
@@ -57,6 +82,7 @@ const ProUpgradeModal = () => {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       
+      const paymentId = data.payment_id || null;
       setPixResult({
         brcode: data.brcode || data.pix_code || "",
         amount: data.amount || (proPriceCents / 100).toFixed(2),
@@ -64,7 +90,9 @@ const ProUpgradeModal = () => {
         provider: data.provider || null,
         qr_code_base64: data.qr_code_base64 || null,
         expires_at: data.expires_at || null,
+        payment_id: paymentId,
       });
+      if (paymentId) startPolling(paymentId);
     } catch (err: any) {
       console.error("Error generating PIX:", err);
       toast({ 
@@ -80,6 +108,8 @@ const ProUpgradeModal = () => {
     setOpen(isOpen);
     if (!isOpen) {
       setPixResult(null);
+      setConfirmed(false);
+      if (pollRef.current) clearInterval(pollRef.current);
     }
   };
 
@@ -104,7 +134,13 @@ const ProUpgradeModal = () => {
             </p>
           </div>
 
-          {loading ? (
+          {confirmed ? (
+            <div className="flex flex-col items-center justify-center py-8 gap-3">
+              <CheckCircle className="h-12 w-12 text-emerald-500" />
+              <p className="text-lg font-bold text-emerald-400">Pagamento Confirmado!</p>
+              <p className="text-sm text-muted-foreground">Recarregando painel...</p>
+            </div>
+          ) : loading ? (
             <div className="flex flex-col items-center justify-center py-8 gap-3">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
               <p className="text-sm text-muted-foreground">Gerando PIX...</p>
@@ -120,6 +156,10 @@ const ProUpgradeModal = () => {
                 qrCodeBase64={pixResult.qr_code_base64}
                 expiresAt={pixResult.expires_at}
               />
+              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Aguardando confirmação do pagamento...
+              </div>
               <p className="text-[11px] text-muted-foreground text-center">
                 Após o pagamento, seu plano será ativado automaticamente.
               </p>
