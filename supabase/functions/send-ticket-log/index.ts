@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
     // Get bot token
     const { data: tenant } = await supabase
       .from("tenants")
-      .select("bot_token_encrypted")
+      .select("bot_token_encrypted, name")
       .eq("id", tenant_id)
       .single();
 
@@ -63,22 +63,33 @@ Deno.serve(async (req) => {
       .eq("tenant_id", tenant_id)
       .single();
 
-    // Send log embed
+    // Send detailed log embed
     if (sc?.ticket_logs_channel_id && action === "closed") {
-      const logEmbed = {
-        title: "🔒 Ticket Fechado (Painel)",
-        color: 0xED4245,
+      const createdAt = new Date(ticket.created_at);
+      const closedAt = new Date();
+      const diffMs = closedAt.getTime() - createdAt.getTime();
+      const diffMin = Math.floor(diffMs / 60000);
+      const diffH = Math.floor(diffMin / 60);
+      const remainMin = diffMin % 60;
+      const totalTime = diffH > 0 ? `${diffH}h ${remainMin}m` : `${diffMin}m`;
+
+      const logEmbed: any = {
+        title: "⚙️ Sistema de Logs",
+        color: 0x2B2D31,
         fields: [
-          { name: "👤 Usuário", value: `<@${ticket.discord_user_id}> (${ticket.discord_username || "N/A"})`, inline: true },
-          { name: "🔐 Fechado por", value: closed_by || "Painel", inline: true },
-          { name: "📅 Criado em", value: `<t:${Math.floor(new Date(ticket.created_at).getTime() / 1000)}:f>`, inline: true },
-          { name: "📅 Fechado em", value: `<t:${Math.floor(Date.now() / 1000)}:f>`, inline: true },
+          { name: "➡️ Usuário que abriu:", value: `> <@${ticket.discord_user_id}>`, inline: false },
+          { name: "➡️ Usuário que fechou:", value: `> ${closed_by || "Painel"}`, inline: false },
+          { name: "➡️ Quem assumiu:", value: "> Ninguém Assumiu", inline: false },
+          { name: "📋 Código do Ticket:", value: `> ${ticket.discord_channel_id || ticket.id.slice(0, 20)}`, inline: false },
+          { name: "😊 Horário de abertura:", value: `> <t:${Math.floor(createdAt.getTime() / 1000)}:f> <t:${Math.floor(createdAt.getTime() / 1000)}:R>`, inline: false },
+          { name: "😔 Horário do fechamento:", value: `> <t:${Math.floor(closedAt.getTime() / 1000)}:f> (<t:${Math.floor(closedAt.getTime() / 1000)}:R>)`, inline: false },
+          { name: "➡️ Tempo total de atendimento:", value: `> ${totalTime}`, inline: false },
         ],
-        timestamp: new Date().toISOString(),
+        timestamp: closedAt.toISOString(),
       };
 
       if (ticket.product_name) {
-        logEmbed.fields.push({ name: "📦 Produto", value: ticket.product_name, inline: true });
+        logEmbed.fields.splice(3, 0, { name: "📦 Produto:", value: `> ${ticket.product_name}`, inline: false });
       }
 
       await fetch(`${DISCORD_API}/channels/${sc.ticket_logs_channel_id}/messages`, {
