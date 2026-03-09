@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Ticket, Clock, CheckCircle, MessageSquare, AlertCircle, Eye, RefreshCw, Search, Filter, Settings } from "lucide-react";
+import { Ticket, Clock, CheckCircle, MessageSquare, AlertCircle, Eye, RefreshCw, Search, Settings, Hash } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TicketEmbedConfig from "@/components/tickets/TicketEmbedConfig";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,8 +22,11 @@ interface TicketItem {
   order_id: string | null;
   discord_user_id: string;
   discord_username: string | null;
+  discord_channel_id: string | null;
   product_name: string | null;
   status: "open" | "in_progress" | "delivered" | "closed";
+  closed_by: string | null;
+  closed_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -48,7 +51,7 @@ const TicketsPage = () => {
     ascending: false,
   });
 
-  // Realtime subscription
+  // Realtime subscription for tickets
   useEffect(() => {
     if (!tenantId) return;
     const channel = supabase
@@ -63,6 +66,14 @@ const TicketsPage = () => {
               description: `${row.discord_username || "Usuário"} — ${row.product_name || "Suporte"}`,
             });
           }
+          if (payload.eventType === "UPDATE") {
+            const row = payload.new as any;
+            if (row.status === "closed") {
+              toast.info("🔒 Ticket Fechado", {
+                description: `${row.discord_username || "Usuário"} — fechado por ${row.closed_by || "sistema"}`,
+              });
+            }
+          }
           queryClient.invalidateQueries({ queryKey: ["tickets", tenantId] });
         }
       )
@@ -70,15 +81,59 @@ const TicketsPage = () => {
     return () => { supabase.removeChannel(channel); };
   }, [tenantId, queryClient]);
 
+  // Realtime subscription for store_configs (ticket config changes)
+  useEffect(() => {
+    if (!tenantId) return;
+    const channel = supabase
+      .channel(`store-configs-realtime-${tenantId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "store_configs", filter: `tenant_id=eq.${tenantId}` },
+        () => {
+          // Config changed - components using store_configs will auto-refresh
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [tenantId]);
+
   const handleStatusChange = async (ticketId: string, newStatus: string) => {
     setUpdatingStatus(true);
     try {
-      const { error } = await supabase
+      const updatePayload: any = { 
+        status: newStatus, 
+        updated_at: new Date().toISOString() 
+      };
+      
+      if (newStatus === "closed") {
+        updatePayload.closed_at = new Date().toISOString();
+        updatePayload.closed_by = "painel";
+      }
+
+      const { error } = await (supabase as any)
         .from("tickets")
-        .update({ status: newStatus as any, updated_at: new Date().toISOString() })
+        .update(updatePayload)
         .eq("id", ticketId)
         .eq("tenant_id", tenantId!);
       if (error) throw error;
+
+      // If closing, send log to Discord via edge function
+      if (newStatus === "closed" && selectedTicket?.discord_channel_id) {
+        try {
+          await supabase.functions.invoke("send-ticket-log", {
+            body: {
+              tenant_id: tenantId,
+              ticket_id: ticketId,
+              action: "closed",
+              closed_by: "painel",
+              discord_channel_id: selectedTicket.discord_channel_id,
+            },
+          });
+        } catch {
+          // Non-critical
+        }
+      }
+
       toast.success("Status atualizado", { description: `Ticket alterado para ${statusConfig[newStatus]?.label}` });
       queryClient.invalidateQueries({ queryKey: ["tickets", tenantId] });
       if (selectedTicket?.id === ticketId) {
@@ -151,9 +206,17 @@ const TicketsPage = () => {
                   <p className="text-sm font-medium truncate">
                     {ticket.product_name || "Suporte Geral"}
                   </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {ticket.discord_username || ticket.discord_user_id}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-muted-foreground truncate">
+                      {ticket.discord_username || ticket.discord_user_id}
+                    </p>
+                    {ticket.discord_channel_id && (
+                      <span className="text-xs text-muted-foreground/50 flex items-center gap-0.5">
+                        <Hash className="h-3 w-3" />
+                        {ticket.discord_channel_id.slice(-6)}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -279,6 +342,15 @@ const TicketsPage = () => {
                     <Label className="text-muted-foreground">Usuário</Label>
                     <span className="text-sm font-medium">{selectedTicket.discord_username || selectedTicket.discord_user_id}</span>
                   </div>
+                  {selectedTicket.discord_channel_id && (
+                    <div className="flex items-center justify-between">
+                      <Label className="text-muted-foreground">Canal Discord</Label>
+                      <span className="text-sm font-mono text-muted-foreground flex items-center gap-1">
+                        <Hash className="h-3.5 w-3.5" />
+                        {selectedTicket.discord_channel_id}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between">
                     <Label className="text-muted-foreground">Produto</Label>
                     <span className="text-sm font-medium">{selectedTicket.product_name || "—"}</span>
@@ -291,10 +363,18 @@ const TicketsPage = () => {
                     <Label className="text-muted-foreground">Criado em</Label>
                     <span className="text-sm">{new Date(selectedTicket.created_at).toLocaleString("pt-BR")}</span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <Label className="text-muted-foreground">Atualizado em</Label>
-                    <span className="text-sm">{new Date(selectedTicket.updated_at).toLocaleString("pt-BR")}</span>
-                  </div>
+                  {selectedTicket.closed_at && (
+                    <div className="flex items-center justify-between">
+                      <Label className="text-muted-foreground">Fechado em</Label>
+                      <span className="text-sm">{new Date(selectedTicket.closed_at).toLocaleString("pt-BR")}</span>
+                    </div>
+                  )}
+                  {selectedTicket.closed_by && (
+                    <div className="flex items-center justify-between">
+                      <Label className="text-muted-foreground">Fechado por</Label>
+                      <span className="text-sm font-medium">{selectedTicket.closed_by}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">
