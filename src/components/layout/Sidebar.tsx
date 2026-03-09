@@ -156,7 +156,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
             <div className="flex flex-col min-w-0">
               <span className="text-sm font-bold leading-tight tracking-wide">
                 <span className="text-gradient-pink">DRIKA</span>{" "}
-                <span className="text-white/90">SOLUTIONS</span>
+                <span className="text-white/90">HUB</span>
               </span>
               {tenant?.discord_guild_id && (
                 <span className="text-[10px] font-mono text-white/30 truncate mt-0.5">
