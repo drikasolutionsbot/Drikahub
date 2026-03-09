@@ -509,7 +509,18 @@ serve(async (req) => {
 
       // ─── TICKET OPEN (from ticket embed button) ───────────
       if (customId.startsWith("ticket_open_")) {
-        const ticketTenantId = customId.replace("ticket_open_", "");
+        // Parse: ticket_open_{tenantId}_{channelId}
+        const parts = customId.replace("ticket_open_", "").split("_");
+        // channelId may contain underscores in theory, but UUIDs use hyphens and Discord IDs are numeric
+        // Format: ticket_open_{uuid-tenant-id}_{discord-channel-id}
+        // UUID has 5 segments separated by hyphens, so we split by last underscore
+        const lastUnder = customId.lastIndexOf("_");
+        const prefix = "ticket_open_";
+        const afterPrefix = customId.substring(prefix.length);
+        const lastUnderscore = afterPrefix.lastIndexOf("_");
+        const ticketTenantId = lastUnderscore > 0 ? afterPrefix.substring(0, lastUnderscore) : afterPrefix;
+        const targetChannelId = lastUnderscore > 0 ? afterPrefix.substring(lastUnderscore + 1) : null;
+
         await respondDeferred(interaction, botToken);
 
         // Get tenant guild + ticket config
@@ -530,7 +541,6 @@ serve(async (req) => {
           .eq("tenant_id", ticketTenantId)
           .single();
 
-        const parentId = storeConfig?.ticket_channel_id || null;
         const guildId = tenant.discord_guild_id;
 
         // Check if user already has an open ticket
@@ -546,44 +556,37 @@ serve(async (req) => {
           return ok();
         }
 
-        // Create private channel for the ticket
-        const channelName = `ticket-${username || userId}`.toLowerCase().replace(/[^a-z0-9-_]/g, "").substring(0, 100);
+        // Determine which channel to create the thread in
+        const parentChannelId = targetChannelId || storeConfig?.ticket_channel_id || interaction.channel_id;
 
-        const channelBody: any = {
-          name: channelName,
-          type: 0, // text channel
-          permission_overwrites: [
-            // Deny @everyone view
-            {
-              id: guildId, // @everyone role ID = guild ID
-              type: 0, // role
-              deny: "1024", // VIEW_CHANNEL
-            },
-            // Allow the ticket creator
-            {
-              id: userId,
-              type: 1, // member
-              allow: "1024", // VIEW_CHANNEL
-            },
-          ],
-        };
+        // Create a thread (topic) in the selected channel
+        const threadName = `Abrir ticket · ${username || "user"} · ${userId}`.substring(0, 100);
 
-        if (parentId) channelBody.parent_id = parentId;
-
-        const createChRes = await fetch(`${DISCORD_API}/guilds/${guildId}/channels`, {
+        const threadRes = await fetch(`${DISCORD_API}/channels/${parentChannelId}/threads`, {
           method: "POST",
           headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
-          body: JSON.stringify(channelBody),
+          body: JSON.stringify({
+            name: threadName,
+            type: 12, // GUILD_PRIVATE_THREAD
+            invitable: false,
+            auto_archive_duration: 10080, // 7 days
+          }),
         });
 
-        if (!createChRes.ok) {
-          const errText = await createChRes.text();
-          console.error("Failed to create ticket channel:", errText);
-          await editFollowup(interaction, botToken, "❌ Não foi possível criar o canal do ticket. Verifique as permissões do bot.");
+        if (!threadRes.ok) {
+          const errText = await threadRes.text();
+          console.error("Failed to create ticket thread:", errText);
+          await editFollowup(interaction, botToken, "❌ Não foi possível criar o tópico do ticket. Verifique as permissões do bot.");
           return ok();
         }
 
-        const ticketChannel = await createChRes.json();
+        const ticketThread = await threadRes.json();
+
+        // Add the user to the private thread
+        await fetch(`${DISCORD_API}/channels/${ticketThread.id}/thread-members/${userId}`, {
+          method: "PUT",
+          headers: { Authorization: `Bot ${botToken}` },
+        });
 
         // Insert ticket in DB
         const { data: ticket, error: ticketErr } = await supabase
@@ -592,7 +595,7 @@ serve(async (req) => {
             tenant_id: ticketTenantId,
             discord_user_id: userId,
             discord_username: username,
-            discord_channel_id: ticketChannel.id,
+            discord_channel_id: ticketThread.id,
             status: "open",
           })
           .select()
@@ -604,7 +607,7 @@ serve(async (req) => {
           return ok();
         }
 
-        // Send welcome embed in the new channel
+        // Send welcome embed in the thread with action buttons
         const embedColor = parseInt((storeConfig?.ticket_embed_color || "#5865F2").replace("#", ""), 16);
         const welcomeEmbed: any = {
           title: storeConfig?.ticket_embed_title || "🎫 Ticket de Suporte",
@@ -619,27 +622,112 @@ serve(async (req) => {
           welcomeEmbed.footer = { text: storeConfig.ticket_embed_footer };
         }
 
-        await fetch(`${DISCORD_API}/channels/${ticketChannel.id}/messages`, {
+        await fetch(`${DISCORD_API}/channels/${ticketThread.id}/messages`, {
           method: "POST",
           headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
           body: JSON.stringify({
             content: `<@${userId}>`,
             embeds: [welcomeEmbed],
-            components: [{
-              type: 1,
-              components: [
-                {
-                  type: 2,
-                  style: 4, // Danger (red)
-                  label: "🔒 Fechar Ticket",
-                  custom_id: `ticket_close_${ticket.id}`,
-                },
-              ],
-            }],
+            components: [
+              {
+                type: 1,
+                components: [
+                  {
+                    type: 2,
+                    style: 1, // Primary (blurple)
+                    label: "🕐 Lembrar",
+                    custom_id: `ticket_remind_${ticket.id}`,
+                  },
+                  {
+                    type: 2,
+                    style: 2, // Secondary (grey)
+                    label: "✏️ Renomear",
+                    custom_id: `ticket_rename_${ticket.id}`,
+                  },
+                  {
+                    type: 2,
+                    style: 4, // Danger (red)
+                    label: "🔒 Fechar Ticket",
+                    custom_id: `ticket_close_${ticket.id}`,
+                  },
+                ],
+              },
+            ],
           }),
         });
 
-        await editFollowup(interaction, botToken, `✅ Ticket criado! Acesse <#${ticketChannel.id}>`);
+        await editFollowup(interaction, botToken, `✅ Ticket criado! Acesse <#${ticketThread.id}>`);
+        return ok();
+      }
+
+      // ─── TICKET REMIND (notify the user who opened the ticket) ───
+      if (customId.startsWith("ticket_remind_")) {
+        const ticketId = customId.replace("ticket_remind_", "");
+        await respondDeferred(interaction, botToken);
+
+        const { data: ticket } = await supabase
+          .from("tickets")
+          .select("discord_user_id, discord_channel_id, status")
+          .eq("id", ticketId)
+          .single();
+
+        if (!ticket) {
+          await editFollowup(interaction, botToken, "❌ Ticket não encontrado.");
+          return ok();
+        }
+
+        if (ticket.status === "closed") {
+          await editFollowup(interaction, botToken, "ℹ️ Este ticket já está fechado.");
+          return ok();
+        }
+
+        const channelId = ticket.discord_channel_id || interaction.channel_id;
+
+        // Send a reminder mention in the thread
+        await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+          method: "POST",
+          headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            content: `🔔 <@${ticket.discord_user_id}>, este é um lembrete sobre seu ticket! Por favor, verifique se há atualizações pendentes.`,
+          }),
+        });
+
+        await editFollowup(interaction, botToken, `✅ Lembrete enviado para <@${ticket.discord_user_id}>!`);
+        return ok();
+      }
+
+      // ─── TICKET RENAME (modal to rename the thread) ──────────
+      if (customId.startsWith("ticket_rename_")) {
+        const ticketId = customId.replace("ticket_rename_", "");
+
+        // Show a modal for the new name
+        await fetch(`${DISCORD_API}/interactions/${interaction.id}/${interaction.token}/callback`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: 9, // MODAL
+            data: {
+              title: "✏️ Renomear Ticket",
+              custom_id: `ticket_rename_modal_${ticketId}`,
+              components: [
+                {
+                  type: 1,
+                  components: [
+                    {
+                      type: 4, // TEXT_INPUT
+                      custom_id: "new_name",
+                      label: "Novo nome do ticket",
+                      style: 1, // Short
+                      min_length: 1,
+                      max_length: 100,
+                      required: true,
+                    },
+                  ],
+                },
+              ],
+            },
+          }),
+        });
         return ok();
       }
 
@@ -717,7 +805,7 @@ serve(async (req) => {
           });
         }
 
-        // Send closing message in the ticket channel then delete after 5 seconds
+        // Send closing message in the ticket thread and archive it
         const channelId = interaction.channel_id || ticket.discord_channel_id;
         if (channelId) {
           await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
@@ -726,23 +814,18 @@ serve(async (req) => {
             body: JSON.stringify({
               embeds: [{
                 title: "🔒 Ticket Fechado",
-                description: `Este ticket foi fechado por <@${userId}>.\nO canal será excluído em 10 segundos.`,
+                description: `Este ticket foi fechado por <@${userId}>.\nO tópico será arquivado.`,
                 color: 0xED4245,
               }],
             }),
           });
 
-          // Delete channel after 10 seconds
-          setTimeout(async () => {
-            try {
-              await fetch(`${DISCORD_API}/channels/${channelId}`, {
-                method: "DELETE",
-                headers: { Authorization: `Bot ${botToken}` },
-              });
-            } catch (e) {
-              console.error("Failed to delete ticket channel:", e);
-            }
-          }, 10000);
+          // Archive and lock the thread instead of deleting
+          await fetch(`${DISCORD_API}/channels/${channelId}`, {
+            method: "PATCH",
+            headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ archived: true, locked: true }),
+          });
         }
 
         return ok();
@@ -755,6 +838,58 @@ serve(async (req) => {
       } catch {
         // If deferred response wasn't sent, try immediate
       }
+      return ok();
+    }
+  }
+
+  // Type 5: MODAL_SUBMIT
+  if (interaction.type === 5) {
+    const customId = interaction.data?.custom_id || "";
+    const userId = interaction.member?.user?.id || interaction.user?.id;
+
+    try {
+      // ─── TICKET RENAME MODAL SUBMIT ──────────────────────
+      if (customId.startsWith("ticket_rename_modal_")) {
+        const ticketId = customId.replace("ticket_rename_modal_", "");
+        await respondDeferred(interaction, botToken);
+
+        const newName = interaction.data?.components?.[0]?.components?.[0]?.value || "";
+        if (!newName) {
+          await editFollowup(interaction, botToken, "❌ Nome inválido.");
+          return ok();
+        }
+
+        const { data: ticket } = await supabase
+          .from("tickets")
+          .select("discord_channel_id")
+          .eq("id", ticketId)
+          .single();
+
+        if (!ticket?.discord_channel_id) {
+          await editFollowup(interaction, botToken, "❌ Ticket não encontrado.");
+          return ok();
+        }
+
+        // Rename the thread
+        const renameRes = await fetch(`${DISCORD_API}/channels/${ticket.discord_channel_id}`, {
+          method: "PATCH",
+          headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ name: newName.substring(0, 100) }),
+        });
+
+        if (!renameRes.ok) {
+          await editFollowup(interaction, botToken, "❌ Não foi possível renomear o ticket.");
+          return ok();
+        }
+
+        await editFollowup(interaction, botToken, `✅ Ticket renomeado para: **${newName.substring(0, 100)}**`);
+        return ok();
+      }
+    } catch (err) {
+      console.error("Modal interaction error:", err);
+      try {
+        await editFollowup(interaction, botToken, `❌ Erro: ${err instanceof Error ? err.message : "Erro desconhecido"}`);
+      } catch {}
       return ok();
     }
   }
