@@ -379,49 +379,6 @@ const SettingsPage = () => {
           </div>
         </TabsContent>
 
-        {/* Users Tab */}
-        <TabsContent value="users">
-          <div className="wallet-section">
-            <div className="flex items-center justify-between mb-5">
-              <div className="wallet-section-header">
-                <div className="wallet-section-icon">
-                  <Shield className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-foreground font-display font-semibold text-sm">Usuários e Permissões</h3>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">Gerencie os acessos ao painel</p>
-                </div>
-              </div>
-              <Button size="sm" variant="outline" className="gap-2">
-                <UserPlus className="h-3.5 w-3.5" /> Convidar
-              </Button>
-            </div>
-            {rolesLoading ? (
-              <div className="space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-14 rounded-xl" />)}</div>
-            ) : (
-              <div className="space-y-2">
-                {userRoles.map(u => (
-                  <div key={u.id} className="wallet-tx-row">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full gradient-pink text-xs font-bold text-primary-foreground">
-                        {(u.profiles?.discord_username || "?")[0].toUpperCase()}
-                      </div>
-                      <span className="text-sm font-medium text-foreground">{u.profiles?.discord_username || "Usuário"}</span>
-                    </div>
-                    <Select defaultValue={u.role}>
-                      <SelectTrigger className="w-32 wallet-input text-sm"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="owner">Owner</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="support">Support</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </TabsContent>
 
         {/* Plan Tab */}
         <TabsContent value="plan">
