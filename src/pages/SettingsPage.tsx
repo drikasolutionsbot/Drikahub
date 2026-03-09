@@ -35,7 +35,7 @@ const PIX_KEY_TYPES = [
 const SettingsPage = () => {
   const { tenant, tenantId, refetch: refetchTenant } = useTenant();
   const [searchParams] = useSearchParams();
-  const defaultTab = searchParams.get("tab") || "branding";
+  const defaultTab = searchParams.get("tab") || "pix";
   const { user } = useAuth();
 
   // PIX state
