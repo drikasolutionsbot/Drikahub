@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Upload, Paintbrush, Users, Crown, QrCode, Loader2, Copy, CheckCircle2, UserPlus, Sparkles, Zap, Shield } from "lucide-react";
+import { Upload, Users, Crown, QrCode, Loader2, Copy, CheckCircle2, UserPlus, Sparkles, Zap, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,7 +35,7 @@ const PIX_KEY_TYPES = [
 const SettingsPage = () => {
   const { tenant, tenantId, refetch: refetchTenant } = useTenant();
   const [searchParams] = useSearchParams();
-  const defaultTab = searchParams.get("tab") || "branding";
+  const defaultTab = searchParams.get("tab") || "pix";
   const { user } = useAuth();
 
   // PIX state
@@ -80,18 +80,8 @@ const SettingsPage = () => {
     enabled: !!tenantId,
   });
 
-  const handleSaveBranding = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!tenantId) return;
-    const form = new FormData(e.currentTarget);
-    await (supabase as any).from("tenants").update({
-      name: form.get("name"),
-      primary_color: form.get("primary_color"),
-      secondary_color: form.get("secondary_color"),
-    }).eq("id", tenantId);
-    refetchTenant();
-    toast({ title: "Configurações salvas" });
-  };
+
+
 
   const handleSavePix = async () => {
     if (!tenantId) return;
@@ -153,9 +143,6 @@ const SettingsPage = () => {
         <Tabs defaultValue={defaultTab} className="relative mt-5">
           <div className="overflow-x-auto -mx-6 px-6 scrollbar-none">
             <TabsList className="bg-muted/60 backdrop-blur-sm border border-border/50 p-1 h-auto gap-1 w-max min-w-full sm:w-auto">
-              <TabsTrigger value="branding" className="gap-2 data-[state=active]:bg-card data-[state=active]:shadow-md px-3 sm:px-4 py-2 text-xs sm:text-sm">
-                <Paintbrush className="h-4 w-4" /> <span className="hidden sm:inline">Marca</span><span className="sm:hidden">Marca</span>
-              </TabsTrigger>
               <TabsTrigger value="pix" className="gap-2 data-[state=active]:bg-card data-[state=active]:shadow-md px-3 sm:px-4 py-2 text-xs sm:text-sm">
                 <QrCode className="h-4 w-4" /> PIX
               </TabsTrigger>
@@ -167,77 +154,6 @@ const SettingsPage = () => {
               </TabsTrigger>
             </TabsList>
           </div>
-
-        {/* Branding Tab */}
-        <TabsContent value="branding">
-          <div className="wallet-section">
-            <div className="wallet-section-header mb-5">
-              <div className="wallet-section-icon">
-                <Paintbrush className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <h3 className="text-foreground font-display font-semibold text-sm">White-label</h3>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Personalize a identidade visual da sua loja</p>
-              </div>
-            </div>
-            <form onSubmit={handleSaveBranding} className="space-y-5">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">Nome da Loja</Label>
-                  <Input name="name" defaultValue={tenant.name} className="wallet-input" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">Logo</Label>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/50">
-                      <Upload className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                    <Button type="button" variant="outline" size="sm">Upload</Button>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">Cor Primária</Label>
-                  <div className="flex gap-2 items-center">
-                    <label className="relative h-10 w-10 rounded-lg flex-shrink-0 cursor-pointer overflow-hidden border border-border" style={{ backgroundColor: tenant.primary_color || '#FF69B4' }}>
-                      <input
-                        type="color"
-                        name="primary_color_picker"
-                        defaultValue={tenant.primary_color || '#FF69B4'}
-                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                        onChange={(e) => {
-                          const input = e.target.closest('form')?.querySelector<HTMLInputElement>('input[name="primary_color"]');
-                          if (input) { input.value = e.target.value; }
-                          (e.target.parentElement as HTMLElement).style.backgroundColor = e.target.value;
-                        }}
-                      />
-                    </label>
-                    <Input name="primary_color" defaultValue={tenant.primary_color} className="wallet-input font-mono" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">Cor Secundária</Label>
-                  <div className="flex gap-2 items-center">
-                    <label className="relative h-10 w-10 rounded-lg flex-shrink-0 cursor-pointer overflow-hidden border border-border" style={{ backgroundColor: tenant.secondary_color || '#00d019' }}>
-                      <input
-                        type="color"
-                        name="secondary_color_picker"
-                        defaultValue={tenant.secondary_color || '#00d019'}
-                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                        onChange={(e) => {
-                          const input = e.target.closest('form')?.querySelector<HTMLInputElement>('input[name="secondary_color"]');
-                          if (input) { input.value = e.target.value; }
-                          (e.target.parentElement as HTMLElement).style.backgroundColor = e.target.value;
-                        }}
-                      />
-                    </label>
-                    <Input name="secondary_color" defaultValue={tenant.secondary_color} className="wallet-input font-mono" />
-                  </div>
-                </div>
-              </div>
-              <Button type="submit" className="gradient-pink text-primary-foreground border-none hover:opacity-90">Salvar</Button>
-            </form>
-          </div>
-        </TabsContent>
 
         {/* PIX Tab */}
         <TabsContent value="pix">
