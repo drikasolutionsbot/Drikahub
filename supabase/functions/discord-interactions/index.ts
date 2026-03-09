@@ -610,7 +610,7 @@ serve(async (req) => {
             tenant_id: ticketTenantId,
             discord_user_id: userId,
             discord_username: username,
-            discord_channel_id: ticketThread.id,
+            discord_channel_id: ticketChannel.id,
             status: "open",
           })
           .select()
