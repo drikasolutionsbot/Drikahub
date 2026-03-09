@@ -32,6 +32,7 @@ interface MarketplaceItem {
   bought_by_tenant_id: string | null;
   bought_at: string | null;
   created_at: string;
+  image_url: string | null;
 }
 
 const LZT_CATEGORIES = [
