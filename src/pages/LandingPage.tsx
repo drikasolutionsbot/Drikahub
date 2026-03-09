@@ -645,7 +645,7 @@ const LandingPage = () => {
               <p className="text-sm text-white/50">Soluções flexíveis para negócios em crescimento</p>
             </div>
           </ScrollReveal>
-          <div className="grid md:grid-cols-3 gap-5 items-start">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 items-start">
             {/* Trial / Free */}
             <ScrollReveal>
               <div className="relative rounded-2xl border border-white/10 bg-[#0d0d0d] p-6 flex flex-col h-full transition-all duration-300 hover:border-white/20">
