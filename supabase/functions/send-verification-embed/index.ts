@@ -65,7 +65,6 @@ Deno.serve(async (req) => {
               style: 5,
               label: button_label || "Verificar",
               url: `https://krudxivcuygykoswjbbx.supabase.co/functions/v1/verify-member?tenant_id=${tenant_id}`,
-              emoji: { name: "🔗" },
             },
           ],
         },
