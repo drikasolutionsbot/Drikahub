@@ -93,6 +93,7 @@ const AppRoutes = () => (
       <Route path="/admin/logs" element={<AdminAuditLogsPage />} />
       <Route path="/admin/permissoes" element={<AdminPermissionsPage />} />
       <Route path="/admin/tutoriais" element={<AdminTutorialsPage />} />
+      <Route path="/admin/marketplace" element={<AdminMarketplacePage />} />
     </Route>
 
     {/* Dashboard routes */}
