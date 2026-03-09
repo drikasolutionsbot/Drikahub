@@ -33,10 +33,25 @@ serve(async (req) => {
 
     // If product_id is provided, add buy/variations buttons
     if (product_id) {
-      // Fetch product fields to check if there are variations
+      // Fetch product fields and auto_delivery status
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
       const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
       const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+      const { data: product } = await supabase
+        .from("products")
+        .select("auto_delivery")
+        .eq("id", product_id)
+        .eq("tenant_id", tenant_id)
+        .single();
+
+      // Prepend auto delivery badge to embed description if applicable
+      if (product?.auto_delivery && embeds && embeds.length > 0) {
+        const currentDesc = embeds[0].description || "";
+        if (!currentDesc.includes("Entrega Automática")) {
+          embeds[0].description = `⚡ **Entrega Automática!**\n\n${currentDesc}`;
+        }
+      }
 
       const { data: fields } = await supabase
         .from("product_fields")

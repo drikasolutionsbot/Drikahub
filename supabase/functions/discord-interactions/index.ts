@@ -304,9 +304,10 @@ serve(async (req) => {
           .eq("product_id", productId)
           .eq("tenant_id", product.tenant_id);
 
+        const autoDeliveryText = product.auto_delivery ? "⚡ **Entrega Automática!**\n\n" : "";
         const embed: any = {
           title: `ℹ️ ${product.name}`,
-          description: product.description || "Sem descrição.",
+          description: `${autoDeliveryText}${product.description || "Sem descrição."}`,
           color: 0x2B2D31,
           fields: [
             { name: "💰 Preço", value: formatBRL(product.price_cents), inline: true },
