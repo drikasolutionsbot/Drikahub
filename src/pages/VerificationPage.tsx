@@ -132,6 +132,7 @@ const VerificationPage = () => {
             verify_enabled: config.verify_enabled,
             verify_role_id: config.verify_role_id || null,
             verify_channel_id: config.verify_channel_id || null,
+            verify_logs_channel_id: config.verify_logs_channel_id || null,
             verify_title: config.verify_title,
             verify_description: config.verify_description,
             verify_button_label: config.verify_button_label,
