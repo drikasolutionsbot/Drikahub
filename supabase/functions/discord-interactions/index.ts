@@ -637,7 +637,7 @@ serve(async (req) => {
           welcomeEmbed.footer = { text: storeConfig.ticket_embed_footer };
         }
 
-        await fetch(`${DISCORD_API}/channels/${ticketThread.id}/messages`, {
+        await fetch(`${DISCORD_API}/channels/${ticketChannel.id}/messages`, {
           method: "POST",
           headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
           body: JSON.stringify({
