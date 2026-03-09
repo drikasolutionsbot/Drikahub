@@ -239,6 +239,103 @@ export type Database = {
           },
         ]
       }
+      bot_commands: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          enabled: boolean
+          id: string
+          is_default: boolean
+          name: string
+          options: Json
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string
+          enabled?: boolean
+          id?: string
+          is_default?: boolean
+          name: string
+          options?: Json
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          enabled?: boolean
+          id?: string
+          is_default?: boolean
+          name?: string
+          options?: Json
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bot_commands_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bot_modules: {
+        Row: {
+          color: string
+          created_at: string
+          custom: boolean
+          description: string
+          enabled: boolean
+          icon_key: string
+          id: string
+          module_key: string
+          name: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          custom?: boolean
+          description?: string
+          enabled?: boolean
+          icon_key?: string
+          id?: string
+          module_key: string
+          name: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          custom?: boolean
+          description?: string
+          enabled?: boolean
+          icon_key?: string
+          id?: string
+          module_key?: string
+          name?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bot_modules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           created_at: string

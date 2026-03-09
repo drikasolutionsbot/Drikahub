@@ -30,9 +30,7 @@ interface DiscordRole {
 const colorToHex = (color: number) =>
   color === 0 ? "#99AAB5" : `#${color.toString(16).padStart(6, "0")}`;
 
-// Discord permission flags (bigint-safe as strings)
 const DISCORD_PERMISSIONS: { flag: bigint; label: string; description: string; category: string }[] = [
-  // General
   { flag: 0x8n, label: "Administrador", description: "Acesso total ao servidor", category: "Geral" },
   { flag: 0x20n, label: "Gerenciar Servidor", description: "Alterar configurações do servidor", category: "Geral" },
   { flag: 0x10000000n, label: "Gerenciar Cargos", description: "Criar, editar e deletar cargos", category: "Geral" },
@@ -61,7 +59,6 @@ const DISCORD_PERMISSIONS: { flag: bigint; label: string; description: string; c
 const CATEGORIES = ["Geral", "Moderação", "Texto", "Voz"];
 
 function hasPermission(perms: bigint, flag: bigint): boolean {
-  // Admin has all permissions
   if ((perms & 0x8n) === 0x8n && flag !== 0x8n) return true;
   return (perms & flag) === flag;
 }
@@ -101,16 +98,15 @@ export const RolesTab = () => {
   });
 
   const handleCreate = async () => {
-    if (!newRoleName.trim() || !guildId) return;
+    if (!newRoleName.trim() || !tenantId) return;
     setCreating(true);
     try {
       const { data, error } = await supabase.functions.invoke("manage-roles", {
         body: {
           action: "create",
-          guild_id: guildId,
-          name: newRoleName.trim(),
-          color: parseInt(newRoleColor.replace("#", ""), 16),
           tenant_id: tenantId,
+          name: newRoleName.trim(),
+          color: newRoleColor, // Pass hex string directly
         },
       });
       if (error || data?.error) throw new Error(data?.error || "Erro ao criar cargo");
@@ -127,15 +123,14 @@ export const RolesTab = () => {
   };
 
   const handleDelete = async (role: DiscordRole) => {
-    if (!guildId) return;
+    if (!tenantId) return;
     setDeletingId(role.id);
     try {
       const { data, error } = await supabase.functions.invoke("manage-roles", {
         body: {
-          action: "delete",
-          guild_id: guildId,
-          role_id: role.id,
+          action: "delete_discord",
           tenant_id: tenantId,
+          role_id: role.id, // Discord role ID
         },
       });
       if (error || data?.error) throw new Error(data?.error || "Erro ao deletar");
@@ -223,11 +218,7 @@ export const RolesTab = () => {
             <div className="space-y-4 pt-2">
               <div className="space-y-2">
                 <Label>Nome</Label>
-                <Input
-                  placeholder="Ex: Moderador"
-                  value={newRoleName}
-                  onChange={(e) => setNewRoleName(e.target.value)}
-                />
+                <Input placeholder="Ex: Moderador" value={newRoleName} onChange={(e) => setNewRoleName(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label>Cor</Label>
@@ -238,11 +229,7 @@ export const RolesTab = () => {
                     onChange={(e) => setNewRoleColor(e.target.value)}
                     className="h-10 w-14 rounded-lg border border-border cursor-pointer bg-transparent"
                   />
-                  <Input
-                    value={newRoleColor}
-                    onChange={(e) => setNewRoleColor(e.target.value)}
-                    className="font-mono text-sm w-28"
-                  />
+                  <Input value={newRoleColor} onChange={(e) => setNewRoleColor(e.target.value)} className="font-mono text-sm w-28" />
                 </div>
               </div>
               <Button
@@ -277,27 +264,17 @@ export const RolesTab = () => {
 
             return (
               <div key={role.id} className="rounded-xl border border-border bg-card overflow-hidden">
-                {/* Role Header */}
                 <div
                   className="flex items-center gap-3 p-4 cursor-pointer hover:bg-muted/50 transition-colors"
                   onClick={() => handleExpand(role)}
                 >
                   <div className="flex items-center justify-center w-6">
-                    {isExpanded ? (
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    )}
+                    {isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
                   </div>
-                  <div
-                    className="h-4 w-4 rounded-full shrink-0"
-                    style={{ backgroundColor: colorToHex(role.color) }}
-                  />
+                  <div className="h-4 w-4 rounded-full shrink-0" style={{ backgroundColor: colorToHex(role.color) }} />
                   <span className="font-medium text-sm flex-1">{role.name}</span>
                   {isAdmin && (
-                    <Badge variant="outline" className="text-xs border-yellow-500/50 text-yellow-500">
-                      Admin
-                    </Badge>
+                    <Badge variant="outline" className="text-xs border-yellow-500/50 text-yellow-500">Admin</Badge>
                   )}
                   <span className="text-xs text-muted-foreground">Pos. {role.position}</span>
                   <Button
@@ -307,15 +284,10 @@ export const RolesTab = () => {
                     disabled={deletingId === role.id}
                     className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
                   >
-                    {deletingId === role.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <TrashIcon className="h-4 w-4" />
-                    )}
+                    {deletingId === role.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <TrashIcon className="h-4 w-4" />}
                   </Button>
                 </div>
 
-                {/* Expanded Permissions */}
                 {isExpanded && (
                   <div className="border-t border-border px-4 pb-4 pt-3 space-y-5">
                     {CATEGORIES.map((cat) => {
@@ -323,28 +295,19 @@ export const RolesTab = () => {
                       if (perms.length === 0) return null;
                       return (
                         <div key={cat}>
-                          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">
-                            {cat}
-                          </h4>
+                          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">{cat}</h4>
                           <div className="space-y-1">
                             {perms.map((p) => {
                               const enabled = hasPermission(currentPerms, p.flag);
                               const isAdminFlag = p.flag === 0x8n;
                               const disabledByAdmin = isAdmin && !isAdminFlag;
                               return (
-                                <div
-                                  key={p.flag.toString()}
-                                  className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-muted/40 transition-colors"
-                                >
+                                <div key={p.flag.toString()} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-muted/40 transition-colors">
                                   <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium">{p.label}</p>
                                     <p className="text-xs text-muted-foreground">{p.description}</p>
                                   </div>
-                                  <Switch
-                                    checked={enabled}
-                                    disabled={disabledByAdmin}
-                                    onCheckedChange={(val) => handleTogglePerm(role.id, p.flag, val)}
-                                  />
+                                  <Switch checked={enabled} disabled={disabledByAdmin} onCheckedChange={(val) => handleTogglePerm(role.id, p.flag, val)} />
                                 </div>
                               );
                             })}
@@ -353,7 +316,6 @@ export const RolesTab = () => {
                       );
                     })}
 
-                    {/* Save button */}
                     <div className="flex justify-end pt-2">
                       <Button
                         size="sm"
@@ -361,11 +323,7 @@ export const RolesTab = () => {
                         onClick={() => handleSavePerms(role)}
                         className="gradient-pink text-primary-foreground border-none hover:opacity-90"
                       >
-                        {savingId === role.id ? (
-                          <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                        ) : (
-                          <Save className="h-4 w-4 mr-1.5" />
-                        )}
+                        {savingId === role.id ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Save className="h-4 w-4 mr-1.5" />}
                         Salvar Permissões
                       </Button>
                     </div>

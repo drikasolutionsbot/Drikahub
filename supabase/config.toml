@@ -149,3 +149,21 @@ verify_jwt = false
 
 [functions.send-ticket-log]
 verify_jwt = false
+
+[functions.manage-bot-commands]
+verify_jwt = false
+
+[functions.manage-bot-modules]
+verify_jwt = false
+
+[functions.manage-store-config]
+verify_jwt = false
+
+[functions.manage-product-fields]
+verify_jwt = false
+
+[functions.discord-guild-emojis]
+verify_jwt = false
+
+[functions.discord-guild-invites]
+verify_jwt = false

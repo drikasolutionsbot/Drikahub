@@ -28,7 +28,6 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 
-// Discord option types: https://discord.com/developers/docs/interactions/application-commands#application-command-object-application-command-option-type
 const OPTION_TYPES = [
   { value: 3, label: "String (texto)" },
   { value: 4, label: "Integer (número inteiro)" },
@@ -50,29 +49,16 @@ interface CommandOption {
 
 interface BotCommand {
   id: string;
+  tenant_id: string;
   name: string;
   description: string;
   category: string;
   enabled: boolean;
-  options?: CommandOption[];
+  options: CommandOption[];
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
 }
-
-const defaultCommands: BotCommand[] = [
-  { id: "1", name: "/painel", description: "Abre o painel administrativo no Discord", category: "Admin", enabled: true },
-  { id: "2", name: "/comprar", description: "Inicia o fluxo de compra de um produto", category: "Loja", enabled: true },
-  { id: "3", name: "/carrinho", description: "Exibe o carrinho do usuário", category: "Loja", enabled: true },
-  { id: "4", name: "/estoque", description: "Verifica o estoque de um produto", category: "Loja", enabled: true },
-  { id: "5", name: "/ticket", description: "Abre um ticket de suporte", category: "Suporte", enabled: true },
-  { id: "6", name: "/fechar", description: "Fecha o ticket atual", category: "Suporte", enabled: true },
-  { id: "7", name: "/rank", description: "Exibe o ranking de convites", category: "Convites", enabled: false },
-  { id: "8", name: "/convites", description: "Mostra quantos convites o usuário tem", category: "Convites", enabled: false },
-  { id: "9", name: "/sortear", description: "Cria um novo sorteio", category: "Sorteios", enabled: false },
-  { id: "10", name: "/vip", description: "Ativa um plano VIP para o usuário", category: "VIP", enabled: true },
-  { id: "11", name: "/ban", description: "Bane um usuário do servidor", category: "Moderação", enabled: true },
-  { id: "12", name: "/kick", description: "Expulsa um usuário do servidor", category: "Moderação", enabled: true },
-  { id: "13", name: "/clear", description: "Limpa mensagens do canal", category: "Moderação", enabled: true },
-  { id: "14", name: "/afiliado", description: "Gera um link de afiliado", category: "Loja", enabled: false },
-];
 
 const categoryColors: Record<string, string> = {
   Admin: "bg-primary/15 text-primary border-primary/20",
@@ -96,28 +82,55 @@ const emptyOption = (): CommandOption => ({
 });
 
 export const CommandsTab = () => {
-  const [commands, setCommands] = useState<BotCommand[]>(() => {
-    const saved = localStorage.getItem("bot_commands");
-    if (saved) {
-      try { return JSON.parse(saved); } catch { /* ignore */ }
-    }
-    return defaultCommands;
-  });
+  const [commands, setCommands] = useState<BotCommand[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [syncing, setSyncing] = useState(false);
-  const { tenant } = useTenant();
+  const { tenant, tenantId } = useTenant();
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [newCategory, setNewCategory] = useState("Custom");
   const [newOptions, setNewOptions] = useState<CommandOption[]>([]);
   const [expandedCmd, setExpandedCmd] = useState<string | null>(null);
-  const hasAutoSynced = useRef(false);
 
-  // Persist commands to localStorage
+  // Load commands from database
+  const loadCommands = useCallback(async () => {
+    if (!tenantId) return;
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-bot-commands", {
+        body: { action: "list", tenant_id: tenantId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setCommands(Array.isArray(data) ? data : []);
+    } catch (err: any) {
+      toast({ title: "Erro ao carregar comandos", description: err.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  }, [tenantId]);
+
   useEffect(() => {
-    localStorage.setItem("bot_commands", JSON.stringify(commands));
-  }, [commands]);
+    loadCommands();
+  }, [loadCommands]);
+
+  // Realtime subscription
+  useEffect(() => {
+    if (!tenantId) return;
+    const channel = supabase
+      .channel(`bot_commands_${tenantId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "bot_commands", filter: `tenant_id=eq.${tenantId}` },
+        () => {
+          loadCommands();
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [tenantId, loadCommands]);
 
   const syncToDiscord = useCallback(async (cmds: BotCommand[], silent = false) => {
     const enabledCommands = cmds.filter((c) => c.enabled);
@@ -137,11 +150,10 @@ export const CommandsTab = () => {
           commands: enabledCommands.map((c) => ({
             name: c.name,
             description: c.description,
-            options: c.options,
+            options: c.options && c.options.length > 0 ? c.options : undefined,
           })),
         },
       });
-
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
@@ -153,24 +165,12 @@ export const CommandsTab = () => {
       }
     } catch (err: any) {
       if (!silent) {
-        toast({
-          title: "Erro ao sincronizar",
-          description: err.message || "Tente novamente.",
-          variant: "destructive",
-        });
+        toast({ title: "Erro ao sincronizar", description: err.message || "Tente novamente.", variant: "destructive" });
       }
     } finally {
       setSyncing(false);
     }
   }, [tenant]);
-
-  // Auto-sync on first mount when guild is available
-  useEffect(() => {
-    if (tenant?.discord_guild_id && !hasAutoSynced.current) {
-      hasAutoSynced.current = true;
-      syncToDiscord(commands, true);
-    }
-  }, [tenant?.discord_guild_id]);
 
   const filtered = commands.filter(
     (c) =>
@@ -196,10 +196,7 @@ export const CommandsTab = () => {
     setNewOptions((prev) =>
       prev.map((o, i) =>
         i === optIndex
-          ? {
-              ...o,
-              choices: (o.choices || []).map((c, ci) => (ci === choiceIndex ? { ...c, ...patch } : c)),
-            }
+          ? { ...o, choices: (o.choices || []).map((c, ci) => (ci === choiceIndex ? { ...c, ...patch } : c)) }
           : o
       )
     );
@@ -220,7 +217,7 @@ export const CommandsTab = () => {
     setNewOptions([]);
   };
 
-  const addCommand = () => {
+  const addCommand = async () => {
     const name = newName.startsWith("/") ? newName : `/${newName}`;
     if (!newName.trim() || !newDesc.trim()) {
       toast({ title: "Preencha nome e descrição", variant: "destructive" });
@@ -230,7 +227,7 @@ export const CommandsTab = () => {
       toast({ title: "Comando já existe", variant: "destructive" });
       return;
     }
-    // Validate options
+
     const validOptions = newOptions.filter((o) => o.name.trim() && o.description.trim());
     for (const opt of validOptions) {
       if (!/^[\w-]{1,32}$/.test(opt.name.trim())) {
@@ -241,41 +238,72 @@ export const CommandsTab = () => {
         });
         return;
       }
-      // Filter out empty choices
       opt.choices = (opt.choices || []).filter((c) => c.name.trim() && c.value.trim());
     }
 
-    const newCmd: BotCommand = {
-      id: crypto.randomUUID(),
-      name: name.toLowerCase(),
-      description: newDesc.trim(),
-      category: newCategory,
-      enabled: true,
-      options: validOptions.length > 0 ? validOptions : undefined,
-    };
-    const updated = [...commands, newCmd];
-    setCommands(updated);
-    resetForm();
-    setCreateOpen(false);
-    toast({ title: "Comando criado!" });
-    syncToDiscord(updated, true);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-bot-commands", {
+        body: {
+          action: "create",
+          tenant_id: tenantId,
+          name: name.toLowerCase(),
+          description: newDesc.trim(),
+          category: newCategory,
+          options: validOptions.length > 0 ? validOptions : [],
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      resetForm();
+      setCreateOpen(false);
+      toast({ title: "Comando criado!" });
+      // Sync to Discord after create
+      await loadCommands();
+      syncToDiscord([...commands, data], true);
+    } catch (err: any) {
+      toast({ title: "Erro ao criar comando", description: err.message, variant: "destructive" });
+    }
   };
 
-  const removeCommand = (id: string) => {
-    const updated = commands.filter((c) => c.id !== id);
-    setCommands(updated);
-    syncToDiscord(updated, true);
+  const removeCommand = async (id: string) => {
+    try {
+      const { error } = await supabase.functions.invoke("manage-bot-commands", {
+        body: { action: "delete", tenant_id: tenantId, id },
+      });
+      if (error) throw error;
+      const remaining = commands.filter((c) => c.id !== id);
+      syncToDiscord(remaining, true);
+    } catch (err: any) {
+      toast({ title: "Erro ao remover", description: err.message, variant: "destructive" });
+    }
   };
 
-  const toggleCommand = (id: string) => {
-    const updated = commands.map((c) => (c.id === id ? { ...c, enabled: !c.enabled } : c));
-    setCommands(updated);
-    syncToDiscord(updated, true);
+  const toggleCommand = async (id: string) => {
+    const cmd = commands.find((c) => c.id === id);
+    if (!cmd) return;
+    try {
+      const { error } = await supabase.functions.invoke("manage-bot-commands", {
+        body: { action: "update", tenant_id: tenantId, id, enabled: !cmd.enabled },
+      });
+      if (error) throw error;
+      const updated = commands.map((c) => (c.id === id ? { ...c, enabled: !c.enabled } : c));
+      syncToDiscord(updated, true);
+    } catch (err: any) {
+      toast({ title: "Erro ao atualizar", description: err.message, variant: "destructive" });
+    }
   };
 
   const handleSync = () => syncToDiscord(commands);
-
   const optionTypeSupportsChoices = (type: number) => type === 3 || type === 4 || type === 10;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -289,21 +317,10 @@ export const CommandsTab = () => {
             <span>/</span>
             <span>{commands.length} total</span>
           </div>
-          <Button
-            onClick={() => setCreateOpen(true)}
-            size="sm"
-            variant="outline"
-            className="gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            Criar
+          <Button onClick={() => setCreateOpen(true)} size="sm" variant="outline" className="gap-2">
+            <Plus className="h-4 w-4" /> Criar
           </Button>
-          <Button
-            onClick={handleSync}
-            disabled={syncing}
-            size="sm"
-            className="gap-2"
-          >
+          <Button onClick={handleSync} disabled={syncing} size="sm" className="gap-2">
             {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
             Sincronizar
           </Button>
@@ -325,9 +342,7 @@ export const CommandsTab = () => {
           .filter((cat) => filtered.some((c) => c.category === cat))
           .map((cat) => (
             <div key={cat} className="space-y-2">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {cat}
-              </h3>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{cat}</h3>
               <div className="space-y-1">
                 {filtered
                   .filter((c) => c.category === cat)
@@ -344,13 +359,8 @@ export const CommandsTab = () => {
                           <Terminal className="h-4 w-4 text-muted-foreground shrink-0" />
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
-                              <code className="text-sm font-semibold text-foreground">
-                                {cmd.name}
-                              </code>
-                              <Badge
-                                variant="outline"
-                                className={cn("text-[10px] px-1.5 py-0", categoryColors[cmd.category])}
-                              >
+                              <code className="text-sm font-semibold text-foreground">{cmd.name}</code>
+                              <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0", categoryColors[cmd.category])}>
                                 {cmd.category}
                               </Badge>
                               {cmd.options && cmd.options.length > 0 && (
@@ -359,9 +369,7 @@ export const CommandsTab = () => {
                                 </Badge>
                               )}
                             </div>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {cmd.description}
-                            </p>
+                            <p className="text-xs text-muted-foreground truncate">{cmd.description}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-1.5">
@@ -372,18 +380,11 @@ export const CommandsTab = () => {
                               className="h-7 w-7 text-muted-foreground"
                               onClick={() => setExpandedCmd(expandedCmd === cmd.id ? null : cmd.id)}
                             >
-                              {expandedCmd === cmd.id ? (
-                                <ChevronUp className="h-3.5 w-3.5" />
-                              ) : (
-                                <ChevronDown className="h-3.5 w-3.5" />
-                              )}
+                              {expandedCmd === cmd.id ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                             </Button>
                           )}
-                          <Switch
-                            checked={cmd.enabled}
-                            onCheckedChange={() => toggleCommand(cmd.id)}
-                          />
-                          {!defaultCommands.some((d) => d.id === cmd.id) && (
+                          <Switch checked={cmd.enabled} onCheckedChange={() => toggleCommand(cmd.id)} />
+                          {!cmd.is_default && (
                             <Button
                               variant="ghost"
                               size="icon"
@@ -395,7 +396,6 @@ export const CommandsTab = () => {
                           )}
                         </div>
                       </div>
-                      {/* Expanded options view */}
                       {expandedCmd === cmd.id && cmd.options && (
                         <div className="rounded-b-lg border border-t-0 border-border bg-muted/50 px-4 py-3 space-y-2">
                           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Parâmetros</p>
@@ -418,9 +418,7 @@ export const CommandsTab = () => {
                                 {opt.choices && opt.choices.length > 0 && (
                                   <div className="flex flex-wrap gap-1 mt-1">
                                     {opt.choices.map((c, ci) => (
-                                      <Badge key={ci} variant="secondary" className="text-[9px] px-1.5 py-0">
-                                        {c.name}
-                                      </Badge>
+                                      <Badge key={ci} variant="secondary" className="text-[9px] px-1.5 py-0">{c.name}</Badge>
                                     ))}
                                   </div>
                                 )}
@@ -444,32 +442,20 @@ export const CommandsTab = () => {
           </DialogHeader>
           <ScrollArea className="flex-1 -mx-6 px-6">
             <div className="space-y-5 pb-2">
-              {/* Basic fields */}
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label>Nome do comando</Label>
-                  <Input
-                    placeholder="/meucomando"
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                  />
+                  <Input placeholder="/meucomando" value={newName} onChange={(e) => setNewName(e.target.value)} />
                   <p className="text-[11px] text-muted-foreground">Apenas letras minúsculas, números, _ e -</p>
                 </div>
                 <div className="space-y-2">
                   <Label>Descrição</Label>
-                  <Input
-                    placeholder="O que este comando faz..."
-                    value={newDesc}
-                    onChange={(e) => setNewDesc(e.target.value)}
-                    maxLength={100}
-                  />
+                  <Input placeholder="O que este comando faz..." value={newDesc} onChange={(e) => setNewDesc(e.target.value)} maxLength={100} />
                 </div>
                 <div className="space-y-2">
                   <Label>Categoria</Label>
                   <Select value={newCategory} onValueChange={setNewCategory}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {AVAILABLE_CATEGORIES.map((cat) => (
                         <SelectItem key={cat} value={cat}>{cat}</SelectItem>
@@ -481,14 +467,11 @@ export const CommandsTab = () => {
 
               <Separator />
 
-              {/* Options (parameters) */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
                     <Label className="text-sm">Parâmetros (Options)</Label>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
-                      Argumentos que o usuário preenche ao usar o comando
-                    </p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">Argumentos que o usuário preenche ao usar o comando</p>
                   </div>
                   <Button
                     type="button"
@@ -498,8 +481,7 @@ export const CommandsTab = () => {
                     onClick={() => setNewOptions((prev) => [...prev, emptyOption()])}
                     disabled={newOptions.length >= 25}
                   >
-                    <Plus className="h-3.5 w-3.5" />
-                    Adicionar
+                    <Plus className="h-3.5 w-3.5" /> Adicionar
                   </Button>
                 </div>
 
@@ -538,9 +520,7 @@ export const CommandsTab = () => {
                       <div className="space-y-1">
                         <Label className="text-[11px]">Tipo</Label>
                         <Select value={String(opt.type)} onValueChange={(v) => updateOption(index, { type: Number(v), choices: optionTypeSupportsChoices(Number(v)) ? opt.choices : [] })}>
-                          <SelectTrigger className="h-8 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
+                          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             {OPTION_TYPES.map((t) => (
                               <SelectItem key={t.value} value={String(t.value)}>{t.label}</SelectItem>
@@ -562,15 +542,10 @@ export const CommandsTab = () => {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <Checkbox
-                        id={`req-${index}`}
-                        checked={opt.required}
-                        onCheckedChange={(checked) => updateOption(index, { required: !!checked })}
-                      />
+                      <Checkbox id={`req-${index}`} checked={opt.required} onCheckedChange={(checked) => updateOption(index, { required: !!checked })} />
                       <Label htmlFor={`req-${index}`} className="text-xs cursor-pointer">Obrigatório</Label>
                     </div>
 
-                    {/* Choices (only for string/integer/number) */}
                     {optionTypeSupportsChoices(opt.type) && (
                       <div className="space-y-2 pt-1 border-t border-border">
                         <div className="flex items-center justify-between">
@@ -583,30 +558,14 @@ export const CommandsTab = () => {
                             onClick={() => addChoice(index)}
                             disabled={(opt.choices?.length || 0) >= 25}
                           >
-                            <Plus className="h-3 w-3 mr-1" />
-                            Escolha
+                            <Plus className="h-3 w-3 mr-1" /> Escolha
                           </Button>
                         </div>
                         {(opt.choices || []).map((choice, ci) => (
                           <div key={ci} className="flex items-center gap-1.5">
-                            <Input
-                              placeholder="Nome"
-                              value={choice.name}
-                              onChange={(e) => updateChoice(index, ci, { name: e.target.value })}
-                              className="h-7 text-[11px] flex-1"
-                            />
-                            <Input
-                              placeholder="Valor"
-                              value={choice.value}
-                              onChange={(e) => updateChoice(index, ci, { value: e.target.value })}
-                              className="h-7 text-[11px] flex-1"
-                            />
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive"
-                              onClick={() => removeChoice(index, ci)}
-                            >
+                            <Input placeholder="Nome" value={choice.name} onChange={(e) => updateChoice(index, ci, { name: e.target.value })} className="h-7 text-[11px] flex-1" />
+                            <Input placeholder="Valor" value={choice.value} onChange={(e) => updateChoice(index, ci, { value: e.target.value })} className="h-7 text-[11px] flex-1" />
+                            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive" onClick={() => removeChoice(index, ci)}>
                               <TrashIcon className="h-2.5 w-2.5" />
                             </Button>
                           </div>

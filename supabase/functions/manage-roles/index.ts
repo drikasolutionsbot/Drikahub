@@ -82,6 +82,9 @@ serve(async (req) => {
         const { name, color = "#99AAB5" } = params;
         if (!name) throw new Error("Missing name");
 
+        // Accept both hex string and number for color
+        const colorDecimal = typeof color === "number" ? color : hexToDecimal(String(color));
+
         const discordRes = await fetch(
           `https://discord.com/api/v10/guilds/${guildId}/roles`,
           {
@@ -92,7 +95,7 @@ serve(async (req) => {
             },
             body: JSON.stringify({
               name,
-              color: hexToDecimal(color),
+              color: colorDecimal,
               mentionable: false,
               hoist: false,
             }),
@@ -106,13 +109,15 @@ serve(async (req) => {
 
         const discordRole = await discordRes.json();
 
+        const colorHex = typeof color === "string" ? color : `#${colorDecimal.toString(16).padStart(6, "0")}`;
+
         const { data, error } = await supabase
           .from("tenant_roles")
           .insert({
             tenant_id,
             discord_role_id: discordRole.id,
             name: discordRole.name,
-            color,
+            color: colorHex,
             synced: true,
           })
           .select()
@@ -245,6 +250,37 @@ serve(async (req) => {
           .eq("tenant_id", tenant_id);
 
         if (error) throw error;
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Delete directly by Discord role ID (used by RolesTab)
+      case "delete_discord": {
+        const { role_id } = params;
+        if (!role_id) throw new Error("Missing role_id");
+
+        // Delete from Discord
+        const discordRes = await fetch(
+          `https://discord.com/api/v10/guilds/${guildId}/roles/${role_id}`,
+          {
+            method: "DELETE",
+            headers: { Authorization: `Bot ${botToken}` },
+          }
+        );
+
+        if (!discordRes.ok && discordRes.status !== 404) {
+          const text = await discordRes.text();
+          throw new Error(`Discord API error [${discordRes.status}]: ${text}`);
+        }
+
+        // Also remove from tenant_roles if exists
+        await supabase
+          .from("tenant_roles")
+          .delete()
+          .eq("discord_role_id", role_id)
+          .eq("tenant_id", tenant_id);
+
         return new Response(JSON.stringify({ success: true }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
