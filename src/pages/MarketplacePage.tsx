@@ -135,21 +135,25 @@ const MarketplacePage = () => {
                             {item.description && (
                               <p className="text-xs text-muted-foreground line-clamp-2 mb-3 flex-1">{item.description}</p>
                             )}
-                          <div className="flex items-center justify-between mt-auto pt-3 border-t border-border">
-                            <span className="text-lg font-bold text-primary">
-                              {formatBRL(item.resale_price_cents)}
-                            </span>
-                            <Button
-                              size="sm"
-                              className="text-xs gradient-pink text-primary-foreground border-none hover:opacity-90"
-                              onClick={() => handleBuy(item)}
-                            >
-                              <CreditCard className="h-3 w-3 mr-1" />
-                              Comprar
-                            </Button>
-                          </div>
+                            <div className="flex items-center justify-between mt-auto pt-3 border-t border-border">
+                              <span className="text-lg font-bold text-primary">
+                                {formatBRL(item.resale_price_cents)}
+                              </span>
+                              <Button
+                                size="sm"
+                                className="text-xs gradient-pink text-primary-foreground border-none hover:opacity-90"
+                                onClick={() => handleBuy(item)}
+                              >
+                                <CreditCard className="h-3 w-3 mr-1" />
+                                Comprar
+                              </Button>
+                            </div>
                           </div>
                         </div>
+                      ))}
+                    </div>
+                  </div>
+                );
               })}
             </div>
           )}
