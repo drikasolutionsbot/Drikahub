@@ -294,7 +294,6 @@ export const TopBar = ({ onToggleSidebar }: TopBarProps) => {
           checked={theme === "dark"}
           onChange={(checked) => setTheme(checked ? "dark" : "light")}
         />
-        </Button>
         {/* Notifications */}
         <Popover open={notifOpen} onOpenChange={setNotifOpen}>
           <PopoverTrigger asChild>
