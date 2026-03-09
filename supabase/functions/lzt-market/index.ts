@@ -150,9 +150,10 @@ serve(async (req) => {
       const data = await res.json();
       // Translate item
       if (data?.item) {
-        if (data.item.title) data.item.title_translated = translateRuToPt(data.item.title);
-        if (data.item.description) data.item.description_translated = translateRuToPt(data.item.description);
-        data.item.extracted_image_url = extractImageUrl(data.item);
+        const item = data.item;
+        item.title_translated = translateRuToPt(item.title_en || item.title || "");
+        item.description_translated = translateRuToPt(item.descriptionEnPlain || item.description_en || item.description || "");
+        item.extracted_image_url = extractImageUrl(item);
       }
       return new Response(JSON.stringify(data), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
