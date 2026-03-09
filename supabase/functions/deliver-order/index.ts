@@ -447,6 +447,7 @@ serve(async (req) => {
       }
     }
 
+    const result = {
       success: true,
       order_id,
       items_delivered: stockItems.length,
