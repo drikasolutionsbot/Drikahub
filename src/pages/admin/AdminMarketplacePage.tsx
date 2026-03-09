@@ -32,6 +32,7 @@ interface MarketplaceItem {
   bought_by_tenant_id: string | null;
   bought_at: string | null;
   created_at: string;
+  image_url: string | null;
 }
 
 const LZT_CATEGORIES = [
@@ -58,6 +59,7 @@ interface LztItem {
   description?: string;
   description_translated?: string;
   category_id?: number;
+  extracted_image_url?: string;
 }
 
 const AdminMarketplacePage = () => {
@@ -149,6 +151,7 @@ const AdminMarketplacePage = () => {
             category: lztCategory || null,
             cost_cents: Math.round((importItem.item.price || 0) * 100),
             resale_price_cents: priceCents,
+            image_url: importItem.item.extracted_image_url || null,
             lzt_data: importItem.item,
           },
         },
@@ -248,6 +251,9 @@ const AdminMarketplacePage = () => {
                 <div className="space-y-2">
                   {tabItems.map((item) => (
                     <div key={item.id} className="rounded-lg border border-border bg-card p-4 flex items-center gap-4">
+                      {item.image_url && (
+                        <img src={item.image_url} alt={item.title} className="h-12 w-12 rounded-lg object-cover shrink-0 border border-border" />
+                      )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className="text-sm font-semibold truncate">{item.title}</h3>
@@ -352,6 +358,9 @@ const AdminMarketplacePage = () => {
                 <div className="space-y-2 max-h-[400px] overflow-y-auto">
                   {lztItems.map((item) => (
                     <div key={item.item_id} className="rounded-lg border border-border p-3 flex items-center gap-3 hover:border-primary/30 transition-colors">
+                      {item.extracted_image_url && (
+                        <img src={item.extracted_image_url} alt="" className="h-10 w-10 rounded-md object-cover shrink-0 border border-border" />
+                      )}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{getItemDisplayTitle(item)}</p>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -401,15 +410,20 @@ const AdminMarketplacePage = () => {
 
               {urlItem && (
                 <div className="rounded-lg border border-border p-4 space-y-3">
-                  <div>
-                    <p className="font-semibold">{getItemDisplayTitle(urlItem)}</p>
-                    {urlItem.title && urlItem.title !== urlItem.title_translated && (
-                      <p className="text-xs text-muted-foreground opacity-50">{urlItem.title}</p>
+                  <div className="flex items-center gap-3">
+                    {urlItem.extracted_image_url && (
+                      <img src={urlItem.extracted_image_url} alt="" className="h-16 w-16 rounded-lg object-cover shrink-0 border border-border" />
                     )}
-                  </div>
-                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                    <span>Preço: R$ {(urlItem.price || 0).toFixed(2).replace('.', ',')}</span>
-                    <span>ID: #{urlItem.item_id}</span>
+                    <div>
+                      <p className="font-semibold">{getItemDisplayTitle(urlItem)}</p>
+                      {urlItem.title && urlItem.title !== urlItem.title_translated && (
+                        <p className="text-xs text-muted-foreground opacity-50">{urlItem.title}</p>
+                      )}
+                      <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
+                        <span>Preço: R$ {(urlItem.price || 0).toFixed(2).replace('.', ',')}</span>
+                        <span>ID: #{urlItem.item_id}</span>
+                      </div>
+                    </div>
                   </div>
                   <Button
                     className="w-full gradient-pink text-primary-foreground border-none"

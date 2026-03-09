@@ -23,6 +23,7 @@ interface MarketplaceItem {
   status: string;
   bought_at: string | null;
   created_at: string;
+  image_url: string | null;
 }
 
 const MarketplacePage = () => {
@@ -124,24 +125,29 @@ const MarketplacePage = () => {
                       {catItems.map((item) => (
                         <div
                           key={item.id}
-                          className="rounded-xl border border-border bg-card p-4 hover:border-primary/40 transition-colors flex flex-col"
+                          className="rounded-xl border border-border bg-card hover:border-primary/40 transition-colors flex flex-col overflow-hidden"
                         >
-                          <h3 className="text-sm font-semibold line-clamp-2 mb-1">{item.title}</h3>
-                          {item.description && (
-                            <p className="text-xs text-muted-foreground line-clamp-2 mb-3 flex-1">{item.description}</p>
+                          {item.image_url && (
+                            <img src={item.image_url} alt={item.title} className="w-full h-32 object-cover border-b border-border" />
                           )}
-                          <div className="flex items-center justify-between mt-auto pt-3 border-t border-border">
-                            <span className="text-lg font-bold text-primary">
-                              {formatBRL(item.resale_price_cents)}
-                            </span>
-                            <Button
-                              size="sm"
-                              className="text-xs gradient-pink text-primary-foreground border-none hover:opacity-90"
-                              onClick={() => handleBuy(item)}
-                            >
-                              <CreditCard className="h-3 w-3 mr-1" />
-                              Comprar
-                            </Button>
+                          <div className="p-4 flex flex-col flex-1">
+                            <h3 className="text-sm font-semibold line-clamp-2 mb-1">{item.title}</h3>
+                            {item.description && (
+                              <p className="text-xs text-muted-foreground line-clamp-2 mb-3 flex-1">{item.description}</p>
+                            )}
+                            <div className="flex items-center justify-between mt-auto pt-3 border-t border-border">
+                              <span className="text-lg font-bold text-primary">
+                                {formatBRL(item.resale_price_cents)}
+                              </span>
+                              <Button
+                                size="sm"
+                                className="text-xs gradient-pink text-primary-foreground border-none hover:opacity-90"
+                                onClick={() => handleBuy(item)}
+                              >
+                                <CreditCard className="h-3 w-3 mr-1" />
+                                Comprar
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       ))}

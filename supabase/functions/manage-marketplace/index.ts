@@ -32,6 +32,7 @@ serve(async (req) => {
           cost_cents: item.cost_cents || 0,
           resale_price_cents: item.resale_price_cents || 0,
           lzt_data: item.lzt_data || {},
+          image_url: item.image_url || null,
           status: "available",
         })
         .select()
