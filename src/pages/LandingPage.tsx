@@ -165,7 +165,19 @@ const SubscriptionPaymentModal = ({ onClose, priceCents }: { onClose: () => void
           name: name.trim() || email.split("@")[0],
         },
       });
-      if (fnError) throw fnError;
+      if (fnError) {
+        // Try to extract the real error message from the response body
+        let errMsg = "Erro ao gerar pagamento";
+        try {
+          if (fnError.context?.body) {
+            const text = await new Response(fnError.context.body).text();
+            const parsed = JSON.parse(text);
+            if (parsed?.error) errMsg = parsed.error;
+          }
+        } catch {}
+        if (errMsg === "Erro ao gerar pagamento" && fnError.message) errMsg = fnError.message;
+        throw new Error(errMsg);
+      }
       if (data?.error) throw new Error(data.error);
       if (data?.brcode) {
         setBrcode(data.brcode);
