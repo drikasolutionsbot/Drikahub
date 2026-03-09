@@ -3,6 +3,7 @@ import { Bell, Menu, Search, LogOut, User, Settings, ChevronDown, QrCode, Zap, C
 import { useTheme } from "next-themes";
 import { differenceInDays, differenceInHours, differenceInMinutes } from "date-fns";
 import { WalletBadge } from "@/components/wallet/WalletBadge";
+import BB8Toggle from "@/components/ui/bb8-toggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
