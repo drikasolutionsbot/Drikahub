@@ -41,8 +41,8 @@ export const TenantProvider = ({ children }: { children: ReactNode }) => {
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchTenant = async () => {
-    setLoading(true);
+  const fetchTenant = async (isRefetch = false) => {
+    if (!isRefetch) setLoading(true);
 
     // Check token session first - use stored data directly (no RLS needed)
     const tokenSessionStr = sessionStorage.getItem("token_session");
@@ -122,7 +122,7 @@ export const TenantProvider = ({ children }: { children: ReactNode }) => {
   })();
 
   return (
-    <TenantContext.Provider value={{ tenant, tenantId: tenant?.id ?? null, loading, refetch: fetchTenant, isPlanExpired }}>
+    <TenantContext.Provider value={{ tenant, tenantId: tenant?.id ?? null, loading, refetch: () => fetchTenant(true), isPlanExpired }}>
       {children}
     </TenantContext.Provider>
   );
