@@ -408,7 +408,7 @@ const AdminMarketplacePage = () => {
                     )}
                   </div>
                   <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                    <span>Preço: ${(urlItem.price || 0).toFixed(2)}</span>
+                    <span>Preço: R$ {(urlItem.price || 0).toFixed(2).replace('.', ',')}</span>
                     <span>ID: #{urlItem.item_id}</span>
                   </div>
                   <Button
