@@ -22,6 +22,7 @@ interface TicketEmbedData {
   ticket_embed_button_label: string;
   ticket_embed_button_style: DiscordButtonStyle;
   ticket_channel_id: string;
+  ticket_logs_channel_id: string;
 }
 
 const defaults: TicketEmbedData = {
@@ -34,6 +35,7 @@ const defaults: TicketEmbedData = {
   ticket_embed_button_label: "📩 Abrir Ticket",
   ticket_embed_button_style: "glass",
   ticket_channel_id: "",
+  ticket_logs_channel_id: "",
 };
 
 const TicketEmbedConfig = () => {
@@ -76,7 +78,7 @@ const TicketEmbedConfig = () => {
     const load = async () => {
       const { data: config } = await supabase
         .from("store_configs")
-        .select("ticket_embed_title, ticket_embed_description, ticket_embed_color, ticket_embed_image_url, ticket_embed_thumbnail_url, ticket_embed_footer, ticket_embed_button_label, ticket_embed_button_style, ticket_channel_id")
+        .select("ticket_embed_title, ticket_embed_description, ticket_embed_color, ticket_embed_image_url, ticket_embed_thumbnail_url, ticket_embed_footer, ticket_embed_button_label, ticket_embed_button_style, ticket_channel_id, ticket_logs_channel_id")
         .eq("tenant_id", tenantId)
         .maybeSingle();
       if (config) {
@@ -90,6 +92,7 @@ const TicketEmbedConfig = () => {
           ticket_embed_button_label: config.ticket_embed_button_label || defaults.ticket_embed_button_label,
           ticket_embed_button_style: (config.ticket_embed_button_style as DiscordButtonStyle) || defaults.ticket_embed_button_style,
           ticket_channel_id: config.ticket_channel_id || "",
+          ticket_logs_channel_id: (config as any).ticket_logs_channel_id || "",
         });
       }
       setLoading(false);
@@ -113,6 +116,7 @@ const TicketEmbedConfig = () => {
           ticket_embed_button_label: data.ticket_embed_button_label || null,
           ticket_embed_button_style: data.ticket_embed_button_style || "glass",
           ticket_channel_id: data.ticket_channel_id || null,
+          ticket_logs_channel_id: data.ticket_logs_channel_id || null,
           updated_at: new Date().toISOString(),
         } as any)
         .eq("tenant_id", tenantId);
@@ -260,7 +264,7 @@ const TicketEmbedConfig = () => {
               folder="ticket-embeds"
             />
             <div className="space-y-2">
-              <Label>Categoria/Canal de Tickets</Label>
+              <Label>📂 Categoria/Canal de Tickets</Label>
               <ChannelSelectWithCreate
                 value={data.ticket_channel_id}
                 onChange={(val) => update("ticket_channel_id", val)}
@@ -269,10 +273,26 @@ const TicketEmbedConfig = () => {
                 onChannelCreated={fetchChannels}
                 tenantId={tenantId}
                 guildId={guildId}
-                placeholder="Selecione a categoria de tickets"
+                placeholder="Onde os tickets serão abertos"
               />
               <p className="text-xs text-muted-foreground">
                 Os tickets criados serão organizados dentro desta categoria/canal
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>📋 Canal de Logs de Tickets</Label>
+              <ChannelSelectWithCreate
+                value={data.ticket_logs_channel_id}
+                onChange={(val) => update("ticket_logs_channel_id", val)}
+                channels={channels}
+                categories={categories}
+                onChannelCreated={fetchChannels}
+                tenantId={tenantId}
+                guildId={guildId}
+                placeholder="Onde ficam os logs quando fechados"
+              />
+              <p className="text-xs text-muted-foreground">
+                Quando um ticket for fechado, o transcript será enviado neste canal
               </p>
             </div>
             <DiscordButtonStylePicker

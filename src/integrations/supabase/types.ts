@@ -1148,6 +1148,7 @@ export type Database = {
           ticket_embed_image_url: string | null
           ticket_embed_thumbnail_url: string | null
           ticket_embed_title: string | null
+          ticket_logs_channel_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1180,6 +1181,7 @@ export type Database = {
           ticket_embed_image_url?: string | null
           ticket_embed_thumbnail_url?: string | null
           ticket_embed_title?: string | null
+          ticket_logs_channel_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1212,6 +1214,7 @@ export type Database = {
           ticket_embed_image_url?: string | null
           ticket_embed_thumbnail_url?: string | null
           ticket_embed_title?: string | null
+          ticket_logs_channel_id?: string | null
           updated_at?: string
         }
         Relationships: [

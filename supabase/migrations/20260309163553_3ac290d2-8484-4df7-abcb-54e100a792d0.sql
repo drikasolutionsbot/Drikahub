@@ -1,0 +1,1 @@
+ALTER TABLE public.store_configs ADD COLUMN IF NOT EXISTS ticket_logs_channel_id text DEFAULT NULL;
