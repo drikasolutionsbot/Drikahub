@@ -707,14 +707,14 @@ serve(async (req) => {
         return ok();
       }
 
-      // ─── TICKET REMIND (notify the user who opened the ticket) ───
+      // ─── TICKET REMIND (send DM to ticket creator) ───────
       if (customId.startsWith("ticket_remind_")) {
         const ticketId = customId.replace("ticket_remind_", "");
         await respondDeferred(interaction, botToken);
 
         const { data: ticket } = await supabase
           .from("tickets")
-          .select("discord_user_id, discord_channel_id, status")
+          .select("discord_user_id, discord_channel_id, status, tenant_id")
           .eq("id", ticketId)
           .single();
 
@@ -730,7 +730,53 @@ serve(async (req) => {
 
         const channelId = ticket.discord_channel_id || interaction.channel_id;
 
-        // Send a reminder mention in the thread
+        // Get tenant info for branding
+        const { data: tenantInfo } = await supabase
+          .from("tenants")
+          .select("name, discord_guild_id")
+          .eq("id", ticket.tenant_id)
+          .single();
+
+        // Determine time greeting
+        const hour = new Date().getUTCHours() - 3; // BRT approximation
+        const greeting = hour >= 0 && hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
+
+        // Send DM to the ticket creator
+        try {
+          const dmChRes = await fetch(`${DISCORD_API}/users/@me/channels`, {
+            method: "POST",
+            headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ recipient_id: ticket.discord_user_id }),
+          });
+
+          if (dmChRes.ok) {
+            const dmCh = await dmChRes.json();
+            const ticketUrl = `https://discord.com/channels/${tenantInfo?.discord_guild_id || "@me"}/${channelId}`;
+
+            await fetch(`${DISCORD_API}/channels/${dmCh.id}/messages`, {
+              method: "POST",
+              headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
+              body: JSON.stringify({
+                embeds: [{
+                  description: `${greeting} <@${ticket.discord_user_id}>, você possui um ticket pendente de resposta; se não for respondido, poderá ser fechado.`,
+                  color: 0x2B2D31,
+                }],
+                components: [{
+                  type: 1,
+                  components: [{
+                    type: 2,
+                    style: 5, // Link
+                    label: "Ir para o ticket",
+                    emoji: { name: "🔗" },
+                    url: ticketUrl,
+                  }],
+                }],
+              }),
+            });
+          }
+        } catch (e) { console.error("DM remind error:", e); }
+
+        // Also post in channel
         await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
           method: "POST",
           headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
@@ -743,7 +789,114 @@ serve(async (req) => {
         return ok();
       }
 
-      // ─── TICKET RENAME (modal to rename the thread) ──────────
+      // ─── TICKET DELETE (permanently delete channel) ────────
+      if (customId.startsWith("ticket_delete_")) {
+        const ticketId = customId.replace("ticket_delete_", "");
+        await respondDeferredUpdate(interaction, botToken);
+
+        const { data: ticket } = await supabase
+          .from("tickets")
+          .select("*, tenant_id")
+          .eq("id", ticketId)
+          .single();
+
+        if (!ticket) {
+          await editFollowup(interaction, botToken, "❌ Ticket não encontrado.");
+          return ok();
+        }
+
+        // Update ticket status
+        await supabase
+          .from("tickets")
+          .update({
+            status: "closed",
+            closed_by: username || userId,
+            closed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", ticketId);
+
+        // Delete channel immediately
+        const channelId = interaction.channel_id || ticket.discord_channel_id;
+        if (channelId) {
+          await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+            method: "POST",
+            headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              embeds: [{
+                title: "🗑️ Ticket Deletado",
+                description: `Este ticket foi deletado por <@${userId}>.\nO canal será excluído em 5 segundos.`,
+                color: 0xED4245,
+              }],
+            }),
+          });
+
+          setTimeout(async () => {
+            try {
+              await fetch(`${DISCORD_API}/channels/${channelId}`, {
+                method: "DELETE",
+                headers: { Authorization: `Bot ${botToken}` },
+              });
+            } catch (e) { console.error("Failed to delete ticket channel:", e); }
+          }, 5000);
+        }
+
+        return ok();
+      }
+
+      // ─── TICKET ASSIGN (user select menu) ─────────────────
+      if (customId.startsWith("ticket_assign_")) {
+        const ticketId = customId.replace("ticket_assign_", "");
+        const selectedUserId = interaction.data?.values?.[0];
+        if (!selectedUserId) return ok();
+
+        await respondDeferred(interaction, botToken);
+
+        const { data: ticket } = await supabase
+          .from("tickets")
+          .select("discord_channel_id, tenant_id")
+          .eq("id", ticketId)
+          .single();
+
+        if (!ticket) {
+          await editFollowup(interaction, botToken, "❌ Ticket não encontrado.");
+          return ok();
+        }
+
+        const channelId = ticket.discord_channel_id || interaction.channel_id;
+
+        // Add selected user to channel permissions
+        const { data: tenantInfo } = await supabase
+          .from("tenants")
+          .select("discord_guild_id")
+          .eq("id", ticket.tenant_id)
+          .single();
+
+        if (channelId) {
+          // Grant VIEW_CHANNEL + SEND_MESSAGES to the assigned user
+          await fetch(`${DISCORD_API}/channels/${channelId}/permissions/${selectedUserId}`, {
+            method: "PUT",
+            headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              allow: "3072", // VIEW_CHANNEL (1024) + SEND_MESSAGES (2048)
+              type: 1, // member
+            }),
+          });
+
+          await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+            method: "POST",
+            headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              content: `👤 <@${selectedUserId}> foi adicionado ao ticket por <@${userId}>.`,
+            }),
+          });
+        }
+
+        await editFollowup(interaction, botToken, `✅ <@${selectedUserId}> adicionado ao ticket!`);
+        return ok();
+      }
+
+      // ─── TICKET RENAME (modal to rename the channel) ──────────
       if (customId.startsWith("ticket_rename_")) {
         const ticketId = customId.replace("ticket_rename_", "");
 
