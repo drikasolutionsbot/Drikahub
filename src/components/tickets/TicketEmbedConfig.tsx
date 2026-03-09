@@ -110,6 +110,7 @@ const TicketEmbedConfig = () => {
           ticket_embed_thumbnail_url: data.ticket_embed_thumbnail_url || null,
           ticket_embed_footer: data.ticket_embed_footer || null,
           ticket_embed_button_label: data.ticket_embed_button_label || null,
+          ticket_embed_button_style: data.ticket_embed_button_style || "glass",
           ticket_channel_id: data.ticket_channel_id || null,
           updated_at: new Date().toISOString(),
         } as any)
