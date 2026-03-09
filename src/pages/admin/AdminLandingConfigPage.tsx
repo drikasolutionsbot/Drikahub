@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Users, TrendingUp, Package, Video, Save, Upload, Link, Loader2 } from "lucide-react";
+import { Users, TrendingUp, Package, Video, Save, Upload, Link, Loader2, Crown } from "lucide-react";
 import { logAudit } from "@/lib/auditLog";
 
 const AdminLandingConfigPage = () => {
