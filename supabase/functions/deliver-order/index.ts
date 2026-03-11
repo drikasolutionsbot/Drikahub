@@ -65,59 +65,57 @@ serve(async (req) => {
       isAutoDelivery = !!product?.auto_delivery;
 
       if (isAutoDelivery) {
-        let targetFieldId = fieldId;
+        // Get delivery_quantity from the field (if specified)
         let deliveryQty = 1;
 
-        if (!targetFieldId) {
-          const { data: fields } = await supabase
-            .from("product_fields")
-            .select("id, delivery_quantity")
-            .eq("product_id", order.product_id)
-            .eq("tenant_id", tenant_id)
-            .order("sort_order", { ascending: true })
-            .limit(1);
-
-          if (fields && fields.length > 0) {
-            targetFieldId = fields[0].id;
-            deliveryQty = fields[0].delivery_quantity || 1;
-          }
-        } else {
-          // Fetch delivery_quantity for the specific field
+        if (fieldId) {
           const { data: fieldData } = await supabase
             .from("product_fields")
             .select("delivery_quantity")
-            .eq("id", targetFieldId)
+            .eq("id", fieldId)
             .eq("tenant_id", tenant_id)
             .single();
 
           if (fieldData) {
             deliveryQty = fieldData.delivery_quantity || 1;
           }
+        } else {
+          // No field selected, check first field for delivery_quantity
+          const { data: fields } = await supabase
+            .from("product_fields")
+            .select("delivery_quantity")
+            .eq("product_id", order.product_id)
+            .eq("tenant_id", tenant_id)
+            .order("sort_order", { ascending: true })
+            .limit(1);
+
+          if (fields && fields.length > 0) {
+            deliveryQty = fields[0].delivery_quantity || 1;
+          }
         }
 
-        if (targetFieldId) {
-          const { data: items } = await supabase
+        // Pull stock from PRODUCT-level general stock
+        const { data: items } = await supabase
+          .from("product_stock_items")
+          .select("*")
+          .eq("product_id", order.product_id)
+          .eq("tenant_id", tenant_id)
+          .eq("delivered", false)
+          .order("created_at", { ascending: true })
+          .limit(deliveryQty);
+
+        if (items && items.length > 0) {
+          stockItems = items;
+
+          const ids = items.map((i: any) => i.id);
+          await supabase
             .from("product_stock_items")
-            .select("*")
-            .eq("field_id", targetFieldId)
-            .eq("tenant_id", tenant_id)
-            .eq("delivered", false)
-            .order("created_at", { ascending: true })
-            .limit(deliveryQty);
-
-          if (items && items.length > 0) {
-            stockItems = items;
-
-            const ids = items.map((i: any) => i.id);
-            await supabase
-              .from("product_stock_items")
-              .update({
-                delivered: true,
-                delivered_at: new Date().toISOString(),
-                delivered_to: order.discord_user_id,
-              })
-              .in("id", ids);
-          }
+            .update({
+              delivered: true,
+              delivered_at: new Date().toISOString(),
+              delivered_to: order.discord_user_id,
+            })
+            .in("id", ids);
         }
       }
     }

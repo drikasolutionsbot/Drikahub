@@ -36,21 +36,7 @@ Deno.serve(async (req) => {
         .order("sort_order", { ascending: true });
       if (error) throw error;
 
-      // Also fetch stock counts
-      const ids = (data || []).map((f: any) => f.id);
-      let stockCounts: Record<string, number> = {};
-      if (ids.length > 0) {
-        const { data: stockData } = await supabase
-          .from("product_stock_items")
-          .select("field_id")
-          .in("field_id", ids)
-          .eq("delivered", false);
-        (stockData || []).forEach((s: any) => {
-          stockCounts[s.field_id] = (stockCounts[s.field_id] || 0) + 1;
-        });
-      }
-
-      return new Response(JSON.stringify({ fields: data, stockCounts }), {
+      return new Response(JSON.stringify({ fields: data }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -101,7 +87,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ADD STOCK items
+    // ADD STOCK items (now supports product-level stock)
     if (action === "add_stock") {
       if (!items || !Array.isArray(items) || items.length === 0) {
         return new Response(JSON.stringify({ error: "items obrigatório" }), {
@@ -109,10 +95,17 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+      if (!product_id) {
+        return new Response(JSON.stringify({ error: "product_id obrigatório" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       const rows = items.map((content: string) => ({
-        field_id,
+        product_id,
         tenant_id,
         content,
+        field_id: null,
       }));
       const { data, error } = await supabase
         .from("product_stock_items")
@@ -120,6 +113,46 @@ Deno.serve(async (req) => {
         .select();
       if (error) throw error;
       return new Response(JSON.stringify({ count: data?.length || 0 }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // GET STOCK COUNT for a product (general stock)
+    if (action === "get_stock") {
+      if (!product_id) {
+        return new Response(JSON.stringify({ error: "product_id obrigatório" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { count, error } = await supabase
+        .from("product_stock_items")
+        .select("*", { count: "exact", head: true })
+        .eq("product_id", product_id)
+        .eq("tenant_id", tenant_id)
+        .eq("delivered", false);
+      if (error) throw error;
+      return new Response(JSON.stringify({ stock: count || 0 }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // CLEAR STOCK for a product
+    if (action === "clear_stock") {
+      if (!product_id) {
+        return new Response(JSON.stringify({ error: "product_id obrigatório" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { error } = await supabase
+        .from("product_stock_items")
+        .delete()
+        .eq("product_id", product_id)
+        .eq("tenant_id", tenant_id)
+        .eq("delivered", false);
+      if (error) throw error;
+      return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
