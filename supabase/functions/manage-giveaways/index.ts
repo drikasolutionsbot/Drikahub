@@ -86,26 +86,51 @@ async function syncEntriesFromDiscord(
 
     const { data: existing } = await supabase
       .from("giveaway_entries")
-      .select("discord_user_id")
+      .select("discord_user_id, discord_username, discord_avatar")
       .eq("giveaway_id", giveaway.id)
       .eq("tenant_id", tenant_id);
 
-    const existingIds = new Set((existing || []).map((e: any) => e.discord_user_id));
+    const existingById = new Map(
+      (existing || []).map((e: any) => [e.discord_user_id, e])
+    );
 
-    const newEntries = allUsers
-      .filter((u) => !existingIds.has(u.id))
-      .map((u) => ({
-        giveaway_id: giveaway.id,
-        tenant_id,
-        discord_user_id: u.id,
-        discord_username: u.username || u.global_name || null,
-        discord_avatar: u.avatar
-          ? `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.png`
-          : null,
-      }));
+    const participantRows = allUsers.map((u: any) => ({
+      giveaway_id: giveaway.id,
+      tenant_id,
+      discord_user_id: u.id,
+      discord_username: u.username || u.global_name || null,
+      discord_avatar: u.avatar
+        ? `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.png`
+        : null,
+    }));
+
+    const newEntries = participantRows.filter(
+      (p: any) => !existingById.has(p.discord_user_id)
+    );
+
+    const changedEntries = participantRows.filter((p: any) => {
+      const prev = existingById.get(p.discord_user_id);
+      return (
+        prev &&
+        (prev.discord_username !== p.discord_username ||
+          prev.discord_avatar !== p.discord_avatar)
+      );
+    });
 
     if (newEntries.length > 0) {
       await supabase.from("giveaway_entries").insert(newEntries);
+    }
+
+    for (const entry of changedEntries) {
+      await supabase
+        .from("giveaway_entries")
+        .update({
+          discord_username: entry.discord_username,
+          discord_avatar: entry.discord_avatar,
+        })
+        .eq("giveaway_id", giveaway.id)
+        .eq("tenant_id", tenant_id)
+        .eq("discord_user_id", entry.discord_user_id);
     }
 
     const reactedIds = new Set(allUsers.map((u: any) => u.id));
@@ -124,6 +149,35 @@ async function syncEntriesFromDiscord(
   } catch (e) {
     console.error("syncEntriesFromDiscord error:", e);
   }
+}
+
+async function hydrateWinnersWithDiscordProfile(botToken: string | null, winners: any[]) {
+  if (!botToken || winners.length === 0) return winners;
+
+  const hydrated = await Promise.all(
+    winners.map(async (winner: any) => {
+      try {
+        const res = await fetch(`https://discord.com/api/v10/users/${winner.discord_user_id}`, {
+          headers: { Authorization: `Bot ${botToken}` },
+        });
+
+        if (!res.ok) return winner;
+
+        const user = await res.json();
+        return {
+          ...winner,
+          discord_username: user?.username || winner.discord_username || winner.discord_user_id,
+          discord_avatar: user?.avatar
+            ? `https://cdn.discordapp.com/avatars/${winner.discord_user_id}/${user.avatar}.png`
+            : winner.discord_avatar || null,
+        };
+      } catch {
+        return winner;
+      }
+    })
+  );
+
+  return hydrated;
 }
 
 Deno.serve(async (req) => {
@@ -360,12 +414,13 @@ Deno.serve(async (req) => {
 
       const shuffled = [...entries].sort(() => Math.random() - 0.5);
       const winnersCount = Math.min(giveaway.winners_count || 1, shuffled.length);
-      const winners = shuffled.slice(0, winnersCount).map((e: any) => ({
+      const winnersRaw = shuffled.slice(0, winnersCount).map((e: any) => ({
         discord_user_id: e.discord_user_id,
-        discord_username: e.discord_username,
+        discord_username: e.discord_username || e.discord_user_id,
         discord_avatar: e.discord_avatar || null,
         entered_at: e.entered_at || null,
       }));
+      const winners = await hydrateWinnersWithDiscordProfile(botToken, winnersRaw);
 
       const { data: updated, error: uErr } = await supabase
         .from("giveaways")
@@ -406,6 +461,7 @@ Deno.serve(async (req) => {
     // Reroll
     if (action === "reroll") {
       const { giveaway_id, count } = body;
+      const botToken = await getBotToken(supabase, tenant_id);
       const { data: entries } = await supabase
         .from("giveaway_entries")
         .select("*")
@@ -426,12 +482,13 @@ Deno.serve(async (req) => {
       if (eligible.length === 0) throw new Error("No eligible entries for reroll");
 
       const shuffled = [...eligible].sort(() => Math.random() - 0.5);
-      const newWinners = shuffled.slice(0, count || 1).map((e: any) => ({
+      const newWinnersRaw = shuffled.slice(0, count || 1).map((e: any) => ({
         discord_user_id: e.discord_user_id,
-        discord_username: e.discord_username,
+        discord_username: e.discord_username || e.discord_user_id,
         discord_avatar: e.discord_avatar || null,
         entered_at: e.entered_at || null,
       }));
+      const newWinners = await hydrateWinnersWithDiscordProfile(botToken, newWinnersRaw);
 
       const { data: updated, error } = await supabase
         .from("giveaways")
