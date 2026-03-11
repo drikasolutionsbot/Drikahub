@@ -238,20 +238,6 @@ export const ProductDetailGeneral = ({ product, onChange, categories = [] }: Pro
       <section className="space-y-5">
         <h3 className="text-base font-bold text-foreground">Configurações</h3>
 
-        <div className="space-y-2">
-          <Label className="text-sm font-bold">Tipo do Produto</Label>
-          <Select value={product.type} onValueChange={(val) => onChange({ type: val })}>
-            <SelectTrigger className="bg-muted border-border">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="digital_auto">Digital (Entrega Automática)</SelectItem>
-              <SelectItem value="service">Serviço</SelectItem>
-              <SelectItem value="hybrid">Híbrido</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
         {/* Toggles */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
