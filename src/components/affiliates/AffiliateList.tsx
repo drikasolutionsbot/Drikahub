@@ -1,7 +1,8 @@
 import { useState } from "react";
 import {
   Plus, Users, Copy, Check, Search, Link2, BarChart3,
-  Percent, Power, PowerOff, Edit2,
+  Percent, Power, PowerOff, Edit2, Mail, Phone, MessageCircle,
+  Calendar, Hash, ExternalLink,
 } from "lucide-react";
 import TrashIcon from "@/components/ui/trash-icon";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -27,12 +29,26 @@ interface Props {
   onRefresh: () => void;
 }
 
+interface AffiliateForm {
+  name: string;
+  code: string;
+  commission_percent: number;
+  discord_username: string;
+  email: string;
+  whatsapp: string;
+}
+
+const emptyForm: AffiliateForm = {
+  name: "", code: "", commission_percent: 5,
+  discord_username: "", email: "", whatsapp: "",
+};
+
 const AffiliateList = ({ affiliates, loading, tenantId, onRefresh }: Props) => {
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Affiliate | null>(null);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ name: "", code: "", commission_percent: 5 });
+  const [form, setForm] = useState<AffiliateForm>(emptyForm);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Stats modal
@@ -43,13 +59,20 @@ const AffiliateList = ({ affiliates, loading, tenantId, onRefresh }: Props) => {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ name: "", code: "", commission_percent: 5 });
+    setForm(emptyForm);
     setModalOpen(true);
   };
 
   const openEdit = (aff: Affiliate) => {
     setEditing(aff);
-    setForm({ name: aff.name, code: aff.code, commission_percent: aff.commission_percent });
+    setForm({
+      name: aff.name,
+      code: aff.code,
+      commission_percent: aff.commission_percent,
+      discord_username: aff.discord_username ?? "",
+      email: aff.email ?? "",
+      whatsapp: aff.whatsapp ?? "",
+    });
     setModalOpen(true);
   };
 
@@ -57,14 +80,22 @@ const AffiliateList = ({ affiliates, loading, tenantId, onRefresh }: Props) => {
     if (!tenantId || !form.name.trim() || !form.code.trim()) return;
     setSaving(true);
     try {
+      const payload = {
+        name: form.name.trim(),
+        code: form.code,
+        commission_percent: form.commission_percent,
+        discord_username: form.discord_username.trim() || null,
+        email: form.email.trim() || null,
+        whatsapp: form.whatsapp.trim() || null,
+      };
       if (editing) {
         await supabase.functions.invoke("manage-affiliates", {
-          body: { action: "update", tenant_id: tenantId, affiliate_id: editing.id, affiliate: form },
+          body: { action: "update", tenant_id: tenantId, affiliate_id: editing.id, affiliate: payload },
         });
         toast({ title: "Afiliado atualizado ✅" });
       } else {
         await supabase.functions.invoke("manage-affiliates", {
-          body: { action: "create", tenant_id: tenantId, affiliate: form },
+          body: { action: "create", tenant_id: tenantId, affiliate: payload },
         });
         toast({ title: "Afiliado criado ✅" });
       }
@@ -99,9 +130,7 @@ const AffiliateList = ({ affiliates, loading, tenantId, onRefresh }: Props) => {
     }
   };
 
-  const getFullLink = (code: string) => {
-    return `https://drikahub.com?ref=${code}`;
-  };
+  const getFullLink = (code: string) => `https://drikahub.com?ref=${code}`;
 
   const copyLink = (aff: Affiliate) => {
     const link = getFullLink(aff.code);
@@ -130,8 +159,13 @@ const AffiliateList = ({ affiliates, loading, tenantId, onRefresh }: Props) => {
   const filtered = affiliates.filter(
     (a) =>
       a.name.toLowerCase().includes(search.toLowerCase()) ||
-      a.code.toLowerCase().includes(search.toLowerCase())
+      a.code.toLowerCase().includes(search.toLowerCase()) ||
+      (a.discord_username && a.discord_username.toLowerCase().includes(search.toLowerCase())) ||
+      (a.email && a.email.toLowerCase().includes(search.toLowerCase())) ||
+      (a.whatsapp && a.whatsapp.includes(search))
   );
+
+  const formatDate = (d: string) => new Date(d).toLocaleDateString("pt-BR");
 
   return (
     <div className="space-y-4">
@@ -140,7 +174,7 @@ const AffiliateList = ({ affiliates, loading, tenantId, onRefresh }: Props) => {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por nome ou código..."
+            placeholder="Buscar nome, código, discord, email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -155,7 +189,7 @@ const AffiliateList = ({ affiliates, loading, tenantId, onRefresh }: Props) => {
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-48 rounded-xl" />
+            <Skeleton key={i} className="h-64 rounded-xl" />
           ))}
         </div>
       ) : filtered.length === 0 ? (
@@ -179,17 +213,20 @@ const AffiliateList = ({ affiliates, loading, tenantId, onRefresh }: Props) => {
             return (
               <div
                 key={aff.id}
-                className="group rounded-xl border border-border bg-card/50 backdrop-blur-sm p-5 space-y-4 hover:border-primary/30 transition-all"
+                className="group relative rounded-2xl border border-border/50 bg-card/60 backdrop-blur-md p-5 space-y-3 hover:border-primary/30 transition-all duration-300 overflow-hidden"
               >
-                {/* Top */}
-                <div className="flex items-center justify-between">
+                {/* Accent line */}
+                <div className={`absolute top-0 left-0 right-0 h-[2px] ${aff.active ? "bg-gradient-to-r from-primary to-violet-500" : "bg-muted"} opacity-60`} />
+
+                {/* Top: Name + Actions */}
+                <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full gradient-pink">
+                    <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${aff.active ? "gradient-pink" : "bg-muted"}`}>
                       <Users className="h-5 w-5 text-primary-foreground" />
                     </div>
                     <div className="min-w-0">
                       <p className="font-semibold text-sm truncate">{aff.name}</p>
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 mt-0.5">
                         <Badge variant={aff.active ? "default" : "secondary"} className="text-[10px] px-1.5 py-0">
                           {aff.active ? "Ativo" : "Inativo"}
                         </Badge>
@@ -197,7 +234,7 @@ const AffiliateList = ({ affiliates, loading, tenantId, onRefresh }: Props) => {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyLink(aff)}>
                       {copiedId === aff.id ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
                     </Button>
@@ -207,26 +244,51 @@ const AffiliateList = ({ affiliates, loading, tenantId, onRefresh }: Props) => {
                   </div>
                 </div>
 
+                {/* Contact info */}
+                <div className="space-y-1.5">
+                  {aff.discord_username && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <MessageCircle className="h-3.5 w-3.5 text-[hsl(235,86%,65%)]" />
+                      <span className="truncate">{aff.discord_username}</span>
+                    </div>
+                  )}
+                  {aff.email && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Mail className="h-3.5 w-3.5 text-amber-400" />
+                      <span className="truncate">{aff.email}</span>
+                    </div>
+                  )}
+                  {aff.whatsapp && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Phone className="h-3.5 w-3.5 text-emerald-400" />
+                      <span className="truncate">{aff.whatsapp}</span>
+                    </div>
+                  )}
+                  {!aff.discord_username && !aff.email && !aff.whatsapp && (
+                    <p className="text-[11px] text-muted-foreground/50 italic">Nenhum contato cadastrado</p>
+                  )}
+                </div>
+
                 {/* Stats grid */}
                 <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="rounded-lg bg-muted/30 py-2">
+                  <div className="rounded-lg bg-muted/20 border border-border/30 py-2">
                     <p className="text-sm font-bold font-display flex items-center justify-center gap-1">
                       <Percent className="h-3 w-3 text-primary" /> {aff.commission_percent}%
                     </p>
                     <p className="text-[10px] text-muted-foreground">Comissão</p>
                   </div>
-                  <div className="rounded-lg bg-muted/30 py-2">
+                  <div className="rounded-lg bg-muted/20 border border-border/30 py-2">
                     <p className="text-sm font-bold font-display">{aff.total_sales}</p>
                     <p className="text-[10px] text-muted-foreground">Vendas</p>
                   </div>
-                  <div className="rounded-lg bg-muted/30 py-2">
+                  <div className="rounded-lg bg-muted/20 border border-border/30 py-2">
                     <p className="text-sm font-bold font-display text-primary">{formatBRL(commissionEarned)}</p>
                     <p className="text-[10px] text-muted-foreground">Ganhos</p>
                   </div>
                 </div>
 
                 {/* Referral link */}
-                <div className="flex items-center gap-2 rounded-lg bg-muted/20 border border-border px-3 py-2">
+                <div className="flex items-center gap-2 rounded-lg bg-muted/10 border border-border/30 px-3 py-2">
                   <Link2 className="h-3.5 w-3.5 shrink-0 text-primary" />
                   <span className="text-xs font-mono text-muted-foreground truncate flex-1">{getFullLink(aff.code)}</span>
                   <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => copyLink(aff)}>
@@ -234,38 +296,41 @@ const AffiliateList = ({ affiliates, loading, tenantId, onRefresh }: Props) => {
                   </Button>
                 </div>
 
-                {/* Actions */}
-                <div className="flex items-center justify-between pt-1 border-t border-border/50">
-                  <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm" className="h-7 text-xs gap-1.5" onClick={() => openStats(aff)}>
+                {/* Date + Actions */}
+                <div className="flex items-center justify-between pt-1 border-t border-border/30">
+                  <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                    <Calendar className="h-3 w-3" />
+                    Criado em {formatDate(aff.created_at)}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => openStats(aff)}>
                       <BarChart3 className="h-3.5 w-3.5" /> Detalhes
                     </Button>
-                    <Button variant="ghost" size="sm" className="h-7 text-xs gap-1.5" onClick={() => handleToggle(aff)}>
+                    <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => handleToggle(aff)}>
                       {aff.active ? <PowerOff className="h-3.5 w-3.5" /> : <Power className="h-3.5 w-3.5" />}
-                      {aff.active ? "Desativar" : "Ativar"}
                     </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive">
+                          <TrashIcon className="h-3.5 w-3.5" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Remover afiliado?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            O afiliado <strong>{aff.name}</strong> será removido permanentemente.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDelete(aff.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Remover
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive">
-                        <TrashIcon className="h-3.5 w-3.5" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Remover afiliado?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          O afiliado <strong>{aff.name}</strong> será removido permanentemente.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => handleDelete(aff.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                          Remover
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
                 </div>
               </div>
             );
@@ -273,33 +338,37 @@ const AffiliateList = ({ affiliates, loading, tenantId, onRefresh }: Props) => {
         </div>
       )}
 
-      {/* Create / Edit Modal */}
+      {/* ── Create / Edit Modal ── */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{editing ? "Editar Afiliado" : "Novo Afiliado"}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" />
+              {editing ? "Editar Afiliado" : "Novo Afiliado"}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Nome do afiliado</Label>
-              <Input
-                placeholder="Ex: João Silva"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-              />
+            {/* Basic info */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Nome do afiliado *</Label>
+                <Input
+                  placeholder="Ex: João Silva"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Código de referência *</Label>
+                <Input
+                  placeholder="Ex: JOAO10"
+                  value={form.code}
+                  onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase().replace(/\s/g, "") })}
+                  className="font-mono uppercase"
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Código de referência</Label>
-              <Input
-                placeholder="Ex: JOAO10"
-                value={form.code}
-                onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase().replace(/\s/g, "") })}
-                className="font-mono uppercase"
-              />
-              <p className="text-[11px] text-muted-foreground">
-                Link de indicação: <span className="font-mono text-primary">?ref={form.code || "..."}</span>
-              </p>
-            </div>
+
             <div className="space-y-2">
               <Label>Comissão (%)</Label>
               <Input
@@ -310,6 +379,48 @@ const AffiliateList = ({ affiliates, loading, tenantId, onRefresh }: Props) => {
                 onChange={(e) => setForm({ ...form, commission_percent: Number(e.target.value) })}
               />
             </div>
+
+            {/* Contact fields */}
+            <div className="border-t border-border/50 pt-4">
+              <p className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Informações de contato</p>
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5">
+                    <MessageCircle className="h-3.5 w-3.5 text-[hsl(235,86%,65%)]" /> Discord
+                  </Label>
+                  <Input
+                    placeholder="Ex: joaosilva ou joao#1234"
+                    value={form.discord_username}
+                    onChange={(e) => setForm({ ...form, discord_username: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5">
+                    <Mail className="h-3.5 w-3.5 text-amber-400" /> E-mail
+                  </Label>
+                  <Input
+                    type="email"
+                    placeholder="Ex: joao@email.com"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5">
+                    <Phone className="h-3.5 w-3.5 text-emerald-400" /> WhatsApp
+                  </Label>
+                  <Input
+                    placeholder="Ex: (11) 99999-9999"
+                    value={form.whatsapp}
+                    onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-muted-foreground">
+              Link gerado: <span className="font-mono text-primary">https://drikahub.com?ref={form.code || "..."}</span>
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
@@ -318,15 +429,15 @@ const AffiliateList = ({ affiliates, loading, tenantId, onRefresh }: Props) => {
               disabled={saving || !form.name.trim() || !form.code.trim()}
               className="gradient-pink text-primary-foreground border-none"
             >
-              {saving ? "Salvando..." : editing ? "Salvar" : "Criar"}
+              {saving ? "Salvando..." : editing ? "Salvar" : "Criar Afiliado"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Stats / Detail Modal */}
+      {/* ── Stats / Detail Modal ── */}
       <Dialog open={!!statsAffiliate} onOpenChange={(o) => !o && setStatsAffiliate(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-primary" />
@@ -335,77 +446,128 @@ const AffiliateList = ({ affiliates, loading, tenantId, onRefresh }: Props) => {
           </DialogHeader>
 
           {statsAffiliate && (
-            <div className="grid grid-cols-3 gap-3 mb-4">
-              <div className="rounded-lg bg-muted/30 p-3 text-center">
-                <p className="text-lg font-bold">{statsAffiliate.commission_percent}%</p>
-                <p className="text-[10px] text-muted-foreground">Comissão</p>
-              </div>
-              <div className="rounded-lg bg-muted/30 p-3 text-center">
-                <p className="text-lg font-bold">{statsAffiliate.total_sales}</p>
-                <p className="text-[10px] text-muted-foreground">Vendas</p>
-              </div>
-              <div className="rounded-lg bg-muted/30 p-3 text-center">
-                <p className="text-lg font-bold text-primary">
-                  {formatBRL(Math.round(statsAffiliate.total_revenue_cents * statsAffiliate.commission_percent / 100))}
-                </p>
-                <p className="text-[10px] text-muted-foreground">Ganhos</p>
-              </div>
-            </div>
-          )}
-
-          {statsLoading ? (
-            <div className="space-y-2">
-              {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 rounded-lg" />)}
-            </div>
-          ) : (
-            <>
-              <h4 className="text-xs font-semibold text-muted-foreground mb-2">Pedidos recentes</h4>
-              {statsOrders.length === 0 ? (
-                <p className="text-center text-sm text-muted-foreground py-4">Nenhum pedido vinculado</p>
-              ) : (
-                <div className="max-h-[200px] overflow-y-auto space-y-2">
-                  {statsOrders.map((order) => (
-                    <div key={order.id} className="flex items-center justify-between rounded-lg border border-border p-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">#{order.order_number} — {order.product_name}</p>
-                        <p className="text-[11px] text-muted-foreground">
-                          {order.discord_username || "Desconhecido"} • {new Date(order.created_at).toLocaleDateString("pt-BR")}
-                        </p>
-                      </div>
-                      <div className="text-right shrink-0 ml-3">
-                        <p className="text-sm font-bold">{formatBRL(order.total_cents)}</p>
-                        <Badge variant="outline" className="text-[10px]">
-                          {statusLabels[order.status] || order.status}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
+            <div className="space-y-4">
+              {/* Contact info */}
+              <div className="rounded-xl border border-border/50 bg-muted/10 p-4 space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Contato</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div className="flex items-center gap-2 text-sm">
+                    <MessageCircle className="h-4 w-4 text-[hsl(235,86%,65%)]" />
+                    <span className="truncate">{statsAffiliate.discord_username || "—"}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Mail className="h-4 w-4 text-amber-400" />
+                    <span className="truncate">{statsAffiliate.email || "—"}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Phone className="h-4 w-4 text-emerald-400" />
+                    <span className="truncate">{statsAffiliate.whatsapp || "—"}</span>
+                  </div>
                 </div>
+              </div>
+
+              {/* Metrics */}
+              <div className="grid grid-cols-4 gap-2">
+                <div className="rounded-xl bg-muted/20 border border-border/30 p-3 text-center">
+                  <p className="text-lg font-bold">{statsAffiliate.commission_percent}%</p>
+                  <p className="text-[10px] text-muted-foreground">Comissão</p>
+                </div>
+                <div className="rounded-xl bg-muted/20 border border-border/30 p-3 text-center">
+                  <p className="text-lg font-bold">{statsAffiliate.total_sales}</p>
+                  <p className="text-[10px] text-muted-foreground">Vendas</p>
+                </div>
+                <div className="rounded-xl bg-muted/20 border border-border/30 p-3 text-center">
+                  <p className="text-lg font-bold text-foreground">{formatBRL(statsAffiliate.total_revenue_cents)}</p>
+                  <p className="text-[10px] text-muted-foreground">Receita</p>
+                </div>
+                <div className="rounded-xl bg-muted/20 border border-border/30 p-3 text-center">
+                  <p className="text-lg font-bold text-primary">
+                    {formatBRL(Math.round(statsAffiliate.total_revenue_cents * statsAffiliate.commission_percent / 100))}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">Ganhos</p>
+                </div>
+              </div>
+
+              {/* Link */}
+              <div className="flex items-center gap-2 rounded-lg bg-muted/10 border border-border/30 px-3 py-2">
+                <Link2 className="h-3.5 w-3.5 shrink-0 text-primary" />
+                <span className="text-xs font-mono text-muted-foreground truncate flex-1">
+                  {getFullLink(statsAffiliate.code)}
+                </span>
+                <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => copyLink(statsAffiliate)}>
+                  <Copy className="h-3 w-3" />
+                </Button>
+              </div>
+
+              {/* Tabs: Orders & Payouts */}
+              {statsLoading ? (
+                <div className="space-y-2">
+                  {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 rounded-lg" />)}
+                </div>
+              ) : (
+                <Tabs defaultValue="orders" className="space-y-3">
+                  <TabsList className="w-full">
+                    <TabsTrigger value="orders" className="flex-1">Pedidos ({statsOrders.length})</TabsTrigger>
+                    <TabsTrigger value="payouts" className="flex-1">Pagamentos ({statsPayouts.length})</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="orders">
+                    {statsOrders.length === 0 ? (
+                      <p className="text-center text-sm text-muted-foreground py-6">Nenhum pedido vinculado</p>
+                    ) : (
+                      <div className="max-h-[250px] overflow-y-auto space-y-2">
+                        {statsOrders.map((order) => (
+                          <div key={order.id} className="flex items-center justify-between rounded-xl border border-border/30 bg-muted/10 p-3">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium truncate">
+                                <Hash className="h-3 w-3 inline text-muted-foreground" />
+                                {order.order_number} — {order.product_name}
+                              </p>
+                              <p className="text-[11px] text-muted-foreground">
+                                {order.discord_username || "Desconhecido"} • {formatDate(order.created_at)}
+                              </p>
+                            </div>
+                            <div className="text-right shrink-0 ml-3">
+                              <p className="text-sm font-bold">{formatBRL(order.total_cents)}</p>
+                              <Badge variant="outline" className="text-[10px]">
+                                {statusLabels[order.status] || order.status}
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="payouts">
+                    {statsPayouts.length === 0 ? (
+                      <p className="text-center text-sm text-muted-foreground py-6">Nenhum pagamento registrado</p>
+                    ) : (
+                      <div className="max-h-[250px] overflow-y-auto space-y-2">
+                        {statsPayouts.map((p) => (
+                          <div key={p.id} className="flex items-center justify-between rounded-xl border border-border/30 bg-muted/10 p-3">
+                            <div>
+                              <p className="text-sm font-bold">{formatBRL(p.amount_cents)}</p>
+                              <p className="text-[11px] text-muted-foreground">{formatDate(p.created_at)}</p>
+                            </div>
+                            <Badge
+                              variant={p.status === "paid" ? "default" : p.status === "canceled" ? "destructive" : "secondary"}
+                              className="text-[10px]"
+                            >
+                              {payoutStatusLabels[p.status] || p.status}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </TabsContent>
+                </Tabs>
               )}
 
-              {/* Payouts section */}
-              <h4 className="text-xs font-semibold text-muted-foreground mt-4 mb-2">Pagamentos de comissão</h4>
-              {statsPayouts.length === 0 ? (
-                <p className="text-center text-sm text-muted-foreground py-4">Nenhum pagamento registrado</p>
-              ) : (
-                <div className="max-h-[150px] overflow-y-auto space-y-2">
-                  {statsPayouts.map((p) => (
-                    <div key={p.id} className="flex items-center justify-between rounded-lg border border-border p-3">
-                      <div>
-                        <p className="text-sm font-bold">{formatBRL(p.amount_cents)}</p>
-                        <p className="text-[11px] text-muted-foreground">
-                          {p.paid_at ? new Date(p.paid_at).toLocaleDateString("pt-BR") : new Date(p.created_at).toLocaleDateString("pt-BR")}
-                          {p.notes && ` • ${p.notes}`}
-                        </p>
-                      </div>
-                      <Badge variant={p.status === "paid" ? "default" : "secondary"} className="text-[10px]">
-                        {payoutStatusLabels[p.status] || p.status}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
+              <p className="text-[10px] text-muted-foreground text-center">
+                Cadastrado em {formatDate(statsAffiliate.created_at)}
+              </p>
+            </div>
           )}
         </DialogContent>
       </Dialog>
