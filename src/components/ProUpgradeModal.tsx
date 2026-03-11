@@ -77,7 +77,7 @@ const ProUpgradeModal = () => {
     if (pollRef.current) clearInterval(pollRef.current);
     try {
       const { data, error } = await supabase.functions.invoke("generate-subscription-pix", {
-        body: { tenant_id: tenantId },
+        body: { tenant_id: tenantId, ref_code: null },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);

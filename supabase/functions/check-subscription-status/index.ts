@@ -347,7 +347,10 @@ async function activateSubscription(supabase: any, subPayment: any) {
 
     console.log(`New Pro subscriber registered: tenant ${tenant.id}, email ${email}`);
   } else {
-    // Existing tenant renewal
+    // Existing tenant renewal/upgrade
+    const meta = subPayment.metadata || {};
+    const refCode = meta.ref_code || null;
+
     await supabase.from("subscription_payments").update({
       status: "paid",
       paid_at: now.toISOString(),
@@ -365,6 +368,55 @@ async function activateSubscription(supabase: any, subPayment: any) {
       }).eq("id", subPayment.tenant_id);
 
       console.log(`Subscription renewed for tenant ${subPayment.tenant_id}`);
+    }
+
+    // Check if this tenant was referred and this is their first Pro payment
+    let referredByTenantId: string | null = null;
+    if (!referredByTenantId) {
+      // Check tenant's referred_by_tenant_id
+      const { data: tenantData } = await supabase
+        .from("tenants")
+        .select("referred_by_tenant_id, name")
+        .eq("id", subPayment.tenant_id)
+        .single();
+      
+      if (tenantData?.referred_by_tenant_id) {
+        // Check if a payout already exists for this tenant (avoid duplicates)
+        const { data: existingPayouts } = await supabase
+          .from("affiliate_payouts")
+          .select("id")
+          .eq("tenant_id", tenantData.referred_by_tenant_id)
+          .limit(1);
+
+        // Check if notes contain this tenant's name to avoid duplicate rewards
+        const { data: existingReward } = await supabase
+          .from("subscription_payments")
+          .select("id")
+          .eq("tenant_id", subPayment.tenant_id)
+          .eq("status", "paid")
+          .neq("id", subPayment.id)
+          .limit(1);
+
+        // Only reward on first Pro payment
+        if (!existingReward || existingReward.length === 0) {
+          // Find the referrer's referral_code
+          const { data: referrerTenant } = await supabase
+            .from("tenants")
+            .select("referral_code")
+            .eq("id", tenantData.referred_by_tenant_id)
+            .single();
+
+          if (referrerTenant?.referral_code) {
+            await processReferralReward(
+              supabase,
+              tenantData.referred_by_tenant_id,
+              referrerTenant.referral_code,
+              config,
+              tenantData.name || "Unknown"
+            );
+          }
+        }
+      }
     }
   }
 }
