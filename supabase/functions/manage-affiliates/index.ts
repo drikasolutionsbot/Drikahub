@@ -374,9 +374,57 @@ Deno.serve(async (req) => {
         .update(updates)
         .eq("id", payout_id)
         .eq("tenant_id", tenant_id)
-        .select()
+        .select("*, affiliate_id")
         .single();
       if (error) throw error;
+
+      // When approved (paid), automatically extend the affiliate's Pro plan
+      if (payout?.status === "paid" && data) {
+        try {
+          // Get referral config for bonus days
+          const { data: configData } = await supabase
+            .from("landing_config")
+            .select("referral_bonus_days")
+            .limit(1)
+            .single();
+          const bonusDays = configData?.referral_bonus_days ?? 7;
+
+          // Find the tenant that owns this affiliate record
+          const { data: affData } = await supabase
+            .from("affiliates")
+            .select("tenant_id")
+            .eq("id", data.affiliate_id)
+            .single();
+
+          if (affData?.tenant_id) {
+            // Get current plan expiration
+            const { data: tenantData } = await supabase
+              .from("tenants")
+              .select("plan, plan_expires_at")
+              .eq("id", affData.tenant_id)
+              .single();
+
+            if (tenantData) {
+              const now = new Date();
+              const currentExpiry = tenantData.plan_expires_at ? new Date(tenantData.plan_expires_at) : now;
+              const baseDate = currentExpiry > now ? currentExpiry : now;
+              const newExpiry = new Date(baseDate.getTime() + bonusDays * 24 * 60 * 60 * 1000);
+
+              await supabase
+                .from("tenants")
+                .update({
+                  plan: "pro",
+                  plan_expires_at: newExpiry.toISOString(),
+                })
+                .eq("id", affData.tenant_id);
+            }
+          }
+        } catch (bonusErr) {
+          console.error("Erro ao aplicar bônus de dias:", bonusErr);
+          // Don't fail the payout update if bonus fails
+        }
+      }
+
       return new Response(JSON.stringify({ payout: data }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
