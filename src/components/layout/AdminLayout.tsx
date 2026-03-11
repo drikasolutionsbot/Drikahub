@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Outlet, Navigate, Link, useLocation } from "react-router-dom";
 import { useAdmin } from "@/contexts/AdminContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { LayoutDashboard, CreditCard, Users, LogOut, Headphones, Globe, Bell, Crown, UserPlus, Inbox, CheckCircle, BarChart3, ClipboardList, Shield, Menu, BookOpen, Store } from "lucide-react";
+import { LayoutDashboard, CreditCard, Users, LogOut, Headphones, Globe, Bell, Crown, UserPlus, Inbox, CheckCircle, BarChart3, ClipboardList, Shield, Menu, BookOpen, Store, GripVertical, Settings2, RotateCcw } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useTheme } from "next-themes";
 import ThemeToggle from "@/components/ui/theme-toggle";
@@ -13,7 +13,13 @@ import { toast } from "sonner";
 import logo from "@/assets/logo.png";
 import { cn } from "@/lib/utils";
 
-const navItems = [
+interface NavItem {
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  path: string;
+}
+
+const DEFAULT_NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/admin" },
   { label: "Pagamentos", icon: CreditCard, path: "/admin/pagamentos" },
   { label: "Clientes", icon: Users, path: "/admin/clientes" },
@@ -26,6 +32,152 @@ const navItems = [
   { label: "Market Clientes", icon: Store, path: "/admin/marketplace" },
   { label: "Afiliados", icon: UserPlus, path: "/admin/afiliados" },
 ];
+
+const STORAGE_KEY = "admin_sidebar_order";
+
+function getOrderedItems(): NavItem[] {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) return DEFAULT_NAV_ITEMS;
+    const paths: string[] = JSON.parse(stored);
+    const map = new Map(DEFAULT_NAV_ITEMS.map(i => [i.path, i]));
+    const ordered = paths.map(p => map.get(p)).filter(Boolean) as NavItem[];
+    for (const item of DEFAULT_NAV_ITEMS) {
+      if (!ordered.find(o => o.path === item.path)) ordered.push(item);
+    }
+    return ordered;
+  } catch {
+    return DEFAULT_NAV_ITEMS;
+  }
+}
+
+function saveOrder(items: NavItem[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(items.map(i => i.path)));
+}
+
+// ── Sidebar ──
+
+const SidebarContent = ({
+  location,
+  onNavigate,
+  items,
+  editMode,
+  onToggleEdit,
+  onReorder,
+  onReset,
+}: {
+  location: ReturnType<typeof useLocation>;
+  onNavigate?: () => void;
+  items: NavItem[];
+  editMode: boolean;
+  onToggleEdit: () => void;
+  onReorder: (from: number, to: number) => void;
+  onReset: () => void;
+}) => {
+  const { signOut } = useAuth();
+  const dragItem = useRef<number | null>(null);
+  const dragOver = useRef<number | null>(null);
+
+  const handleDragStart = (index: number) => { dragItem.current = index; };
+  const handleDragEnter = (index: number) => { dragOver.current = index; };
+  const handleDragEnd = () => {
+    if (dragItem.current !== null && dragOver.current !== null && dragItem.current !== dragOver.current) {
+      onReorder(dragItem.current, dragOver.current);
+    }
+    dragItem.current = null;
+    dragOver.current = null;
+  };
+
+  return (
+    <div className="flex h-full flex-col bg-sidebar">
+      <div className="flex items-center gap-3 border-b border-sidebar-border px-4 py-3">
+        <img src={logo} alt="Admin" className="h-9 w-9 object-contain" />
+        <div className="flex flex-col flex-1">
+          <span className="font-display text-lg font-bold leading-tight">
+            <span className="text-gradient-pink">ADMIN</span>{" "}
+            <span className="text-foreground">PANEL</span>
+          </span>
+          <span className="text-[10px] text-muted-foreground">Super Admin</span>
+        </div>
+      </div>
+
+      <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
+        {items.map((item, index) => {
+          const isActive = location.pathname === item.path;
+          return (
+            <div
+              key={item.path}
+              draggable={editMode}
+              onDragStart={() => handleDragStart(index)}
+              onDragEnter={() => handleDragEnter(index)}
+              onDragEnd={handleDragEnd}
+              onDragOver={(e) => e.preventDefault()}
+              className={cn(
+                "flex items-center rounded-lg transition-all duration-200",
+                editMode && "cursor-grab active:cursor-grabbing",
+              )}
+            >
+              {editMode && (
+                <GripVertical className="h-4 w-4 text-muted-foreground shrink-0 ml-1" />
+              )}
+              <Link
+                to={item.path}
+                onClick={editMode ? (e) => e.preventDefault() : onNavigate}
+                className={cn(
+                  "flex flex-1 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                  isActive
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent/50",
+                  editMode && "pointer-events-none opacity-80"
+                )}
+              >
+                <item.icon className={cn("h-5 w-5", isActive && "text-primary")} />
+                <span>{item.label}</span>
+              </Link>
+            </div>
+          );
+        })}
+      </nav>
+
+      <div className="border-t border-sidebar-border p-2 space-y-0.5">
+        <button
+          onClick={onToggleEdit}
+          className={cn(
+            "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+            editMode
+              ? "bg-primary/10 text-primary"
+              : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+          )}
+        >
+          <Settings2 className="h-4 w-4" />
+          <span>{editMode ? "Concluir" : "Organizar menu"}</span>
+        </button>
+        {editMode && (
+          <button
+            onClick={onReset}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-sidebar-accent/50 transition-colors"
+          >
+            <RotateCcw className="h-4 w-4" />
+            <span>Restaurar padrão</span>
+          </button>
+        )}
+        <button
+          onClick={async () => {
+            sessionStorage.removeItem("token_session");
+            try { await signOut(); } catch (_) {}
+            window.location.href = "/login";
+          }}
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
+        >
+          <LogOut className="h-5 w-5" />
+          <span>Sair</span>
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ── Layout ──
 
 interface AdminNotif {
   id: string;
@@ -46,67 +198,14 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(hours / 24)}d atrás`;
 }
 
-const SidebarContent = ({ location, onNavigate }: { location: ReturnType<typeof useLocation>; onNavigate?: () => void }) => {
-  const { signOut } = useAuth();
-
-  return (
-    <div className="flex h-full flex-col bg-sidebar">
-      <div className="flex items-center gap-3 border-b border-sidebar-border px-4 py-3">
-        <img src={logo} alt="Admin" className="h-9 w-9 object-contain" />
-        <div className="flex flex-col">
-          <span className="font-display text-lg font-bold leading-tight">
-            <span className="text-gradient-pink">ADMIN</span>{" "}
-            <span className="text-foreground">PANEL</span>
-          </span>
-          <span className="text-[10px] text-muted-foreground">Super Admin</span>
-        </div>
-      </div>
-
-      <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.path;
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              onClick={onNavigate}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
-                isActive
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-              )}
-            >
-              <item.icon className={cn("h-5 w-5", isActive && "text-primary")} />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
-
-      <div className="border-t border-sidebar-border p-2">
-        <button
-          onClick={async () => {
-            sessionStorage.removeItem("token_session");
-            try { await signOut(); } catch (_) {}
-            window.location.href = "/login";
-          }}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
-        >
-          <LogOut className="h-5 w-5" />
-          <span>Sair</span>
-        </button>
-      </div>
-    </div>
-  );
-};
-
 export const AdminLayout = () => {
   const { isSuperAdmin, loading } = useAdmin();
   const location = useLocation();
   const { theme, setTheme } = useTheme();
   const [notifOpen, setNotifOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [orderedItems, setOrderedItems] = useState<NavItem[]>(getOrderedItems);
   const [notifications, setNotifications] = useState<AdminNotif[]>([]);
   const [readIds, setReadIds] = useState<Set<string>>(() => {
     try {
@@ -114,6 +213,26 @@ export const AdminLayout = () => {
       return stored ? new Set(JSON.parse(stored)) : new Set();
     } catch { return new Set(); }
   });
+
+  const handleReorder = useCallback((from: number, to: number) => {
+    setOrderedItems(prev => {
+      const updated = [...prev];
+      const [moved] = updated.splice(from, 1);
+      updated.splice(to, 0, moved);
+      saveOrder(updated);
+      return updated;
+    });
+  }, []);
+
+  const handleReset = useCallback(() => {
+    setOrderedItems(DEFAULT_NAV_ITEMS);
+    localStorage.removeItem(STORAGE_KEY);
+    toast.success("Menu restaurado ao padrão");
+  }, []);
+
+  const toggleEdit = useCallback(() => {
+    setEditMode(prev => !prev);
+  }, []);
 
   const fetchNotifications = useCallback(async () => {
     const { data: payments } = await (supabase as any)
@@ -222,26 +341,31 @@ export const AdminLayout = () => {
 
   const notifIcon = (type: AdminNotif["type"]) => {
     if (type === "pro_activated") return <Crown className="h-4 w-4 text-primary" />;
-    if (type === "new_tenant") return <UserPlus className="h-4 w-4 text-emerald-400" />;
+    if (type === "new_tenant") return <UserPlus className="h-4 w-4 text-accent-foreground" />;
     return <CheckCircle className="h-4 w-4 text-muted-foreground" />;
+  };
+
+  const sidebarProps = {
+    items: orderedItems,
+    editMode,
+    onToggleEdit: toggleEdit,
+    onReorder: handleReorder,
+    onReset: handleReset,
   };
 
   return (
     <div className="flex h-screen bg-background">
-      {/* Desktop sidebar */}
       <aside className="hidden md:flex w-64 flex-col border-r border-sidebar-border bg-sidebar">
-        <SidebarContent location={location} />
+        <SidebarContent location={location} {...sidebarProps} />
       </aside>
 
-      {/* Mobile sidebar drawer */}
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
         <SheetContent side="left" className="p-0 w-64 border-r-0 [&>button]:hidden">
-          <SidebarContent location={location} onNavigate={() => setMobileOpen(false)} />
+          <SidebarContent location={location} onNavigate={() => setMobileOpen(false)} {...sidebarProps} />
         </SheetContent>
       </Sheet>
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Admin TopBar */}
         <header className="flex h-14 items-center justify-between border-b border-border bg-card px-4 md:px-6 gap-3">
           <Button variant="ghost" size="icon" onClick={() => setMobileOpen(true)} className="md:hidden">
             <Menu className="h-5 w-5" />
@@ -280,7 +404,10 @@ export const AdminLayout = () => {
                       key={n.id}
                       to={n.type === "new_tenant" ? "/admin/clientes" : "/admin/pagamentos"}
                       onClick={() => setNotifOpen(false)}
-                      className={`block px-4 py-3 border-b border-border last:border-0 hover:bg-accent/50 transition-colors ${!n.read ? "bg-primary/5" : ""}`}
+                      className={cn(
+                        "block px-4 py-3 border-b border-border last:border-0 hover:bg-accent/50 transition-colors",
+                        !n.read && "bg-primary/5"
+                      )}
                     >
                       <div className="flex items-start gap-2.5">
                         <div className="mt-0.5 shrink-0">{notifIcon(n.type)}</div>
