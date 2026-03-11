@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "@/hooks/use-toast";
-import { AddStockModal } from "./AddStockModal";
+
 import { EmojiPicker } from "./EmojiPicker";
 import { ProductImageUpload } from "./ProductImageUpload";
 
