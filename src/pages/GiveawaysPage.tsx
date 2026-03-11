@@ -57,9 +57,6 @@ export default function GiveawaysPage() {
     enabled: !!tenantId,
   });
 
-  const refetch = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ["giveaways", tenantId] });
-  }, [queryClient, tenantId]);
 
   const activeGiveaways = giveaways.filter((g) => g.status === "active");
   const historyGiveaways = giveaways.filter((g) => g.status !== "active");
