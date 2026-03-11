@@ -289,8 +289,6 @@ export const ProductDetailFields = ({ productId, onFieldsChange }: ProductDetail
   const [fields, setFields] = useState<ProductField[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [stockCounts, setStockCounts] = useState<Record<string, number>>({});
-  const [stockModalFieldId, setStockModalFieldId] = useState<string | null>(null);
 
   const fetchFields = useCallback(async () => {
     if (!tenantId || !productId) return;
