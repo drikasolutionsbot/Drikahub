@@ -70,17 +70,18 @@ const AffiliatePayouts = ({ affiliates, tenantId, payouts, onRefresh }: Props) =
     setSaving(false);
   };
 
-  const handleMarkPaid = async (payoutId: string) => {
+  const handleUpdateStatus = async (payoutId: string, newStatus: string) => {
     try {
       await supabase.functions.invoke("manage-affiliates", {
         body: {
           action: "update_payout",
           tenant_id: tenantId,
           payout_id: payoutId,
-          payout: { status: "paid" },
+          payout: { status: newStatus },
         },
       });
-      toast({ title: "Marcado como pago ✅" });
+      const label = payoutStatusLabels[newStatus] || newStatus;
+      toast({ title: `Status atualizado para "${label}" ✅` });
       onRefresh();
     } catch (e: any) {
       toast({ title: "Erro", description: e.message, variant: "destructive" });
