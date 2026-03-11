@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { type DiscordButtonStyle } from "@/components/discord/DiscordButtonStylePicker";
 import { ArrowLeft, RefreshCw, Send, Eye } from "lucide-react";
 import TrashIcon from "@/components/ui/trash-icon";
 import { Button } from "@/components/ui/button";
