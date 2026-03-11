@@ -363,6 +363,10 @@ const RolesPage = () => {
           </div>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleSyncFromDiscord} disabled={syncing}>
+            {syncing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-1" />}
+            Sincronizar com Discord
+          </Button>
           <Button variant="outline" size="sm" onClick={() => {
             queryClient.invalidateQueries({ queryKey: ["tenant-roles", tenantId] });
             queryClient.invalidateQueries({ queryKey: ["discord-roles-raw", guildId] });
