@@ -34,6 +34,7 @@ interface ProductField {
   require_role_id: string | null;
   min_quantity: number;
   max_quantity: number | null;
+  delivery_quantity: number;
 }
 
 interface ProductDetailFieldsProps {
