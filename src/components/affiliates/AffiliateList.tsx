@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Affiliate, AffiliateOrder, AffiliatePayout, formatBRL, statusLabels, payoutStatusLabels } from "./types";
+import { Affiliate, AffiliateOrder, AffiliatePayout, formatBRL, statusLabels, payoutStatusLabels, getCommissionLabel, calcCommission } from "./types";
 
 interface Props {
   affiliates: Affiliate[];
