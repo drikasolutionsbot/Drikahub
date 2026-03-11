@@ -381,15 +381,46 @@ const AffiliateList = ({ affiliates, loading, tenantId, onRefresh }: Props) => {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Comissão (%)</Label>
-              <Input
-                type="number"
-                min={0}
-                max={100}
-                value={form.commission_percent}
-                onChange={(e) => setForm({ ...form, commission_percent: Number(e.target.value) })}
-              />
+            {/* Commission config */}
+            <div className="border-t border-border/50 pt-4">
+              <p className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Premiação / Comissão</p>
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label>Tipo de comissão</Label>
+                  <Select value={form.commission_type} onValueChange={(v: "percent" | "fixed") => setForm({ ...form, commission_type: v })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="percent">Porcentagem sobre a venda (%)</SelectItem>
+                      <SelectItem value="fixed">Valor fixo por venda (R$)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {form.commission_type === "percent" ? (
+                  <div className="space-y-2">
+                    <Label>Porcentagem (%)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={form.commission_percent}
+                      onChange={(e) => setForm({ ...form, commission_percent: Number(e.target.value) })}
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label>Valor fixo por venda (R$)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={(form.commission_fixed_cents / 100).toFixed(2)}
+                      onChange={(e) => setForm({ ...form, commission_fixed_cents: Math.round(Number(e.target.value) * 100) })}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Contact fields */}
