@@ -786,6 +786,22 @@ const AdminClientsPage = () => {
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
+              <Label>Plano</Label>
+              <div className="flex gap-2">
+                {PLANS.map(p => (
+                  <Button
+                    key={p.value}
+                    size="sm"
+                    variant={renewPlan === p.value ? "default" : "outline"}
+                    className={`text-xs h-8 px-3 ${renewPlan === p.value ? "gradient-pink text-primary-foreground border-none" : ""}`}
+                    onClick={() => setRenewPlan(p.value)}
+                  >
+                    {p.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
               <Label>Quantidade de dias</Label>
               <Input
                 type="number"
