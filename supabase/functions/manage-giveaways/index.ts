@@ -212,6 +212,37 @@ Deno.serve(async (req) => {
         );
         for (const g of activeWithMsg) {
           await syncEntriesFromDiscord(supabase, botToken, g, tenant_id);
+
+          // If expired, update Discord embed to show static "Sorteando ganhador..."
+          const now = Date.now();
+          const endsAt = new Date(g.ends_at).getTime();
+          if (endsAt <= now && g.channel_id) {
+            try {
+              const cfg = g.embed_config && Object.keys(g.embed_config).length > 0 ? g.embed_config : null;
+              const colorHex = cfg?.color || "#FEE75C";
+              const colorInt = parseInt(colorHex.replace("#", ""), 16);
+              const expiredEmbed: any = {
+                color: colorInt,
+                title: `🎉 SORTEIO: ${g.title}`,
+                description: `**Prêmio:** ${g.prize}\n\n${g.description || "Participe reagindo abaixo!"}\n\n⏳ **Sorteando ganhador...**\n👥 **Vencedores:** ${g.winners_count}`,
+                footer: { text: "⏳ Aguardando sorteio..." },
+                timestamp: new Date().toISOString(),
+              };
+              if (cfg?.thumbnail_url) expiredEmbed.thumbnail = { url: cfg.thumbnail_url };
+              if (cfg?.image_url) expiredEmbed.image = { url: cfg.image_url };
+
+              await fetch(`https://discord.com/api/v10/channels/${g.channel_id}/messages/${g.message_id}`, {
+                method: "PATCH",
+                headers: {
+                  Authorization: `Bot ${botToken}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ embeds: [expiredEmbed] }),
+              });
+            } catch (e) {
+              console.error("Failed to update expired giveaway embed:", e);
+            }
+          }
         }
       }
 
