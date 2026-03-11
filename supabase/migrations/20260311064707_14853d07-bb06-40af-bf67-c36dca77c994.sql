@@ -1,0 +1,4 @@
+ALTER TABLE public.affiliates
+  ADD COLUMN IF NOT EXISTS discord_username text DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS email text DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS whatsapp text DEFAULT NULL;

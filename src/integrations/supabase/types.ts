@@ -154,33 +154,42 @@ export type Database = {
           code: string
           commission_percent: number
           created_at: string
+          discord_username: string | null
+          email: string | null
           id: string
           name: string
           tenant_id: string
           total_revenue_cents: number
           total_sales: number
+          whatsapp: string | null
         }
         Insert: {
           active?: boolean
           code: string
           commission_percent?: number
           created_at?: string
+          discord_username?: string | null
+          email?: string | null
           id?: string
           name: string
           tenant_id: string
           total_revenue_cents?: number
           total_sales?: number
+          whatsapp?: string | null
         }
         Update: {
           active?: boolean
           code?: string
           commission_percent?: number
           created_at?: string
+          discord_username?: string | null
+          email?: string | null
           id?: string
           name?: string
           tenant_id?: string
           total_revenue_cents?: number
           total_sales?: number
+          whatsapp?: string | null
         }
         Relationships: [
           {
