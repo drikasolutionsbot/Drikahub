@@ -323,25 +323,58 @@ const ChannelsPage = () => {
     }
     setCreating(true);
     try {
-      const { data, error } = await supabase.functions.invoke("create-discord-channel", {
-        body: {
-          guild_id: guildId,
-          name: newName.trim(),
-          type: newType,
-          parent_id: newParent && newParent !== "none" ? newParent : undefined,
-          topic: newTopic.trim() || undefined,
-        },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      toast({ title: "Canal criado no Discord! ✅", description: `#${data.channel?.name}` });
+      let parentId = newParent && newParent !== "none" ? newParent : undefined;
 
-      // Auto-assign to the mapping key that triggered the dialog
-      if (createForKey && data.channel?.id) {
-        handleLocalChange(createForKey, data.channel.id);
+      // If user is creating a new category inline, create it first
+      if (creatingCategory && newCategoryName.trim()) {
+        const { data: catData, error: catError } = await supabase.functions.invoke("create-discord-channel", {
+          body: {
+            guild_id: guildId,
+            name: newCategoryName.trim(),
+            type: "category",
+          },
+        });
+        if (catError) throw catError;
+        if (catData?.error) throw new Error(catData.error);
+        parentId = catData.channel?.id;
+        toast({ title: "Categoria criada! ✅", description: catData.channel?.name });
+      }
+
+      // Now create the actual channel (skip if type is category since we already handled it)
+      if (newType === "category") {
+        // User explicitly chose to create a category
+        const { data, error } = await supabase.functions.invoke("create-discord-channel", {
+          body: {
+            guild_id: guildId,
+            name: newName.trim(),
+            type: "category",
+          },
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        toast({ title: "Categoria criada no Discord! ✅", description: data.channel?.name });
+      } else {
+        const { data, error } = await supabase.functions.invoke("create-discord-channel", {
+          body: {
+            guild_id: guildId,
+            name: newName.trim(),
+            type: newType,
+            parent_id: parentId,
+            topic: newTopic.trim() || undefined,
+          },
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        toast({ title: "Canal criado no Discord! ✅", description: `#${data.channel?.name}` });
+
+        // Auto-assign to the mapping key that triggered the dialog
+        if (createForKey && data.channel?.id) {
+          handleLocalChange(createForKey, data.channel.id);
+        }
       }
 
       setNewName(""); setNewType("text"); setNewParent(""); setNewTopic("");
+      setNewCategoryName(""); setCreatingCategory(false);
       setCreateOpen(false);
       setCreateForKey(null);
       await fetchDiscordChannels();
@@ -598,7 +631,7 @@ const ChannelsPage = () => {
       </Tabs>
 
       {/* Create channel dialog */}
-      <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) setCreateForKey(null); }}>
+      <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) { setCreateForKey(null); setCreatingCategory(false); setNewCategoryName(""); setNewName(""); setNewType("text"); setNewParent(""); setNewTopic(""); } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Criar Canal no Discord</DialogTitle>
