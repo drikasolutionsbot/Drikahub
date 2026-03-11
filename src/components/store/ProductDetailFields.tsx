@@ -389,6 +389,7 @@ export const ProductDetailFields = ({ productId, onFieldsChange }: ProductDetail
             require_role_id: field.require_role_id,
             min_quantity: field.min_quantity,
             max_quantity: field.max_quantity,
+            delivery_quantity: field.delivery_quantity || 1,
           },
         },
       });
