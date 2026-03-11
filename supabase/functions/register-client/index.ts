@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { email, password, whatsapp, name } = await req.json();
+    const { email, password, whatsapp, name, ref_code } = await req.json();
 
     if (!email || !password) {
       return new Response(JSON.stringify({ error: "Email e senha são obrigatórios" }), {
