@@ -148,8 +148,13 @@ export default function GiveawaysPage() {
           </h1>
           <p className="text-muted-foreground text-sm mt-1">Gerencie sorteios integrados ao Discord</p>
         </div>
-        <Button variant="outline" size="sm" onClick={refetch}>
-          <RefreshCw className="h-4 w-4 mr-1" /> Atualizar
+        <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isLoading || isFetching}>
+          {isFetching ? (
+            <span className="inline-block w-5 h-5 border-[3px] border-solid border-primary border-t-transparent border-b-foreground rounded-full animate-spin mr-1" />
+          ) : (
+            <RefreshCw className="h-4 w-4 mr-1" />
+          )}
+          {isFetching ? "Atualizando..." : "Atualizar"}
         </Button>
       </div>
 
