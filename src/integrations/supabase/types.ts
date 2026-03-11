@@ -1790,6 +1790,7 @@ export type Database = {
       }
       tenants: {
         Row: {
+          affiliate_active: boolean
           banner_url: string | null
           bot_client_id: string | null
           bot_prefix: string | null
@@ -1827,6 +1828,7 @@ export type Database = {
           whatsapp: string | null
         }
         Insert: {
+          affiliate_active?: boolean
           banner_url?: string | null
           bot_client_id?: string | null
           bot_prefix?: string | null
@@ -1864,6 +1866,7 @@ export type Database = {
           whatsapp?: string | null
         }
         Update: {
+          affiliate_active?: boolean
           banner_url?: string | null
           bot_client_id?: string | null
           bot_prefix?: string | null

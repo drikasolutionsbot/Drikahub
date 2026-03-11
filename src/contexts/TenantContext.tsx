@@ -27,6 +27,7 @@ interface Tenant {
   referral_code: string | null;
   referred_by_tenant_id: string | null;
   referral_credits_cents: number;
+  affiliate_active: boolean;
 }
 
 interface TenantContextType {
@@ -85,6 +86,7 @@ export const TenantProvider = ({ children }: { children: ReactNode }) => {
               referral_code: null,
               referred_by_tenant_id: null,
               referral_credits_cents: 0,
+              affiliate_active: false,
             });
           }
           setLoading(false);

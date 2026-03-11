@@ -1,0 +1,1 @@
+ALTER TABLE public.tenants ADD COLUMN IF NOT EXISTS affiliate_active boolean NOT NULL DEFAULT false;
