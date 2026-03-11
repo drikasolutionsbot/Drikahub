@@ -100,7 +100,7 @@ export const PostMessageModal = ({
       const embed: Record<string, any> = {
         title: `${product.name}`,
         description: `${autoDeliveryLine}${product.description || ""}`,
-        color: 0x2B2D31,
+        color: parseInt(embedColor.replace("#", ""), 16),
         fields: [
           ...(product.compare_price_cents && product.compare_price_cents > product.price_cents
             ? [
