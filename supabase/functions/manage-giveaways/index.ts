@@ -151,6 +151,35 @@ async function syncEntriesFromDiscord(
   }
 }
 
+async function hydrateWinnersWithDiscordProfile(botToken: string | null, winners: any[]) {
+  if (!botToken || winners.length === 0) return winners;
+
+  const hydrated = await Promise.all(
+    winners.map(async (winner: any) => {
+      try {
+        const res = await fetch(`https://discord.com/api/v10/users/${winner.discord_user_id}`, {
+          headers: { Authorization: `Bot ${botToken}` },
+        });
+
+        if (!res.ok) return winner;
+
+        const user = await res.json();
+        return {
+          ...winner,
+          discord_username: user?.username || winner.discord_username || winner.discord_user_id,
+          discord_avatar: user?.avatar
+            ? `https://cdn.discordapp.com/avatars/${winner.discord_user_id}/${user.avatar}.png`
+            : winner.discord_avatar || null,
+        };
+      } catch {
+        return winner;
+      }
+    })
+  );
+
+  return hydrated;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
