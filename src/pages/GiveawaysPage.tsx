@@ -116,7 +116,7 @@ export default function GiveawaysPage() {
           open={!!editGiveaway}
           onOpenChange={(open) => { if (!open) setEditGiveaway(null); }}
           giveaway={editGiveaway}
-          onUpdated={refetch}
+          onSaved={refetch}
         />
       )}
 
