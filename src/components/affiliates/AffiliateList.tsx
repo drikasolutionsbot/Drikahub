@@ -122,7 +122,7 @@ const AffiliateList = ({ affiliates, loading, tenantId, onRefresh, adminMode }: 
   const handleToggle = async (aff: Affiliate) => {
     try {
       await supabase.functions.invoke("manage-affiliates", {
-        body: { action: "update", tenant_id: tenantId, affiliate_id: aff.id, affiliate: { active: !aff.active } },
+        body: { action: "update", tenant_id: getTenantId(aff), affiliate_id: aff.id, affiliate: { active: !aff.active } },
       });
       onRefresh();
     } catch (e: any) {
