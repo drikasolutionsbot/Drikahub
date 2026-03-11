@@ -31,7 +31,8 @@ interface Props {
   adminMode?: boolean;
 }
 
-const AffiliatePayouts = ({ affiliates, tenantId, payouts, onRefresh }: Props) => {
+const AffiliatePayouts = ({ affiliates, tenantId, payouts, onRefresh, adminMode }: Props) => {
+  const getAffTenantId = (affId: string) => tenantId || (affiliates.find(a => a.id === affId) as any)?.tenant_id || null;
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
