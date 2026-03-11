@@ -169,3 +169,6 @@ verify_jwt = false
 
 [functions.manage-marketplace]
 verify_jwt = false
+
+[functions.manage-affiliates]
+verify_jwt = false
