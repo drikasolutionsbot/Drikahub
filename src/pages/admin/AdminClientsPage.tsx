@@ -768,6 +768,65 @@ const AdminClientsPage = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Renew/Add Days Dialog */}
+      <Dialog open={!!renewDialogTenantId} onOpenChange={(open) => { if (!open) setRenewDialogTenantId(null); }}>
+        <DialogContent className="bg-card border-border sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Adicionar Dias</DialogTitle>
+            <DialogDescription>
+              {renewDialogTenantId && (() => {
+                const t = tenants.find(x => x.id === renewDialogTenantId);
+                return t ? `Cliente: ${t.name} (${(t.plan || "free").toUpperCase()})` : "";
+              })()}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Quantidade de dias</Label>
+              <Input
+                type="number"
+                min="1"
+                max="3650"
+                value={renewDays}
+                onChange={(e) => setRenewDays(e.target.value)}
+                placeholder="Ex: 30"
+                className="bg-muted border-none"
+              />
+            </div>
+            <div className="flex gap-2">
+              {[7, 15, 30, 60, 90].map(d => (
+                <Button
+                  key={d}
+                  size="sm"
+                  variant={renewDays === String(d) ? "default" : "outline"}
+                  className="text-xs h-7 px-2"
+                  onClick={() => setRenewDays(String(d))}
+                >
+                  {d}d
+                </Button>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="ghost">Cancelar</Button>
+            </DialogClose>
+            <Button
+              onClick={() => {
+                const days = parseInt(renewDays);
+                if (!days || days < 1 || !renewDialogTenantId) return;
+                handleRenewPlan(renewDialogTenantId, days);
+              }}
+              disabled={savingPlan || !renewDays || parseInt(renewDays) < 1}
+              className="gradient-pink text-primary-foreground border-none hover:opacity-90"
+            >
+              {savingPlan ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CalendarClock className="mr-2 h-4 w-4" />}
+              Adicionar +{renewDays || 0} dias
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
