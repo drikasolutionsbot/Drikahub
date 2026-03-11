@@ -226,7 +226,7 @@ Deno.serve(async (req) => {
             await fetch(`https://discord.com/api/v10/channels/${giveaway.channel_id}/messages`, {
               method: "POST",
               headers: {
-                Authorization: `Bot ${tenant.bot_token_encrypted}`,
+                Authorization: `Bot ${botToken}`,
                 "Content-Type": "application/json",
               },
               body: JSON.stringify({ content: `🎉 ${winnerMentions}`, embeds: [embed] }),
