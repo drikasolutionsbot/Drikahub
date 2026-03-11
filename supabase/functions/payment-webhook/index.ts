@@ -12,14 +12,12 @@ const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 // ─── Provider-specific webhook handlers ────────────────────────────
 async function handleMercadoPago(body: any, tenantId: string, supabase: any) {
-  // MP sends: { action: "payment.created", data: { id: "123" } }
   const action = body?.action;
   if (!action?.startsWith("payment.")) return { handled: false, reason: "Not a payment event" };
 
   const paymentId = body?.data?.id;
   if (!paymentId) return { handled: false, reason: "No payment ID" };
 
-  // Get provider credentials
   const { data: provider } = await supabase
     .from("payment_providers")
     .select("api_key_encrypted")
@@ -29,7 +27,6 @@ async function handleMercadoPago(body: any, tenantId: string, supabase: any) {
 
   if (!provider?.api_key_encrypted) return { handled: false, reason: "No API key" };
 
-  // Fetch payment details from MP API
   const res = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
     headers: { Authorization: `Bearer ${provider.api_key_encrypted}` },
   });
@@ -38,7 +35,6 @@ async function handleMercadoPago(body: any, tenantId: string, supabase: any) {
 
   const payment = await res.json();
 
-  // Map MP status to order status
   let orderStatus: string;
   switch (payment.status) {
     case "approved": orderStatus = "paid"; break;
@@ -47,7 +43,6 @@ async function handleMercadoPago(body: any, tenantId: string, supabase: any) {
     default: orderStatus = "pending_payment";
   }
 
-  // Update order — external_reference is "order_{uuid}"
   if (payment.external_reference) {
     const orderId = payment.external_reference.replace(/^order_/, "");
     await supabase
@@ -55,44 +50,124 @@ async function handleMercadoPago(body: any, tenantId: string, supabase: any) {
       .update({ status: orderStatus, payment_id: String(paymentId), payment_provider: "mercadopago" })
       .eq("id", orderId)
       .eq("tenant_id", tenantId);
+
+    return { handled: true, order_status: orderStatus, payment_id: paymentId, order_id: orderId };
   }
 
-  return { handled: true, status: payment.status, order_status: orderStatus, payment_id: paymentId };
+  return { handled: false, reason: "No external_reference" };
 }
 
 async function handlePushinPay(body: any, tenantId: string, supabase: any) {
-  // PushinPay sends payment confirmation
-  const paymentId = body?.id || body?.payment_id;
+  // PushinPay webhook payload may vary - extract payment ID
+  const paymentId = body?.id || body?.payment_id || body?.transaction_id;
   const status = body?.status;
-  const orderId = body?.external_reference || body?.metadata?.order_id;
 
-  if (paymentId && orderId && status === "paid") {
-    await supabase
-      .from("orders")
-      .update({ status: "paid", payment_id: String(paymentId), payment_provider: "pushinpay" })
-      .eq("id", orderId)
-      .eq("tenant_id", tenantId);
-    return { handled: true, status, payment_id: paymentId };
+  console.log(`PushinPay webhook: paymentId=${paymentId}, status=${status}, body=${JSON.stringify(body)}`);
+
+  if (!paymentId) return { handled: false, reason: "No payment ID in webhook" };
+
+  // Accept various "paid" statuses from PushinPay
+  const isPaid = status === "paid" || status === "completed" || status === "approved";
+  if (!isPaid) return { handled: false, reason: `Status not paid: ${status}` };
+
+  // Look up order by payment_id (stored when PIX was generated)
+  const { data: order, error: orderErr } = await supabase
+    .from("orders")
+    .select("id, status")
+    .eq("payment_id", String(paymentId))
+    .eq("tenant_id", tenantId)
+    .single();
+
+  if (orderErr || !order) {
+    // Fallback: try external_reference or metadata
+    const extRef = body?.external_reference || body?.metadata?.order_id;
+    if (extRef) {
+      const orderId = extRef.replace(/^order_/, "");
+      await supabase
+        .from("orders")
+        .update({ status: "paid", payment_id: String(paymentId), payment_provider: "pushinpay" })
+        .eq("id", orderId)
+        .eq("tenant_id", tenantId);
+      return { handled: true, order_status: "paid", payment_id: paymentId, order_id: orderId };
+    }
+    console.error(`PushinPay: No order found for payment_id=${paymentId} in tenant=${tenantId}`);
+    return { handled: false, reason: "Order not found by payment_id" };
   }
-  return { handled: false, reason: "Missing data or not paid" };
+
+  if (order.status === "paid" || order.status === "delivered") {
+    return { handled: false, reason: "Order already processed" };
+  }
+
+  await supabase
+    .from("orders")
+    .update({ status: "paid", payment_provider: "pushinpay" })
+    .eq("id", order.id)
+    .eq("tenant_id", tenantId);
+
+  return { handled: true, order_status: "paid", payment_id: paymentId, order_id: order.id };
 }
 
 async function handleEfi(body: any, tenantId: string, supabase: any) {
-  // Efí (Gerencianet) webhook
   const pix = body?.pix?.[0];
-  if (pix) {
-    const txid = pix.txid;
-    const valor = pix.valor;
-    if (txid) {
-      await supabase
-        .from("orders")
-        .update({ status: "paid", payment_id: pix.endToEndId || txid, payment_provider: "efi" })
-        .eq("id", txid)
-        .eq("tenant_id", tenantId);
-      return { handled: true, txid, valor };
-    }
+  if (!pix) return { handled: false, reason: "No PIX data" };
+
+  const txid = pix.txid;
+  const endToEndId = pix.endToEndId;
+
+  console.log(`Efí webhook: txid=${txid}, endToEndId=${endToEndId}, body=${JSON.stringify(body)}`);
+
+  if (!txid && !endToEndId) return { handled: false, reason: "No txid or endToEndId" };
+
+  // Look up order by payment_id (txid or endToEndId stored during PIX generation)
+  let order = null;
+
+  if (txid) {
+    const { data } = await supabase
+      .from("orders")
+      .select("id, status")
+      .eq("payment_id", txid)
+      .eq("tenant_id", tenantId)
+      .single();
+    order = data;
   }
-  return { handled: false, reason: "No PIX data" };
+
+  if (!order && endToEndId) {
+    const { data } = await supabase
+      .from("orders")
+      .select("id, status")
+      .eq("payment_id", endToEndId)
+      .eq("tenant_id", tenantId)
+      .single();
+    order = data;
+  }
+
+  // Fallback: try txid as order ID directly (legacy)
+  if (!order && txid) {
+    const { data } = await supabase
+      .from("orders")
+      .select("id, status")
+      .eq("id", txid)
+      .eq("tenant_id", tenantId)
+      .single();
+    order = data;
+  }
+
+  if (!order) {
+    console.error(`Efí: No order found for txid=${txid} endToEndId=${endToEndId} in tenant=${tenantId}`);
+    return { handled: false, reason: "Order not found" };
+  }
+
+  if (order.status === "paid" || order.status === "delivered") {
+    return { handled: false, reason: "Order already processed" };
+  }
+
+  await supabase
+    .from("orders")
+    .update({ status: "paid", payment_id: endToEndId || txid, payment_provider: "efi" })
+    .eq("id", order.id)
+    .eq("tenant_id", tenantId);
+
+  return { handled: true, order_status: "paid", payment_id: endToEndId || txid, order_id: order.id };
 }
 
 async function handleMisticPay(body: any, tenantId: string, supabase: any) {
@@ -101,12 +176,13 @@ async function handleMisticPay(body: any, tenantId: string, supabase: any) {
   const orderId = body?.reference || body?.external_reference;
 
   if (paymentId && orderId && (status === "paid" || status === "approved")) {
+    const cleanOrderId = orderId.replace(/^order_/, "");
     await supabase
       .from("orders")
       .update({ status: "paid", payment_id: String(paymentId), payment_provider: "misticpay" })
-      .eq("id", orderId)
+      .eq("id", cleanOrderId)
       .eq("tenant_id", tenantId);
-    return { handled: true, status, payment_id: paymentId };
+    return { handled: true, order_status: "paid", payment_id: paymentId, order_id: cleanOrderId };
   }
   return { handled: false, reason: "Missing data or not paid" };
 }
@@ -122,14 +198,11 @@ serve(async (req) => {
     const pathParts = url.pathname.split("/").filter(Boolean);
     
     // Expected path: /payment-webhook/{provider_key}/{tenant_id}
-    // The edge function name is the first part, so we look for provider and tenant after
     const provider = pathParts[pathParts.length - 2];
     const tenantId = pathParts[pathParts.length - 1];
 
     if (!provider || !tenantId) {
-      // Try from query params as fallback
-      const body = await req.json();
-      throw new Error("Missing provider or tenant_id in URL path. Use ?provider=xxx&tenant_id=xxx or path format.");
+      throw new Error("Missing provider or tenant_id in URL path.");
     }
 
     const body = await req.json();
@@ -170,32 +243,27 @@ serve(async (req) => {
     }
 
     // Log webhook
-    await supabase.from("webhook_logs").insert({
-      tenant_id: tenantId,
-      provider_key: provider,
-      event_type: eventType,
-      payload: body,
-      result,
-      status: result?.handled ? "processed" : "ignored",
-    });
+    try {
+      await supabase.from("webhook_logs").insert({
+        tenant_id: tenantId,
+        provider_key: provider,
+        event_type: eventType,
+        payload: body,
+        result,
+        status: result?.handled ? "processed" : "ignored",
+      });
+    } catch (logErr) {
+      console.error("Failed to log webhook:", logErr);
+    }
 
     console.log(`Webhook ${provider}/${tenantId}:`, JSON.stringify(result));
 
-    // If payment was confirmed, trigger auto-delivery + automations
-    if (result?.handled && (result?.order_status === "paid" || result?.status === "approved" || (result as any)?.txid)) {
-      try {
-        // Find the order that was just paid
-        const { data: paidOrders } = await supabase
-          .from("orders")
-          .select("id, order_number, product_name, discord_user_id, discord_username, total_cents")
-          .eq("tenant_id", tenantId)
-          .eq("status", "paid")
-          .order("updated_at", { ascending: false })
-          .limit(1);
+    // If payment was confirmed, trigger auto-delivery
+    if (result?.handled && result?.order_status === "paid") {
+      const orderId = result.order_id;
 
-        if (paidOrders && paidOrders.length > 0) {
-          const paidOrder = paidOrders[0];
-
+      if (orderId) {
+        try {
           // Call deliver-order function
           const deliverRes = await fetch(
             `${supabaseUrl}/functions/v1/deliver-order`,
@@ -206,7 +274,7 @@ serve(async (req) => {
                 Authorization: `Bearer ${serviceRoleKey}`,
               },
               body: JSON.stringify({
-                order_id: paidOrder.id,
+                order_id: orderId,
                 tenant_id: tenantId,
               }),
             }
@@ -216,30 +284,37 @@ serve(async (req) => {
 
           // Trigger order_paid automations
           try {
-            await fetch(`${supabaseUrl}/functions/v1/execute-automation`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceRoleKey}` },
-              body: JSON.stringify({
-                tenant_id: tenantId,
-                trigger_type: "order_paid",
-                trigger_data: {
-                  discord_user_id: paidOrder.discord_user_id,
-                  discord_username: paidOrder.discord_username,
-                  order_id: paidOrder.id,
-                  order_number: paidOrder.order_number,
-                  product_name: paidOrder.product_name,
-                  total_cents: paidOrder.total_cents,
-                },
-              }),
-            });
-            console.log("Automation order_paid triggered");
+            const { data: paidOrder } = await supabase
+              .from("orders")
+              .select("order_number, product_name, discord_user_id, discord_username, total_cents")
+              .eq("id", orderId)
+              .single();
+
+            if (paidOrder) {
+              await fetch(`${supabaseUrl}/functions/v1/execute-automation`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceRoleKey}` },
+                body: JSON.stringify({
+                  tenant_id: tenantId,
+                  trigger_type: "order_paid",
+                  trigger_data: {
+                    discord_user_id: paidOrder.discord_user_id,
+                    discord_username: paidOrder.discord_username,
+                    order_id: orderId,
+                    order_number: paidOrder.order_number,
+                    product_name: paidOrder.product_name,
+                    total_cents: paidOrder.total_cents,
+                  },
+                }),
+              });
+              console.log("Automation order_paid triggered");
+            }
           } catch (autoErr) {
             console.error("Automation trigger failed:", autoErr);
           }
+        } catch (deliverErr) {
+          console.error("Auto-delivery failed:", deliverErr);
         }
-      } catch (deliverErr) {
-        console.error("Auto-delivery failed:", deliverErr);
-        // Don't fail the webhook response
       }
     }
 
