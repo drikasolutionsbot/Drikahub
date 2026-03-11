@@ -577,6 +577,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
+          embed_config: Json
           ends_at: string
           id: string
           message_id: string | null
@@ -594,6 +595,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          embed_config?: Json
           ends_at: string
           id?: string
           message_id?: string | null
@@ -611,6 +613,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          embed_config?: Json
           ends_at?: string
           id?: string
           message_id?: string | null
