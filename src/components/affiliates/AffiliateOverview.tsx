@@ -6,7 +6,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
 } from "recharts";
-import { Affiliate, AffiliateOrder, AffiliatePayout, formatBRL } from "./types";
+import { Affiliate, AffiliateOrder, AffiliatePayout, formatBRL, calcCommission } from "./types";
 
 const COLORS = [
   "hsl(var(--primary))",
@@ -28,19 +28,20 @@ const AffiliateOverview = ({ affiliates, orders, payouts, loading }: Props) => {
   const filteredSales = orders.length;
   const filteredRevenue = orders.reduce((s, o) => s + o.total_cents, 0);
 
-  // Build a map of affiliate commission rates
-  const affMap = useMemo(() => {
-    const m: Record<string, number> = {};
-    affiliates.forEach(a => { m[a.id] = a.commission_percent; });
+  // Build a map of affiliates for commission calc
+  const affObjMap = useMemo(() => {
+    const m: Record<string, Affiliate> = {};
+    affiliates.forEach(a => { m[a.id] = a; });
     return m;
   }, [affiliates]);
 
   const filteredCommission = useMemo(() => {
     return orders.reduce((sum, o) => {
-      const pct = o.affiliate_id ? (affMap[o.affiliate_id] ?? 5) : 0;
-      return sum + Math.round(o.total_cents * pct / 100);
+      const aff = o.affiliate_id ? affObjMap[o.affiliate_id] : null;
+      if (!aff) return sum;
+      return sum + calcCommission(aff, o.total_cents);
     }, 0);
-  }, [orders, affMap]);
+  }, [orders, affObjMap]);
 
   const totalPaid = useMemo(() => {
     return payouts.filter(p => p.status === "paid").reduce((s, p) => s + p.amount_cents, 0);

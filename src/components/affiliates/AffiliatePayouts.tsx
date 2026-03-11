@@ -70,17 +70,18 @@ const AffiliatePayouts = ({ affiliates, tenantId, payouts, onRefresh }: Props) =
     setSaving(false);
   };
 
-  const handleMarkPaid = async (payoutId: string) => {
+  const handleUpdateStatus = async (payoutId: string, newStatus: string) => {
     try {
       await supabase.functions.invoke("manage-affiliates", {
         body: {
           action: "update_payout",
           tenant_id: tenantId,
           payout_id: payoutId,
-          payout: { status: "paid" },
+          payout: { status: newStatus },
         },
       });
-      toast({ title: "Marcado como pago ✅" });
+      const label = payoutStatusLabels[newStatus] || newStatus;
+      toast({ title: `Status atualizado para "${label}" ✅` });
       onRefresh();
     } catch (e: any) {
       toast({ title: "Erro", description: e.message, variant: "destructive" });
@@ -159,35 +160,35 @@ const AffiliatePayouts = ({ affiliates, tenantId, payouts, onRefresh }: Props) =
                 </p>
               </div>
               <p className="text-sm font-bold">{formatBRL(p.amount_cents)}</p>
-              <Badge variant={p.status === "paid" ? "default" : "secondary"} className="text-[10px]">
-                {payoutStatusLabels[p.status] || p.status}
-              </Badge>
-              <div className="flex items-center gap-1">
-                {p.status === "pending" && (
-                  <Button variant="ghost" size="sm" className="h-7 text-xs text-emerald-400" onClick={() => handleMarkPaid(p.id)}>
-                    <Check className="h-3.5 w-3.5 mr-1" /> Pagar
+              <Select value={p.status} onValueChange={(v) => handleUpdateStatus(p.id, v)}>
+                <SelectTrigger className="w-[130px] h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">⏳ Pendente</SelectItem>
+                  <SelectItem value="paid">✅ Pago</SelectItem>
+                  <SelectItem value="canceled">❌ Cancelado</SelectItem>
+                </SelectContent>
+              </Select>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive">
+                    <TrashIcon className="h-3.5 w-3.5" />
                   </Button>
-                )}
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive">
-                      <TrashIcon className="h-3.5 w-3.5" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Remover pagamento?</AlertDialogTitle>
-                      <AlertDialogDescription>Este registro será removido permanentemente.</AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => handleDelete(p.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                        Remover
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Remover pagamento?</AlertDialogTitle>
+                    <AlertDialogDescription>Este registro será removido permanentemente.</AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => handleDelete(p.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                      Remover
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           ))}
         </div>
@@ -232,6 +233,7 @@ const AffiliatePayouts = ({ affiliates, tenantId, payouts, onRefresh }: Props) =
                 <SelectContent>
                   <SelectItem value="pending">Pendente</SelectItem>
                   <SelectItem value="paid">Pago</SelectItem>
+                  <SelectItem value="canceled">Cancelado</SelectItem>
                 </SelectContent>
               </Select>
             </div>

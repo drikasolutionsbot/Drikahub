@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   Plus, Users, Copy, Check, Search, Link2, BarChart3,
   Percent, Power, PowerOff, Edit2, Mail, Phone, MessageCircle,
-  Calendar, Hash, ExternalLink,
+  Calendar, Hash, ExternalLink, DollarSign,
 } from "lucide-react";
 import TrashIcon from "@/components/ui/trash-icon";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,9 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import {
@@ -20,7 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Affiliate, AffiliateOrder, AffiliatePayout, formatBRL, statusLabels, payoutStatusLabels } from "./types";
+import { Affiliate, AffiliateOrder, AffiliatePayout, formatBRL, statusLabels, payoutStatusLabels, getCommissionLabel, calcCommission } from "./types";
 
 interface Props {
   affiliates: Affiliate[];
@@ -32,14 +35,16 @@ interface Props {
 interface AffiliateForm {
   name: string;
   code: string;
+  commission_type: "percent" | "fixed";
   commission_percent: number;
+  commission_fixed_cents: number;
   discord_username: string;
   email: string;
   whatsapp: string;
 }
 
 const emptyForm: AffiliateForm = {
-  name: "", code: "", commission_percent: 5,
+  name: "", code: "", commission_type: "percent", commission_percent: 5, commission_fixed_cents: 0,
   discord_username: "", email: "", whatsapp: "",
 };
 
@@ -68,7 +73,9 @@ const AffiliateList = ({ affiliates, loading, tenantId, onRefresh }: Props) => {
     setForm({
       name: aff.name,
       code: aff.code,
+      commission_type: aff.commission_type || "percent",
       commission_percent: aff.commission_percent,
+      commission_fixed_cents: aff.commission_fixed_cents || 0,
       discord_username: aff.discord_username ?? "",
       email: aff.email ?? "",
       whatsapp: aff.whatsapp ?? "",
@@ -83,7 +90,9 @@ const AffiliateList = ({ affiliates, loading, tenantId, onRefresh }: Props) => {
       const payload = {
         name: form.name.trim(),
         code: form.code,
+        commission_type: form.commission_type,
         commission_percent: form.commission_percent,
+        commission_fixed_cents: form.commission_fixed_cents,
         discord_username: form.discord_username.trim() || null,
         email: form.email.trim() || null,
         whatsapp: form.whatsapp.trim() || null,
@@ -209,7 +218,7 @@ const AffiliateList = ({ affiliates, loading, tenantId, onRefresh }: Props) => {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((aff) => {
-            const commissionEarned = Math.round(aff.total_revenue_cents * aff.commission_percent / 100);
+            const commissionEarned = calcCommission(aff, aff.total_revenue_cents);
             return (
               <div
                 key={aff.id}
@@ -273,7 +282,10 @@ const AffiliateList = ({ affiliates, loading, tenantId, onRefresh }: Props) => {
                 <div className="grid grid-cols-3 gap-2 text-center">
                   <div className="rounded-lg bg-muted/20 border border-border/30 py-2">
                     <p className="text-sm font-bold font-display flex items-center justify-center gap-1">
-                      <Percent className="h-3 w-3 text-primary" /> {aff.commission_percent}%
+                      {aff.commission_type === "fixed"
+                        ? <><DollarSign className="h-3 w-3 text-primary" /> {formatBRL(aff.commission_fixed_cents)}</>
+                        : <><Percent className="h-3 w-3 text-primary" /> {aff.commission_percent}%</>
+                      }
                     </p>
                     <p className="text-[10px] text-muted-foreground">Comissão</p>
                   </div>
@@ -369,15 +381,46 @@ const AffiliateList = ({ affiliates, loading, tenantId, onRefresh }: Props) => {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Comissão (%)</Label>
-              <Input
-                type="number"
-                min={0}
-                max={100}
-                value={form.commission_percent}
-                onChange={(e) => setForm({ ...form, commission_percent: Number(e.target.value) })}
-              />
+            {/* Commission config */}
+            <div className="border-t border-border/50 pt-4">
+              <p className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Premiação / Comissão</p>
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label>Tipo de comissão</Label>
+                  <Select value={form.commission_type} onValueChange={(v: "percent" | "fixed") => setForm({ ...form, commission_type: v })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="percent">Porcentagem sobre a venda (%)</SelectItem>
+                      <SelectItem value="fixed">Valor fixo por venda (R$)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {form.commission_type === "percent" ? (
+                  <div className="space-y-2">
+                    <Label>Porcentagem (%)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={form.commission_percent}
+                      onChange={(e) => setForm({ ...form, commission_percent: Number(e.target.value) })}
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label>Valor fixo por venda (R$)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={(form.commission_fixed_cents / 100).toFixed(2)}
+                      onChange={(e) => setForm({ ...form, commission_fixed_cents: Math.round(Number(e.target.value) * 100) })}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Contact fields */}
@@ -469,7 +512,7 @@ const AffiliateList = ({ affiliates, loading, tenantId, onRefresh }: Props) => {
               {/* Metrics */}
               <div className="grid grid-cols-4 gap-2">
                 <div className="rounded-xl bg-muted/20 border border-border/30 p-3 text-center">
-                  <p className="text-lg font-bold">{statsAffiliate.commission_percent}%</p>
+                  <p className="text-lg font-bold">{getCommissionLabel(statsAffiliate)}</p>
                   <p className="text-[10px] text-muted-foreground">Comissão</p>
                 </div>
                 <div className="rounded-xl bg-muted/20 border border-border/30 p-3 text-center">
@@ -482,7 +525,7 @@ const AffiliateList = ({ affiliates, loading, tenantId, onRefresh }: Props) => {
                 </div>
                 <div className="rounded-xl bg-muted/20 border border-border/30 p-3 text-center">
                   <p className="text-lg font-bold text-primary">
-                    {formatBRL(Math.round(statsAffiliate.total_revenue_cents * statsAffiliate.commission_percent / 100))}
+                    {formatBRL(calcCommission(statsAffiliate, statsAffiliate.total_revenue_cents))}
                   </p>
                   <p className="text-[10px] text-muted-foreground">Ganhos</p>
                 </div>
