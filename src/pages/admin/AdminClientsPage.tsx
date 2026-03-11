@@ -86,6 +86,7 @@ const AdminClientsPage = () => {
       !searchQuery.trim() ||
       t.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.discord_guild_id?.includes(searchQuery) ||
+      t.owner_discord_username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.id?.includes(searchQuery);
     const matchesPlan = planFilter === "all" || (t.plan || "free") === planFilter;
     return matchesSearch && matchesPlan;
