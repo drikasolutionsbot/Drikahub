@@ -1107,8 +1107,45 @@ serve(async (req) => {
           });
         }
 
-        // Archive: send closing message and lock channel (don't delete)
+        // Generate transcript before archiving
         const channelId = interaction.channel_id || ticket.discord_channel_id;
+
+        if (sc?.ticket_logs_channel_id && channelId) {
+          let transcript = "";
+          try {
+            const msgsRes = await fetch(`${DISCORD_API}/channels/${channelId}/messages?limit=100`, {
+              headers: { Authorization: `Bot ${botToken}` },
+            });
+            if (msgsRes.ok) {
+              const msgs = await msgsRes.json();
+              const sorted = msgs.reverse();
+              transcript = sorted.map((m: any) => {
+                const ts = new Date(m.timestamp).toLocaleString("pt-BR");
+                const author = m.author?.username || "Desconhecido";
+                const content = m.content || (m.embeds?.length ? "[embed]" : "[sem conteúdo]");
+                return `[${ts}] ${author}: ${content}`;
+              }).join("\n");
+            }
+          } catch (e) { console.error("Transcript fetch error:", e); }
+
+          // Send transcript as file
+          if (transcript) {
+            const formData = new FormData();
+            const blob = new Blob([transcript], { type: "text/plain" });
+            formData.append("files[0]", blob, `transcript-${ticket.discord_username || ticket.discord_user_id}-${ticket.id.slice(0, 8)}.txt`);
+            formData.append("payload_json", JSON.stringify({
+              content: `📜 **Transcript do Ticket** — ${ticket.discord_username || ticket.discord_user_id}`,
+            }));
+
+            await fetch(`${DISCORD_API}/channels/${sc.ticket_logs_channel_id}/messages`, {
+              method: "POST",
+              headers: { Authorization: `Bot ${botToken}` },
+              body: formData,
+            });
+          }
+        }
+
+        // Archive: send closing message and lock thread
         if (channelId) {
           await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
             method: "POST",
@@ -1116,29 +1153,21 @@ serve(async (req) => {
             body: JSON.stringify({
               embeds: [{
                 title: "📁 Ticket Arquivado",
-                description: `Este ticket foi arquivado por <@${userId}>.\nO canal está agora somente leitura.`,
+                description: `Este ticket foi arquivado por <@${userId}>.\nO tópico está agora somente leitura.`,
                 color: 0xFEE75C,
               }],
             }),
           });
 
-          // Lock the channel by denying SEND_MESSAGES for @everyone
-          const { data: tenantGuild } = await supabase
-            .from("tenants")
-            .select("discord_guild_id")
-            .eq("id", ticket.tenant_id)
-            .single();
-
-          if (tenantGuild?.discord_guild_id) {
-            await fetch(`${DISCORD_API}/channels/${channelId}/permissions/${tenantGuild.discord_guild_id}`, {
-              method: "PUT",
-              headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
-              body: JSON.stringify({
-                deny: "3072", // VIEW_CHANNEL (1024) + SEND_MESSAGES (2048)
-                type: 0, // role
-              }),
-            });
-          }
+          // Archive and lock the thread
+          await fetch(`${DISCORD_API}/channels/${channelId}`, {
+            method: "PATCH",
+            headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              archived: true,
+              locked: true,
+            }),
+          });
         }
 
         return ok();
