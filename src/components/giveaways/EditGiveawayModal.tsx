@@ -13,6 +13,7 @@ import { CalendarIcon, Loader2, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "@/hooks/use-toast";
+import { useDiscordRoles } from "@/hooks/useDiscordRoles";
 
 interface Giveaway {
   id: string;
@@ -26,17 +27,7 @@ interface Giveaway {
   status: string;
 }
 
-interface Channel {
-  id: string;
-  name: string;
-}
-
-interface Role {
-  id: string;
-  name: string;
-  color: string;
-  discord_role_id?: string;
-}
+interface Channel { id: string; name: string; }
 
 interface EditGiveawayModalProps {
   open: boolean;
@@ -47,6 +38,7 @@ interface EditGiveawayModalProps {
 
 export default function EditGiveawayModal({ open, onOpenChange, giveaway, onSaved }: EditGiveawayModalProps) {
   const { tenantId } = useTenant();
+  const { roles } = useDiscordRoles(open);
   const [title, setTitle] = useState(giveaway.title);
   const [prize, setPrize] = useState(giveaway.prize);
   const [description, setDescription] = useState(giveaway.description || "");
@@ -56,15 +48,12 @@ export default function EditGiveawayModal({ open, onOpenChange, giveaway, onSave
   const [channelId, setChannelId] = useState(giveaway.channel_id || "");
   const [requireRoleId, setRequireRoleId] = useState(giveaway.require_role_id || "");
   const [channels, setChannels] = useState<Channel[]>([]);
-  const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!tenantId || !open) return;
     supabase.functions.invoke("discord-channels", { body: { tenant_id: tenantId } })
       .then(({ data }) => { if (data?.channels) setChannels(data.channels); });
-    supabase.functions.invoke("manage-roles", { body: { action: "list", tenant_id: tenantId } })
-      .then(({ data }) => { if (Array.isArray(data)) setRoles(data); });
   }, [tenantId, open]);
 
   useEffect(() => {
@@ -94,13 +83,11 @@ export default function EditGiveawayModal({ open, onOpenChange, giveaway, onSave
           action: "update",
           tenant_id: tenantId,
           giveaway_id: giveaway.id,
-          title,
-          prize,
-          description,
+          title, prize, description,
           winners_count: parseInt(winnersCount) || 1,
           ends_at: endsAt.toISOString(),
-          channel_id: channelId || null,
-          require_role_id: requireRoleId || null,
+          channel_id: channelId && channelId !== "none" ? channelId : null,
+          require_role_id: requireRoleId && requireRoleId !== "none" ? requireRoleId : null,
         },
       });
       if (error || data?.error) throw new Error(data?.error || "Erro ao salvar");
@@ -112,6 +99,11 @@ export default function EditGiveawayModal({ open, onOpenChange, giveaway, onSave
     } finally {
       setLoading(false);
     }
+  };
+
+  const getRoleColor = (color: string | number) => {
+    if (typeof color === "number") return `#${color.toString(16).padStart(6, "0")}`;
+    return color || "#99AAB5";
   };
 
   return (
@@ -186,9 +178,9 @@ export default function EditGiveawayModal({ open, onOpenChange, giveaway, onSave
                 <SelectContent>
                   <SelectItem value="none">Nenhum</SelectItem>
                   {roles.map((r) => (
-                    <SelectItem key={r.id} value={r.discord_role_id || r.id}>
+                    <SelectItem key={r.id} value={r.id}>
                       <span className="flex items-center gap-2">
-                        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: r.color }} />
+                        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: getRoleColor(r.color) }} />
                         {r.name}
                       </span>
                     </SelectItem>

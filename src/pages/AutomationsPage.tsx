@@ -190,8 +190,9 @@ const AutomationsPage = () => {
   const fetchDiscordData = useCallback(async () => {
     if (!tenantId) return;
     try {
-      const [chData, roleData] = await Promise.all([
+      const [chData, discordRolesRes, panelRolesRes] = await Promise.all([
         supabase.functions.invoke("discord-channels", { body: { tenant_id: tenantId } }),
+        supabase.functions.invoke("manage-roles", { body: { action: "list_discord", tenant_id: tenantId } }),
         supabase.functions.invoke("manage-roles", { body: { action: "list", tenant_id: tenantId } }),
       ]);
       const chResult = chData.data;
@@ -200,11 +201,16 @@ const AutomationsPage = () => {
       } else if (Array.isArray(chResult)) {
         setChannels(chResult.filter((c: any) => c.type === 0 || c.type === 5).sort((a: any, b: any) => (a.name || "").localeCompare(b.name || "")));
       }
-      // Try to get Discord roles directly
-      const guildInfo = await supabase.functions.invoke("discord-guild-info", { body: { tenant_id: tenantId } });
-      if (guildInfo.data?.roles) {
-        setRoles(guildInfo.data.roles.filter((r: any) => r.name !== "@everyone").sort((a: any, b: any) => b.position - a.position));
-      }
+      // Hybrid role merge: Discord + panel
+      const discordRoles = Array.isArray(discordRolesRes.data?.roles) ? discordRolesRes.data.roles : [];
+      const panelRoles = Array.isArray(panelRolesRes.data) ? panelRolesRes.data : [];
+      const discordIds = new Set(discordRoles.map((r: any) => r.id));
+      const panelOnly = panelRoles
+        .filter((r: any) => r.discord_role_id && !discordIds.has(r.discord_role_id))
+        .map((r: any) => ({ id: r.discord_role_id, name: r.name, position: 0, color: r.color }));
+      const mergedRoles = [...discordRoles.filter((r: any) => r.name !== "@everyone"), ...panelOnly]
+        .sort((a: any, b: any) => (b.position ?? 0) - (a.position ?? 0));
+      setRoles(mergedRoles);
     } catch (err) {
       console.error("Failed to fetch Discord data:", err);
     }
