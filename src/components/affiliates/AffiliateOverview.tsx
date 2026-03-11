@@ -338,7 +338,7 @@ const AffiliateOverview = ({ affiliates, orders, payouts, loading }: Props) => {
             </span>
           </h3>
           {monthlyData.length > 0 ? (
-            <div style={{ filter: "url(#surreal-glow)" }}>
+            <div style={{ filter: "url(#surreal-glow) url(#surreal-liquid) url(#surreal-grain)" }}>
               <ResponsiveContainer width="100%" height={220}>
                 <AreaChart data={monthlyData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} />
