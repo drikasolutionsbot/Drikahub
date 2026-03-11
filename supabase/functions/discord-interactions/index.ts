@@ -1386,17 +1386,21 @@ async function processPurchase(
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 
   // Check for active payment provider
-  const { data: providers } = await supabase
+  const { data: providers, error: provErr } = await supabase
     .from("payment_providers")
     .select("provider_key, api_key_encrypted, secret_key_encrypted, active, efi_cert_pem, efi_key_pem, efi_pix_key")
     .eq("tenant_id", tenantId)
     .eq("active", true);
+
+  console.log("Payment providers query:", { tenantId, providers: providers?.map((p: any) => ({ key: p.provider_key, hasApiKey: !!p.api_key_encrypted })), error: provErr?.message });
 
   const activeProvider = providers?.find((p: any) => p.api_key_encrypted);
   const amountBRL = priceCents / 100;
   const webhookBaseUrl = `${supabaseUrl}/functions/v1/payment-webhook`;
   let brcode = "";
   let paymentId = "";
+
+  console.log("Purchase debug:", { activeProvider: activeProvider?.provider_key, amountBRL, priceCents });
 
   if (activeProvider && amountBRL > 0) {
     const providerKey = activeProvider.provider_key;
