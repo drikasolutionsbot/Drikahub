@@ -35,8 +35,9 @@ function useCountdown(endsAt: string) {
       const end = new Date(endsAt).getTime();
       const diff = end - now;
       if (diff <= 0) {
-        setTimeLeft("Encerrado");
+        setTimeLeft("Sorteando ganhador...");
         setIsExpired(true);
+        clearInterval(interval);
         return;
       }
       const d = Math.floor(diff / 86400000);
