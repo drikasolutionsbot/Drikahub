@@ -429,6 +429,8 @@ Deno.serve(async (req) => {
       const newWinners = shuffled.slice(0, count || 1).map((e: any) => ({
         discord_user_id: e.discord_user_id,
         discord_username: e.discord_username,
+        discord_avatar: e.discord_avatar || null,
+        entered_at: e.entered_at || null,
       }));
 
       const { data: updated, error } = await supabase
