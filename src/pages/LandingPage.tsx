@@ -139,6 +139,12 @@ const SubscriptionPaymentModal = ({ onClose, priceCents }: { onClose: () => void
   const [whatsapp, setWhatsapp] = useState("");
   const [name, setName] = useState("");
 
+  // Capture ?ref=CODE from URL
+  const refCode = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("ref") || null;
+  }, []);
+
   useEffect(() => {
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
