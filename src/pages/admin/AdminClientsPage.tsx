@@ -507,8 +507,6 @@ const AdminClientsPage = () => {
                                 {tenant.discord_guild_id || "Sem contato"}
                               </span>
                             )}
-                              </span>
-                            )}
                           </div>
                         </div>
                       </div>
