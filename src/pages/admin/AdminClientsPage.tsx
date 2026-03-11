@@ -167,6 +167,7 @@ const AdminClientsPage = () => {
       
       const updateData: any = {
         plan_expires_at: newExpiry.toISOString(),
+        plan: renewPlan,
       };
       // If no plan_started_at yet, set it
       if (!tenant?.plan_started_at) {
