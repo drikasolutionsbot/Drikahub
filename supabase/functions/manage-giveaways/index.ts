@@ -89,14 +89,17 @@ Deno.serve(async (req) => {
             });
             if (res.ok) {
               const msg = await res.json();
-              // Save message_id
               await supabase.from("giveaways").update({ message_id: msg.id }).eq("id", data.id);
-              // Add 🎉 reaction
               await fetch(`https://discord.com/api/v10/channels/${channel_id}/messages/${msg.id}/reactions/%F0%9F%8E%89/@me`, {
                 method: "PUT",
                 headers: { Authorization: `Bot ${botToken}` },
               });
+            } else {
+              const errText = await res.text();
+              console.error("Discord send failed:", res.status, errText);
             }
+          } else {
+            console.error("No bot token available for tenant:", tenant_id);
           }
         } catch (e) {
           console.error("Discord announce failed:", e);
