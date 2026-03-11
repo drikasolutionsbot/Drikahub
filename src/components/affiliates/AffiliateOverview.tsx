@@ -265,7 +265,7 @@ const AffiliateOverview = ({ affiliates, orders, payouts, loading }: Props) => {
           </h3>
           {topAffiliates.length > 0 ? (
             <div className="flex items-center gap-4">
-              <div style={{ filter: "url(#surreal-glow)" }} className="w-1/2">
+              <div style={{ filter: "url(#surreal-glow) url(#surreal-chromatic)" }} className="w-1/2">
                 <ResponsiveContainer width="100%" height={200}>
                   <PieChart>
                     <circle cx="50%" cy="50%" r="90" fill="url(#pieGlow)" />
