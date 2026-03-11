@@ -12,9 +12,9 @@ import { CalendarIcon, Gift, Loader2, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "@/hooks/use-toast";
+import { useDiscordRoles } from "@/hooks/useDiscordRoles";
 
 interface Channel { id: string; name: string; }
-interface Role { id: string; name: string; color: string; discord_role_id?: string; }
 
 interface CreateGiveawayFormProps {
   onCreated: () => void;
@@ -22,6 +22,7 @@ interface CreateGiveawayFormProps {
 
 export default function CreateGiveawayForm({ onCreated }: CreateGiveawayFormProps) {
   const { tenantId } = useTenant();
+  const { roles } = useDiscordRoles();
   const [title, setTitle] = useState("");
   const [prize, setPrize] = useState("");
   const [description, setDescription] = useState("");
@@ -31,20 +32,15 @@ export default function CreateGiveawayForm({ onCreated }: CreateGiveawayFormProp
   const [channelId, setChannelId] = useState("");
   const [requireRoleId, setRequireRoleId] = useState("");
   const [channels, setChannels] = useState<Channel[]>([]);
-  const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingChannels, setLoadingChannels] = useState(false);
 
   useEffect(() => {
     if (!tenantId) return;
     setLoadingChannels(true);
-    Promise.all([
-      supabase.functions.invoke("discord-channels", { body: { tenant_id: tenantId } }),
-      supabase.functions.invoke("manage-roles", { body: { action: "list", tenant_id: tenantId } }),
-    ]).then(([chRes, rolesRes]) => {
-      if (chRes.data?.channels) setChannels(chRes.data.channels);
-      if (Array.isArray(rolesRes.data)) setRoles(rolesRes.data);
-    }).finally(() => setLoadingChannels(false));
+    supabase.functions.invoke("discord-channels", { body: { tenant_id: tenantId } })
+      .then(({ data }) => { if (data?.channels) setChannels(data.channels); })
+      .finally(() => setLoadingChannels(false));
   }, [tenantId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -74,26 +70,25 @@ export default function CreateGiveawayForm({ onCreated }: CreateGiveawayFormProp
           description,
           winners_count: parseInt(winnersCount) || 1,
           ends_at: endsAt.toISOString(),
-          channel_id: channelId || null,
-          require_role_id: requireRoleId || null,
+          channel_id: channelId && channelId !== "none" ? channelId : null,
+          require_role_id: requireRoleId && requireRoleId !== "none" ? requireRoleId : null,
         },
       });
       if (error || data?.error) throw new Error(data?.error || "Erro ao criar sorteio");
       toast({ title: "🎉 Sorteio criado com sucesso!" });
-      setTitle("");
-      setPrize("");
-      setDescription("");
-      setWinnersCount("1");
-      setDate(undefined);
-      setTime("23:59");
-      setChannelId("");
-      setRequireRoleId("");
+      setTitle(""); setPrize(""); setDescription(""); setWinnersCount("1");
+      setDate(undefined); setTime("23:59"); setChannelId(""); setRequireRoleId("");
       onCreated();
     } catch (err: any) {
       toast({ title: err.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
+  };
+
+  const getRoleColor = (color: string | number) => {
+    if (typeof color === "number") return `#${color.toString(16).padStart(6, "0")}`;
+    return color || "#99AAB5";
   };
 
   return (
@@ -119,7 +114,6 @@ export default function CreateGiveawayForm({ onCreated }: CreateGiveawayFormProp
           <Label>Vencedores</Label>
           <Input type="number" min="1" max="20" value={winnersCount} onChange={(e) => setWinnersCount(e.target.value)} />
         </div>
-
         <div className="space-y-2">
           <Label>Data de encerramento *</Label>
           <Popover>
@@ -130,18 +124,10 @@ export default function CreateGiveawayForm({ onCreated }: CreateGiveawayFormProp
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={date}
-                onSelect={setDate}
-                disabled={(d) => d < new Date()}
-                initialFocus
-                className={cn("p-3 pointer-events-auto")}
-              />
+              <Calendar mode="single" selected={date} onSelect={setDate} disabled={(d) => d < new Date()} initialFocus className={cn("p-3 pointer-events-auto")} />
             </PopoverContent>
           </Popover>
         </div>
-
         <div className="space-y-2">
           <Label>Horário</Label>
           <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
@@ -164,7 +150,6 @@ export default function CreateGiveawayForm({ onCreated }: CreateGiveawayFormProp
           </Select>
           <p className="text-xs text-muted-foreground">O embed será enviado automaticamente neste canal</p>
         </div>
-
         <div className="space-y-2">
           <Label className="flex items-center gap-1.5">
             <ShieldCheck className="h-3.5 w-3.5" /> Cargo obrigatório (opcional)
@@ -176,9 +161,9 @@ export default function CreateGiveawayForm({ onCreated }: CreateGiveawayFormProp
             <SelectContent>
               <SelectItem value="none">Nenhum</SelectItem>
               {roles.map((r) => (
-                <SelectItem key={r.id} value={r.discord_role_id || r.id}>
+                <SelectItem key={r.id} value={r.id}>
                   <span className="flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: r.color }} />
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: getRoleColor(r.color) }} />
                     {r.name}
                   </span>
                 </SelectItem>
