@@ -48,6 +48,10 @@ const AdminClientsPage = () => {
   const [editingPlan, setEditingPlan] = useState<string | null>(null);
   const [savingPlan, setSavingPlan] = useState(false);
 
+  // Renew dialog
+  const [renewDialogTenantId, setRenewDialogTenantId] = useState<string | null>(null);
+  const [renewDays, setRenewDays] = useState("30");
+
   // Token generation
   const [tokenLabel, setTokenLabel] = useState("");
   const [generatingToken, setGeneratingToken] = useState<string | null>(null);
