@@ -1182,6 +1182,28 @@ serve(async (req) => {
           .eq("tenant_id", ticket.tenant_id)
           .single();
 
+        // Generate transcript before archiving
+        const channelId = interaction.channel_id || ticket.discord_channel_id;
+        let transcript = "";
+
+        if (channelId) {
+          try {
+            const msgsRes = await fetch(`${DISCORD_API}/channels/${channelId}/messages?limit=100`, {
+              headers: { Authorization: `Bot ${botToken}` },
+            });
+            if (msgsRes.ok) {
+              const msgs = await msgsRes.json();
+              const sorted = msgs.reverse();
+              transcript = sorted.map((m: any) => {
+                const ts = new Date(m.timestamp).toLocaleString("pt-BR");
+                const author = m.author?.username || "Desconhecido";
+                const content = m.content || (m.embeds?.length ? "[embed]" : "[sem conteúdo]");
+                return `[${ts}] ${author}: ${content}`;
+              }).join("\n");
+            }
+          } catch (e) { console.error("Transcript fetch error:", e); }
+        }
+
         if (sc?.ticket_logs_channel_id) {
           const createdAt = new Date(ticket.created_at);
           const closedAt = new Date();
@@ -1215,30 +1237,7 @@ serve(async (req) => {
             headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
             body: JSON.stringify({ embeds: [logEmbed] }),
           });
-        }
 
-        // Generate transcript before archiving
-        const channelId = interaction.channel_id || ticket.discord_channel_id;
-
-        if (sc?.ticket_logs_channel_id && channelId) {
-          let transcript = "";
-          try {
-            const msgsRes = await fetch(`${DISCORD_API}/channels/${channelId}/messages?limit=100`, {
-              headers: { Authorization: `Bot ${botToken}` },
-            });
-            if (msgsRes.ok) {
-              const msgs = await msgsRes.json();
-              const sorted = msgs.reverse();
-              transcript = sorted.map((m: any) => {
-                const ts = new Date(m.timestamp).toLocaleString("pt-BR");
-                const author = m.author?.username || "Desconhecido";
-                const content = m.content || (m.embeds?.length ? "[embed]" : "[sem conteúdo]");
-                return `[${ts}] ${author}: ${content}`;
-              }).join("\n");
-            }
-          } catch (e) { console.error("Transcript fetch error:", e); }
-
-          // Send transcript as file
           if (transcript) {
             const formData = new FormData();
             const blob = new Blob([transcript], { type: "text/plain" });
@@ -1254,6 +1253,30 @@ serve(async (req) => {
             });
           }
         }
+
+        try {
+          const dmChRes = await fetch(`${DISCORD_API}/users/@me/channels`, {
+            method: "POST",
+            headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ recipient_id: ticket.discord_user_id }),
+          });
+
+          if (dmChRes.ok && transcript) {
+            const dmCh = await dmChRes.json();
+            const dmFormData = new FormData();
+            const dmBlob = new Blob([transcript], { type: "text/plain" });
+            dmFormData.append("files[0]", dmBlob, `transcript-${ticket.id.slice(0, 8)}.txt`);
+            dmFormData.append("payload_json", JSON.stringify({
+              content: "📜 Aqui está o transcript do seu ticket encerrado.",
+            }));
+
+            await fetch(`${DISCORD_API}/channels/${dmCh.id}/messages`, {
+              method: "POST",
+              headers: { Authorization: `Bot ${botToken}` },
+              body: dmFormData,
+            });
+          }
+        } catch (e) { console.error("DM transcript error:", e); }
 
         // Archive: send closing message and lock thread
         if (channelId) {
