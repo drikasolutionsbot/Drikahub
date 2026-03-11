@@ -44,7 +44,7 @@ export default function GiveawaysPage() {
   const [editGiveaway, setEditGiveaway] = useState<Giveaway | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
-  const { data: giveaways = [], isLoading } = useQuery<Giveaway[]>({
+  const { data: giveaways = [], isLoading, isFetching, refetch } = useQuery<Giveaway[]>({
     queryKey: ["giveaways", tenantId],
     queryFn: async () => {
       if (!tenantId) return [];
