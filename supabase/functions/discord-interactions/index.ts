@@ -1402,6 +1402,28 @@ async function processPurchase(
 
   console.log("Purchase debug:", { activeProvider: activeProvider?.provider_key, amountBRL, priceCents });
 
+  // ─── FREE PRODUCT: deliver immediately without payment ────
+  if (priceCents <= 0) {
+    // Mark order as paid and trigger delivery
+    await supabase.from("orders").update({ 
+      status: "paid", 
+      payment_provider: "free",
+      updated_at: new Date().toISOString() 
+    }).eq("id", order.id);
+
+    // Trigger delivery via deliver-order
+    try {
+      await fetch(`${supabaseUrl}/functions/v1/deliver-order`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
+        body: JSON.stringify({ order_id: order.id }),
+      });
+    } catch (e) { console.error("Free delivery error:", e); }
+
+    await editFollowup(interaction, botToken, `✅ Pedido **#${order.order_number}** — **${orderName}** entregue gratuitamente! Verifique sua DM.`);
+    return;
+  }
+
   if (activeProvider && amountBRL > 0) {
     const providerKey = activeProvider.provider_key;
     const apiKey = activeProvider.api_key_encrypted;
@@ -1417,7 +1439,6 @@ async function processPurchase(
       brcode = result.brcode;
       paymentId = result.payment_id;
     } else if (providerKey === "efi") {
-      // Generate PIX via Efí using the generate-pix function
       const pixRes = await fetch(`${supabaseUrl}/functions/v1/generate-pix`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
@@ -1479,14 +1500,14 @@ async function processPurchase(
             type: 1,
             components: [
               {
-                type: 2, // Button
-                style: 3, // Green (Success)
+                type: 2,
+                style: 3,
                 label: "✅ Aprovar Pagamento",
                 custom_id: `approve_order:${order.id}`,
               },
               {
                 type: 2,
-                style: 4, // Red (Danger)
+                style: 4,
                 label: "❌ Recusar",
                 custom_id: `reject_order:${order.id}`,
               },
