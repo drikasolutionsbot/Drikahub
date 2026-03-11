@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { tenant_id, channel_id, title, description, button_label, embed_color, image_url } = await req.json();
+    const { tenant_id, channel_id, title, description, button_label, button_style, embed_color, image_url } = await req.json();
 
     if (!tenant_id || !channel_id) {
       return new Response(JSON.stringify({ error: "tenant_id and channel_id required" }), {
