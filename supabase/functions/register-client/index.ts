@@ -63,6 +63,18 @@ Deno.serve(async (req) => {
     const userId = authData.user.id;
     const tenantName = name || email.split("@")[0];
 
+    // Look up referring tenant by ref_code
+    let referredByTenantId: string | null = null;
+    if (ref_code) {
+      const { data: referrer } = await supabase
+        .from("tenants")
+        .select("id")
+        .eq("referral_code", ref_code)
+        .eq("affiliate_active", true)
+        .maybeSingle();
+      if (referrer) referredByTenantId = referrer.id;
+    }
+
     // 2. Create tenant with 4-day trial
     const now = new Date();
     const trialExpires = new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000);
@@ -75,6 +87,7 @@ Deno.serve(async (req) => {
         plan: "free",
         plan_started_at: now.toISOString(),
         plan_expires_at: trialExpires.toISOString(),
+        referred_by_tenant_id: referredByTenantId,
       })
       .select()
       .single();

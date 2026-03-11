@@ -47,6 +47,7 @@ const SignupPage = () => {
           email: email.trim(),
           password,
           whatsapp: whatsapp.replace(/\D/g, "") || null,
+          ref_code: refCode,
         },
       });
 
