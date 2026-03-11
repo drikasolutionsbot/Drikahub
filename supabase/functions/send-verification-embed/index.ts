@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { tenant_id, channel_id, title, description, button_label, embed_color, image_url } = await req.json();
+    const { tenant_id, channel_id, title, description, button_label, button_style, embed_color, image_url } = await req.json();
 
     if (!tenant_id || !channel_id) {
       return new Response(JSON.stringify({ error: "tenant_id and channel_id required" }), {
@@ -54,6 +54,8 @@ Deno.serve(async (req) => {
       embed.image = { url: image_url };
     }
 
+    // Verification button is a URL button (style 5) since it redirects to verification page
+    // URL buttons MUST use style 5 per Discord API - no other style is allowed with url
     const payload: any = {
       embeds: [embed],
       components: [

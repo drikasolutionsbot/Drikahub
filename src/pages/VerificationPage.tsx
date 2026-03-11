@@ -166,6 +166,7 @@ const VerificationPage = () => {
           title: config.verify_title,
           description: config.verify_description,
           button_label: config.verify_button_label,
+          button_style: config.verify_button_style,
           embed_color: config.verify_embed_color,
           image_url: config.verify_image_url || null,
         },
