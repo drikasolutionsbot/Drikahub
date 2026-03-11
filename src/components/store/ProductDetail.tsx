@@ -18,6 +18,7 @@ import { ProductDetailGeneral } from "./ProductDetailGeneral";
 import { ProductDetailFields } from "./ProductDetailFields";
 import { ProductDetailCoupons } from "./ProductDetailCoupons";
 import { ProductDetailHooks } from "./ProductDetailHooks";
+import { ProductDetailStock } from "./ProductDetailStock";
 import { PostMessageModal } from "./PostMessageModal";
 import { ProductDiscordPreview } from "./ProductDiscordPreview";
 import { supabase } from "@/integrations/supabase/client";
