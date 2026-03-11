@@ -68,6 +68,10 @@ serve(async (req) => {
 
     const referralCode = crypto.randomUUID().replace(/-/g, "").substring(0, 8).toUpperCase();
 
+    // Extract Discord info from the authenticated user
+    const discordUsername = user.user_metadata?.full_name || user.user_metadata?.name || user.user_metadata?.user_name || null;
+    const discordId = user.user_metadata?.provider_id || null;
+
     const { data: tenant, error: tenantError } = await supabaseAdmin
       .from("tenants")
       .insert({
@@ -80,6 +84,8 @@ serve(async (req) => {
         plan_expires_at: trialEnd.toISOString(),
         referral_code: referralCode,
         referred_by_tenant_id: body.referred_by_tenant_id || null,
+        owner_discord_username: discordUsername,
+        owner_discord_id: discordId,
       })
       .select()
       .single();

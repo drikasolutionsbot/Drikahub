@@ -1807,6 +1807,8 @@ export type Database = {
           id: string
           logo_url: string | null
           name: string
+          owner_discord_id: string | null
+          owner_discord_username: string | null
           pix_key: string | null
           pix_key_type: string | null
           plan: string | null
@@ -1845,6 +1847,8 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name: string
+          owner_discord_id?: string | null
+          owner_discord_username?: string | null
           pix_key?: string | null
           pix_key_type?: string | null
           plan?: string | null
@@ -1883,6 +1887,8 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name?: string
+          owner_discord_id?: string | null
+          owner_discord_username?: string | null
           pix_key?: string | null
           pix_key_type?: string | null
           plan?: string | null

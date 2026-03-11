@@ -12,7 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { Plus, Key, Copy, Eye, EyeOff, Loader2, Users, Crown, Search, Settings, Mail, Phone, Calendar, CalendarClock, ShieldCheck, ShieldOff, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { Plus, Key, Copy, Eye, EyeOff, Loader2, Users, Crown, Search, Settings, Mail, Phone, Calendar, CalendarClock, ShieldCheck, ShieldOff, Download, FileSpreadsheet, FileText, AtSign } from "lucide-react";
 import TrashIcon from "@/components/ui/trash-icon";
 import { logAudit } from "@/lib/auditLog";
 import * as XLSX from "xlsx";
@@ -86,6 +86,7 @@ const AdminClientsPage = () => {
       !searchQuery.trim() ||
       t.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.discord_guild_id?.includes(searchQuery) ||
+      t.owner_discord_username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.id?.includes(searchQuery);
     const matchesPlan = planFilter === "all" || (t.plan || "free") === planFilter;
     return matchesSearch && matchesPlan;
@@ -476,6 +477,12 @@ const AdminClientsPage = () => {
                             )}
                           </div>
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                            {tenant.owner_discord_username && (
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <AtSign className="h-3 w-3" /> {tenant.owner_discord_username}
+                                {tenant.owner_discord_id && <span className="text-muted-foreground/50 text-[10px]">({tenant.owner_discord_id})</span>}
+                              </span>
+                            )}
                             {tenant.email && (
                               <span className="text-xs text-muted-foreground flex items-center gap-1">
                                 <Mail className="h-3 w-3" /> {tenant.email}
@@ -496,7 +503,7 @@ const AdminClientsPage = () => {
                                 <CalendarClock className="h-3 w-3" /> Vence: {format(new Date(tenant.plan_expires_at), "dd/MM/yyyy")}
                               </span>
                             )}
-                            {!tenant.email && !tenant.whatsapp && !isPro && (
+                            {!tenant.owner_discord_username && !tenant.email && !tenant.whatsapp && !isPro && (
                               <span className="text-xs text-muted-foreground font-mono">
                                 {tenant.discord_guild_id || "Sem contato"}
                               </span>
