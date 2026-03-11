@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   Plus, Users, Copy, Check, Search, Link2, BarChart3,
   Percent, Power, PowerOff, Edit2, Mail, Phone, MessageCircle,
-  Calendar, Hash, ExternalLink,
+  Calendar, Hash, ExternalLink, DollarSign,
 } from "lucide-react";
 import TrashIcon from "@/components/ui/trash-icon";
 import { Button } from "@/components/ui/button";
