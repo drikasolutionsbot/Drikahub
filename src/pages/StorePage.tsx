@@ -24,6 +24,11 @@ interface Product {
   banner_url?: string | null;
   auto_delivery?: boolean;
   category_id?: string | null;
+  enable_credits?: boolean;
+  show_stock?: boolean;
+  show_sold?: boolean;
+  enable_instructions?: boolean;
+  button_style?: string;
 }
 
 const StorePage = () => {
