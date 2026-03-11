@@ -255,6 +255,51 @@ serve(async (req) => {
         });
       }
 
+      case "sync_from_discord": {
+        // Fetch all Discord roles
+        const syncRes = await fetch(
+          `https://discord.com/api/v10/guilds/${guildId}/roles`,
+          { headers: { Authorization: `Bot ${botToken}` } }
+        );
+        if (!syncRes.ok) {
+          const text = await syncRes.text();
+          throw new Error(`Discord API error [${syncRes.status}]: ${text}`);
+        }
+        const allDiscordRoles = await syncRes.json();
+        const syncableRoles = allDiscordRoles.filter((r: any) => r.name !== "@everyone" && !r.managed);
+
+        // Get existing tenant_roles with discord_role_id
+        const { data: existingRoles } = await supabase
+          .from("tenant_roles")
+          .select("discord_role_id")
+          .eq("tenant_id", tenant_id);
+
+        const existingIds = new Set((existingRoles || []).map((r: any) => r.discord_role_id));
+
+        const toInsert = syncableRoles
+          .filter((r: any) => !existingIds.has(r.id))
+          .map((r: any) => ({
+            tenant_id,
+            discord_role_id: r.id,
+            name: r.name,
+            color: r.color === 0 ? "#99AAB5" : `#${r.color.toString(16).padStart(6, "0")}`,
+            synced: true,
+          }));
+
+        let inserted = 0;
+        if (toInsert.length > 0) {
+          const { error: insertErr } = await supabase
+            .from("tenant_roles")
+            .insert(toInsert);
+          if (insertErr) throw insertErr;
+          inserted = toInsert.length;
+        }
+
+        return new Response(JSON.stringify({ success: true, synced: inserted, total: syncableRoles.length }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       // Delete directly by Discord role ID (used by RolesTab)
       case "delete_discord": {
         const { role_id } = params;

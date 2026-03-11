@@ -161,11 +161,34 @@ const RolesPage = () => {
   const [saving, setSaving] = useState<string | null>(null);
   const [expandedRole, setExpandedRole] = useState<string | null>(null);
   const [editDrafts, setEditDrafts] = useState<Record<string, Partial<TenantRole>>>({});
+  const [syncing, setSyncing] = useState(false);
 
   // Discord permissions draft: { roleId: "permissionsBitString" }
   const [discordPermDrafts, setDiscordPermDrafts] = useState<Record<string, string>>({});
   const [discordPermOriginal, setDiscordPermOriginal] = useState<Record<string, string>>({});
   const [savingDiscord, setSavingDiscord] = useState<string | null>(null);
+
+  const handleSyncFromDiscord = async () => {
+    if (!tenantId) return;
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-roles", {
+        body: { action: "sync_from_discord", tenant_id: tenantId },
+      });
+      if (error || data?.error) throw new Error(data?.error || "Erro ao sincronizar");
+      if (data.synced === 0) {
+        toast.info("Todos os cargos já estão sincronizados!");
+      } else {
+        toast.success(`${data.synced} cargo(s) importado(s) do Discord!`);
+      }
+      queryClient.invalidateQueries({ queryKey: ["tenant-roles", tenantId] });
+      queryClient.invalidateQueries({ queryKey: ["discord-roles-raw", guildId] });
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   // Fetch tenant roles from DB
   const { data: roles = [], isLoading } = useQuery<TenantRole[]>({
@@ -340,6 +363,10 @@ const RolesPage = () => {
           </div>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleSyncFromDiscord} disabled={syncing}>
+            {syncing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-1" />}
+            Sincronizar com Discord
+          </Button>
           <Button variant="outline" size="sm" onClick={() => {
             queryClient.invalidateQueries({ queryKey: ["tenant-roles", tenantId] });
             queryClient.invalidateQueries({ queryKey: ["discord-roles-raw", guildId] });
