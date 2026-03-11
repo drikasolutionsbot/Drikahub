@@ -244,11 +244,14 @@ serve(async (req) => {
 
       // ─── SELECT VARIATION (from dropdown) ─────────────────
       if (customId.startsWith("select_variation:")) {
+        console.log("SELECT_VARIATION handler entered, customId:", customId);
         const values = interaction.data?.values || [];
+        console.log("Selected values:", JSON.stringify(values));
         if (values.length === 0) return ok();
 
         const selectedValue = values[0]; // format: buy_field:productId:fieldId
         const parts = selectedValue.split(":");
+        console.log("Parsed parts:", JSON.stringify(parts));
         if (parts.length < 3) return ok();
 
         const productId = parts[1];
