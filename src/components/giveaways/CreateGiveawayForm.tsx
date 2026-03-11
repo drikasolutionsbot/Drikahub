@@ -6,13 +6,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { CalendarIcon, Gift, Loader2, ShieldCheck } from "lucide-react";
+import { CalendarIcon, Gift, Loader2, ShieldCheck, ChevronDown, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "@/hooks/use-toast";
 import { useDiscordRoles } from "@/hooks/useDiscordRoles";
+import GiveawayEmbedPreview, { defaultEmbedConfig, type GiveawayEmbedConfig } from "./GiveawayEmbedPreview";
+import GiveawayEmbedConfigForm from "./GiveawayEmbedConfig";
 
 interface Channel { id: string; name: string; }
 
@@ -34,6 +37,9 @@ export default function CreateGiveawayForm({ onCreated }: CreateGiveawayFormProp
   const [channels, setChannels] = useState<Channel[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingChannels, setLoadingChannels] = useState(false);
+  const [embedConfig, setEmbedConfig] = useState<GiveawayEmbedConfig>({ ...defaultEmbedConfig });
+  const [embedOpen, setEmbedOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(true);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -72,12 +78,14 @@ export default function CreateGiveawayForm({ onCreated }: CreateGiveawayFormProp
           ends_at: endsAt.toISOString(),
           channel_id: channelId && channelId !== "none" ? channelId : null,
           require_role_id: requireRoleId && requireRoleId !== "none" ? requireRoleId : null,
+          embed_config: embedConfig,
         },
       });
       if (error || data?.error) throw new Error(data?.error || "Erro ao criar sorteio");
       toast({ title: "🎉 Sorteio criado com sucesso!" });
       setTitle(""); setPrize(""); setDescription(""); setWinnersCount("1");
       setDate(undefined); setTime("23:59"); setChannelId(""); setRequireRoleId("");
+      setEmbedConfig({ ...defaultEmbedConfig });
       onCreated();
     } catch (err: any) {
       toast({ title: err.message, variant: "destructive" });
@@ -91,93 +99,132 @@ export default function CreateGiveawayForm({ onCreated }: CreateGiveawayFormProp
     return color || "#99AAB5";
   };
 
+  const giveawayData = { title, prize, description, winnersCount, date, time };
+
   return (
-    <form onSubmit={handleSubmit} className="max-w-2xl space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="title">Título *</Label>
-          <Input id="title" placeholder="Ex: Sorteio de Nitro" value={title} onChange={(e) => setTitle(e.target.value)} />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="prize">Prêmio *</Label>
-          <Input id="prize" placeholder="Ex: Discord Nitro 1 mês" value={prize} onChange={(e) => setPrize(e.target.value)} />
-        </div>
-      </div>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Left: Form */}
+        <div className="space-y-6">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="title">Título *</Label>
+              <Input id="title" placeholder="Ex: Sorteio de Nitro" value={title} onChange={(e) => setTitle(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="prize">Prêmio *</Label>
+              <Input id="prize" placeholder="Ex: Discord Nitro 1 mês" value={prize} onChange={(e) => setPrize(e.target.value)} />
+            </div>
+          </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="description">Descrição (opcional)</Label>
-        <Textarea id="description" placeholder="Detalhes do sorteio..." value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
-      </div>
+          <div className="space-y-2">
+            <Label htmlFor="description">Descrição (opcional)</Label>
+            <Textarea id="description" placeholder="Detalhes do sorteio..." value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
+          </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="space-y-2">
-          <Label>Vencedores</Label>
-          <Input type="number" min="1" max="20" value={winnersCount} onChange={(e) => setWinnersCount(e.target.value)} />
-        </div>
-        <div className="space-y-2">
-          <Label>Data de encerramento *</Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}>
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {date ? format(date, "dd/MM/yyyy") : "Selecione"}
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="space-y-2">
+              <Label>Vencedores</Label>
+              <Input type="number" min="1" max="20" value={winnersCount} onChange={(e) => setWinnersCount(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Data de encerramento *</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {date ? format(date, "dd/MM/yyyy") : "Selecione"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={date} onSelect={setDate} disabled={(d) => { const today = new Date(); today.setHours(0,0,0,0); return d < today; }} initialFocus className={cn("p-3 pointer-events-auto")} />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="space-y-2">
+              <Label>Horário</Label>
+              <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Canal do Discord (opcional)</Label>
+              <Select value={channelId} onValueChange={setChannelId}>
+                <SelectTrigger>
+                  <SelectValue placeholder={loadingChannels ? "Carregando..." : "Selecione um canal"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum</SelectItem>
+                  {channels.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>#{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">O embed será enviado automaticamente neste canal</p>
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5">
+                <ShieldCheck className="h-3.5 w-3.5" /> Cargo obrigatório (opcional)
+              </Label>
+              <Select value={requireRoleId} onValueChange={setRequireRoleId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Nenhum (todos participam)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum</SelectItem>
+                  {roles.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      <span className="flex items-center gap-2">
+                        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: getRoleColor(r.color) }} />
+                        {r.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Apenas membros com este cargo poderão participar</p>
+            </div>
+          </div>
+
+          {/* Embed customization collapsible */}
+          <Collapsible open={embedOpen} onOpenChange={setEmbedOpen}>
+            <CollapsibleTrigger asChild>
+              <Button type="button" variant="outline" className="w-full justify-between">
+                <span className="flex items-center gap-2">
+                  <Eye className="h-4 w-4" /> Personalizar Embed do Discord
+                </span>
+                <ChevronDown className={cn("h-4 w-4 transition-transform", embedOpen && "rotate-180")} />
               </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar mode="single" selected={date} onSelect={setDate} disabled={(d) => { const today = new Date(); today.setHours(0,0,0,0); return d < today; }} initialFocus className={cn("p-3 pointer-events-auto")} />
-            </PopoverContent>
-          </Popover>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-4">
+              <GiveawayEmbedConfigForm config={embedConfig} onChange={setEmbedConfig} />
+            </CollapsibleContent>
+          </Collapsible>
+
+          <Button type="submit" disabled={loading} className="w-full sm:w-auto">
+            {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Gift className="h-4 w-4 mr-2" />}
+            Criar Sorteio
+          </Button>
         </div>
-        <div className="space-y-2">
-          <Label>Horário</Label>
-          <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+
+        {/* Right: Preview */}
+        <div className="space-y-3">
+          <Collapsible open={previewOpen} onOpenChange={setPreviewOpen}>
+            <CollapsibleTrigger asChild>
+              <Button type="button" variant="ghost" size="sm" className="w-full justify-between text-muted-foreground">
+                <span className="flex items-center gap-2">
+                  <Eye className="h-4 w-4" /> Preview do Discord
+                </span>
+                <ChevronDown className={cn("h-4 w-4 transition-transform", previewOpen && "rotate-180")} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <GiveawayEmbedPreview config={embedConfig} giveawayData={giveawayData} />
+            </CollapsibleContent>
+          </Collapsible>
         </div>
       </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label>Canal do Discord (opcional)</Label>
-          <Select value={channelId} onValueChange={setChannelId}>
-            <SelectTrigger>
-              <SelectValue placeholder={loadingChannels ? "Carregando..." : "Selecione um canal"} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Nenhum</SelectItem>
-              {channels.map((c) => (
-                <SelectItem key={c.id} value={c.id}>#{c.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">O embed será enviado automaticamente neste canal</p>
-        </div>
-        <div className="space-y-2">
-          <Label className="flex items-center gap-1.5">
-            <ShieldCheck className="h-3.5 w-3.5" /> Cargo obrigatório (opcional)
-          </Label>
-          <Select value={requireRoleId} onValueChange={setRequireRoleId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Nenhum (todos participam)" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Nenhum</SelectItem>
-              {roles.map((r) => (
-                <SelectItem key={r.id} value={r.id}>
-                  <span className="flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: getRoleColor(r.color) }} />
-                    {r.name}
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">Apenas membros com este cargo poderão participar</p>
-        </div>
-      </div>
-
-      <Button type="submit" disabled={loading} className="w-full sm:w-auto">
-        {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Gift className="h-4 w-4 mr-2" />}
-        Criar Sorteio
-      </Button>
     </form>
   );
 }

@@ -14,7 +14,45 @@ async function getBotToken(supabase: any, tenant_id: string): Promise<string | n
   return tenant?.bot_token_encrypted || Deno.env.get("DISCORD_BOT_TOKEN") || null;
 }
 
-// Fetch 🎉 reactions from Discord message and sync to giveaway_entries
+function buildGiveawayEmbed(giveaway: any, embedConfig: any) {
+  const cfg = embedConfig && Object.keys(embedConfig).length > 0 ? embedConfig : null;
+
+  const colorHex = cfg?.color || "#FEE75C";
+  const colorInt = parseInt(colorHex.replace("#", ""), 16);
+
+  const titleTemplate = cfg?.title || "🎉 SORTEIO: {title}";
+  const descTemplate = cfg?.description || "**Prêmio:** {prize}\n\n{description}\n\n⏰ **Encerra:** {ends_at}\n👥 **Vencedores:** {winners_count}";
+  const footerTemplate = cfg?.footer || "Reaja com 🎉 para participar!";
+
+  const endsAtTimestamp = Math.floor(new Date(giveaway.ends_at).getTime() / 1000);
+
+  function replacePlaceholders(template: string): string {
+    return template
+      .replace(/{title}/g, giveaway.title || "")
+      .replace(/{prize}/g, giveaway.prize || "")
+      .replace(/{description}/g, giveaway.description || "Participe reagindo abaixo!")
+      .replace(/{winners_count}/g, String(giveaway.winners_count || 1))
+      .replace(/{ends_at}/g, `<t:${endsAtTimestamp}:R>`);
+  }
+
+  const embed: any = {
+    color: colorInt,
+    title: replacePlaceholders(titleTemplate),
+    description: replacePlaceholders(descTemplate),
+    footer: { text: replacePlaceholders(footerTemplate) },
+    timestamp: new Date().toISOString(),
+  };
+
+  if (cfg?.thumbnail_url) {
+    embed.thumbnail = { url: cfg.thumbnail_url };
+  }
+  if (cfg?.image_url) {
+    embed.image = { url: cfg.image_url };
+  }
+
+  return embed;
+}
+
 async function syncEntriesFromDiscord(
   supabase: any,
   botToken: string,
@@ -24,7 +62,6 @@ async function syncEntriesFromDiscord(
   if (!giveaway.channel_id || !giveaway.message_id) return;
 
   try {
-    // Fetch all users who reacted with 🎉 (paginate with after param)
     const allUsers: any[] = [];
     let after = "0";
     while (true) {
@@ -33,13 +70,11 @@ async function syncEntriesFromDiscord(
         headers: { Authorization: `Bot ${botToken}` },
       });
       if (!res.ok) {
-        const errText = await res.text();
-        console.error("Discord reactions fetch failed:", res.status, errText);
+        console.error("Discord reactions fetch failed:", res.status, await res.text());
         break;
       }
       const users = await res.json();
       if (!Array.isArray(users) || users.length === 0) break;
-      // Filter out bots
       for (const u of users) {
         if (!u.bot) allUsers.push(u);
       }
@@ -49,7 +84,6 @@ async function syncEntriesFromDiscord(
 
     if (allUsers.length === 0) return;
 
-    // Get existing entries
     const { data: existing } = await supabase
       .from("giveaway_entries")
       .select("discord_user_id")
@@ -58,7 +92,6 @@ async function syncEntriesFromDiscord(
 
     const existingIds = new Set((existing || []).map((e: any) => e.discord_user_id));
 
-    // Insert new entries
     const newEntries = allUsers
       .filter((u) => !existingIds.has(u.id))
       .map((u) => ({
@@ -75,7 +108,6 @@ async function syncEntriesFromDiscord(
       await supabase.from("giveaway_entries").insert(newEntries);
     }
 
-    // Remove entries for users who un-reacted
     const reactedIds = new Set(allUsers.map((u: any) => u.id));
     const toRemove = (existing || [])
       .filter((e: any) => !reactedIds.has(e.discord_user_id))
@@ -110,7 +142,7 @@ Deno.serve(async (req) => {
     const json = (data: any) =>
       new Response(JSON.stringify(data), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    // List giveaways — auto-sync entries from Discord reactions
+    // List giveaways
     if (action === "list") {
       const { data, error } = await supabase
         .from("giveaways")
@@ -119,7 +151,6 @@ Deno.serve(async (req) => {
         .order("created_at", { ascending: false });
       if (error) throw error;
 
-      // Sync entries from Discord for active giveaways with message_id
       const botToken = await getBotToken(supabase, tenant_id);
       if (botToken) {
         const activeWithMsg = (data || []).filter(
@@ -130,7 +161,6 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Get entry counts (after sync)
       const ids = (data || []).map((g: any) => g.id);
       let entryCounts: Record<string, number> = {};
       if (ids.length > 0) {
@@ -147,7 +177,7 @@ Deno.serve(async (req) => {
       return json(result);
     }
 
-    // Sync entries manually for a specific giveaway
+    // Sync entries manually
     if (action === "sync_entries") {
       const { giveaway_id } = body;
       const { data: giveaway } = await supabase
@@ -174,7 +204,7 @@ Deno.serve(async (req) => {
 
     // Create giveaway
     if (action === "create") {
-      const { title, description, prize, winners_count, ends_at, channel_id, require_role_id, created_by } = body;
+      const { title, description, prize, winners_count, ends_at, channel_id, require_role_id, created_by, embed_config } = body;
       if (!title || !prize || !ends_at) throw new Error("title, prize, ends_at required");
       const { data, error } = await supabase
         .from("giveaways")
@@ -182,6 +212,7 @@ Deno.serve(async (req) => {
           tenant_id, title, description: description || "", prize,
           winners_count: winners_count || 1, ends_at, channel_id,
           require_role_id, created_by,
+          embed_config: embed_config || {},
         })
         .select()
         .single();
@@ -192,13 +223,7 @@ Deno.serve(async (req) => {
         try {
           const botToken = await getBotToken(supabase, tenant_id);
           if (botToken) {
-            const embed = {
-              color: 0xFEE75C,
-              title: `🎉 SORTEIO: ${title}`,
-              description: `**Prêmio:** ${prize}\n\n${description || "Participe reagindo abaixo!"}\n\n⏰ **Encerra:** <t:${Math.floor(new Date(ends_at).getTime() / 1000)}:R>\n👥 **Vencedores:** ${winners_count || 1}`,
-              footer: { text: "Reaja com 🎉 para participar!" },
-              timestamp: new Date().toISOString(),
-            };
+            const embed = buildGiveawayEmbed(data, embed_config);
             const res = await fetch(`https://discord.com/api/v10/channels/${channel_id}/messages`, {
               method: "POST",
               headers: {
@@ -216,11 +241,8 @@ Deno.serve(async (req) => {
                 headers: { Authorization: `Bot ${botToken}` },
               });
             } else {
-              const errText = await res.text();
-              console.error("Discord send failed:", res.status, errText);
+              console.error("Discord send failed:", res.status, await res.text());
             }
-          } else {
-            console.error("No bot token available for tenant:", tenant_id);
           }
         } catch (e) {
           console.error("Discord announce failed:", e);
@@ -244,13 +266,33 @@ Deno.serve(async (req) => {
         .select()
         .single();
       if (error) throw error;
+
+      // Update Discord message if exists
+      if (data.message_id && data.channel_id) {
+        try {
+          const botToken = await getBotToken(supabase, tenant_id);
+          if (botToken) {
+            const embed = buildGiveawayEmbed(data, data.embed_config);
+            await fetch(`https://discord.com/api/v10/channels/${data.channel_id}/messages/${data.message_id}`, {
+              method: "PATCH",
+              headers: {
+                Authorization: `Bot ${botToken}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ embeds: [embed] }),
+            });
+          }
+        } catch (e) {
+          console.error("Discord message update failed:", e);
+        }
+      }
+
       return json(data);
     }
 
     // Delete giveaway
     if (action === "delete") {
       const { giveaway_id } = body;
-      // Delete entries first
       await supabase.from("giveaway_entries").delete().eq("giveaway_id", giveaway_id).eq("tenant_id", tenant_id);
       const { error } = await supabase.from("giveaways").delete().eq("id", giveaway_id).eq("tenant_id", tenant_id);
       if (error) throw error;
@@ -290,7 +332,7 @@ Deno.serve(async (req) => {
       return json({ success: true });
     }
 
-    // Draw winners — sync entries first, then pick
+    // Draw winners
     if (action === "draw") {
       const { giveaway_id } = body;
       if (!giveaway_id) throw new Error("giveaway_id required");
@@ -303,7 +345,6 @@ Deno.serve(async (req) => {
         .single();
       if (gErr || !giveaway) throw new Error("Giveaway not found");
 
-      // Sync entries from Discord before drawing
       const botToken = await getBotToken(supabase, tenant_id);
       if (botToken && giveaway.message_id) {
         await syncEntriesFromDiscord(supabase, botToken, giveaway, tenant_id);

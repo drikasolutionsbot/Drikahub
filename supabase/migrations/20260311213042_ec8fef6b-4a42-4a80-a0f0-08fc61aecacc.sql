@@ -1,0 +1,1 @@
+ALTER TABLE public.giveaways ADD COLUMN IF NOT EXISTS embed_config jsonb NOT NULL DEFAULT '{}'::jsonb;
