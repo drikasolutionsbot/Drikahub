@@ -1640,9 +1640,17 @@ function respondImmediate(interaction: any, content: string | Record<string, any
 // Edit the deferred followup
 async function editFollowup(interaction: any, botToken: string, content: string | Record<string, any>) {
   const payload = typeof content === "string" ? { content, components: [] } : { ...content, components: content.components || [] };
-  await fetch(`${DISCORD_API}/webhooks/${interaction.application_id}/${interaction.token}/messages/@original`, {
+  const url = `${DISCORD_API}/webhooks/${interaction.application_id}/${interaction.token}/messages/@original`;
+  console.log("editFollowup URL:", url);
+  const res = await fetch(url, {
     method: "PATCH",
     headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
+  const resText = await res.text();
+  if (!res.ok) {
+    console.error("editFollowup FAILED:", res.status, resText);
+  } else {
+    console.log("editFollowup OK:", res.status);
+  }
 }
