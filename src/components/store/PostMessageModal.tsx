@@ -79,8 +79,10 @@ export const PostMessageModal = ({
   useEffect(() => {
     if (open) {
       fetchChannels();
-      // Fetch embed color from store config
-      if (tenantId) {
+      // Use external color if provided, otherwise fetch from store config
+      if (externalEmbedColor) {
+        setEmbedColor(externalEmbedColor);
+      } else if (tenantId) {
         supabase.functions.invoke("manage-store-config", {
           body: { action: "get", tenant_id: tenantId },
         }).then(({ data }) => {
