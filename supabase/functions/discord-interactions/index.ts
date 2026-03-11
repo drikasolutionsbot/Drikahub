@@ -135,6 +135,324 @@ serve(async (req) => {
     });
   }
 
+  // Type 2: APPLICATION_COMMAND (slash commands)
+  if (interaction.type === 2) {
+    const commandName = interaction.data?.name || "";
+    const userId = interaction.member?.user?.id || interaction.user?.id;
+    const username = interaction.member?.user?.username || interaction.user?.username;
+    const guildId = interaction.guild_id;
+    const channelId = interaction.channel_id;
+    const options = interaction.data?.options || [];
+    const getOption = (name: string) => options.find((o: any) => o.name === name)?.value;
+
+    try {
+      // ─── /clear - Limpa mensagens do canal ────────────────
+      if (commandName === "clear") {
+        const amount = getOption("quantidade") || getOption("amount") || 10;
+        const count = Math.min(Math.max(Number(amount), 1), 100);
+
+        // Check MANAGE_MESSAGES permission (bit 13 = 8192)
+        const memberPerms = BigInt(interaction.member?.permissions || "0");
+        if (!(memberPerms & BigInt(0x2000)) && !(memberPerms & BigInt(0x8))) {
+          return respondImmediate(interaction, "❌ Você não tem permissão para limpar mensagens.");
+        }
+
+        // Defer ephemeral
+        await respondDeferred(interaction, botToken);
+
+        // Fetch messages
+        const msgsRes = await fetch(`${DISCORD_API}/channels/${channelId}/messages?limit=${count}`, {
+          headers: { Authorization: `Bot ${botToken}` },
+        });
+
+        if (!msgsRes.ok) {
+          await editFollowup(interaction, botToken, "❌ Não foi possível buscar as mensagens.");
+          return ok();
+        }
+
+        const msgs = await msgsRes.json();
+        if (!Array.isArray(msgs) || msgs.length === 0) {
+          await editFollowup(interaction, botToken, "ℹ️ Nenhuma mensagem encontrada.");
+          return ok();
+        }
+
+        // Filter messages < 14 days old (Discord bulk delete limit)
+        const twoWeeksAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
+        const deletable = msgs.filter((m: any) => new Date(m.timestamp).getTime() > twoWeeksAgo);
+
+        if (deletable.length === 0) {
+          await editFollowup(interaction, botToken, "ℹ️ Nenhuma mensagem recente encontrada para deletar.");
+          return ok();
+        }
+
+        if (deletable.length === 1) {
+          await fetch(`${DISCORD_API}/channels/${channelId}/messages/${deletable[0].id}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bot ${botToken}` },
+          });
+        } else {
+          await fetch(`${DISCORD_API}/channels/${channelId}/messages/bulk-delete`, {
+            method: "POST",
+            headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ messages: deletable.map((m: any) => m.id) }),
+          });
+        }
+
+        await editFollowup(interaction, botToken, `✅ ${deletable.length} mensagem(ns) deletada(s)!`);
+        return ok();
+      }
+
+      // ─── /ban - Bane um usuário ───────────────────────────
+      if (commandName === "ban") {
+        const targetUser = getOption("usuario") || getOption("user");
+        const reason = getOption("motivo") || getOption("reason") || "Sem motivo especificado";
+
+        const memberPerms = BigInt(interaction.member?.permissions || "0");
+        if (!(memberPerms & BigInt(0x4))) {
+          return respondImmediate(interaction, "❌ Você não tem permissão para banir membros.");
+        }
+
+        if (!targetUser) return respondImmediate(interaction, "❌ Especifique um usuário.");
+
+        await respondDeferred(interaction, botToken);
+
+        const banRes = await fetch(`${DISCORD_API}/guilds/${guildId}/bans/${targetUser}`, {
+          method: "PUT",
+          headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ delete_message_seconds: 604800 }),
+        });
+
+        if (!banRes.ok) {
+          const errText = await banRes.text();
+          await editFollowup(interaction, botToken, `❌ Erro ao banir: ${banRes.status}`);
+          return ok();
+        }
+
+        await editFollowup(interaction, botToken, {
+          embeds: [{
+            title: "🔨 Usuário Banido",
+            description: `<@${targetUser}> foi banido por <@${userId}>.`,
+            fields: [{ name: "Motivo", value: String(reason) }],
+            color: 0xED4245,
+            timestamp: new Date().toISOString(),
+          }],
+        });
+        return ok();
+      }
+
+      // ─── /kick - Expulsa um usuário ───────────────────────
+      if (commandName === "kick") {
+        const targetUser = getOption("usuario") || getOption("user");
+        const reason = getOption("motivo") || getOption("reason") || "Sem motivo especificado";
+
+        const memberPerms = BigInt(interaction.member?.permissions || "0");
+        if (!(memberPerms & BigInt(0x2))) {
+          return respondImmediate(interaction, "❌ Você não tem permissão para expulsar membros.");
+        }
+
+        if (!targetUser) return respondImmediate(interaction, "❌ Especifique um usuário.");
+
+        await respondDeferred(interaction, botToken);
+
+        const kickRes = await fetch(`${DISCORD_API}/guilds/${guildId}/members/${targetUser}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
+        });
+
+        if (!kickRes.ok) {
+          await editFollowup(interaction, botToken, `❌ Erro ao expulsar: ${kickRes.status}`);
+          return ok();
+        }
+
+        await editFollowup(interaction, botToken, {
+          embeds: [{
+            title: "👢 Usuário Expulso",
+            description: `<@${targetUser}> foi expulso por <@${userId}>.`,
+            fields: [{ name: "Motivo", value: String(reason) }],
+            color: 0xFEE75C,
+            timestamp: new Date().toISOString(),
+          }],
+        });
+        return ok();
+      }
+
+      // ─── /ticket - Abre um ticket ─────────────────────────
+      if (commandName === "ticket") {
+        // Find tenant by guild_id
+        const { data: tenant } = await supabase
+          .from("tenants")
+          .select("id")
+          .eq("discord_guild_id", guildId)
+          .single();
+
+        if (!tenant) return respondImmediate(interaction, "❌ Servidor não configurado.");
+
+        // Simulate ticket_open button click by redirecting logic
+        await respondDeferred(interaction, botToken);
+
+        const { data: existingTickets } = await supabase
+          .from("tickets")
+          .select("id")
+          .eq("tenant_id", tenant.id)
+          .eq("discord_user_id", userId)
+          .in("status", ["open", "in_progress"]);
+
+        if (existingTickets && existingTickets.length > 0) {
+          await editFollowup(interaction, botToken, "⚠️ Você já possui um ticket aberto.");
+          return ok();
+        }
+
+        const { data: storeConfig } = await supabase
+          .from("store_configs")
+          .select("ticket_channel_id, ticket_embed_title, ticket_embed_description, ticket_embed_color, ticket_embed_footer, ticket_embed_button_label, ticket_embed_button_style")
+          .eq("tenant_id", tenant.id)
+          .single();
+
+        let parentChannelId = storeConfig?.ticket_channel_id || channelId;
+
+        // If it's a category, find first text channel
+        if (parentChannelId && parentChannelId !== channelId) {
+          try {
+            const chInfoRes = await fetch(`${DISCORD_API}/channels/${parentChannelId}`, {
+              headers: { Authorization: `Bot ${botToken}` },
+            });
+            if (chInfoRes.ok) {
+              const chInfo = await chInfoRes.json();
+              if (chInfo.type === 4) {
+                const guildChRes = await fetch(`${DISCORD_API}/guilds/${guildId}/channels`, {
+                  headers: { Authorization: `Bot ${botToken}` },
+                });
+                if (guildChRes.ok) {
+                  const allCh = await guildChRes.json();
+                  const textCh = allCh.find((c: any) => c.parent_id === parentChannelId && c.type === 0);
+                  if (textCh) parentChannelId = textCh.id;
+                }
+              }
+            }
+          } catch (e) { console.error("Channel check error:", e); }
+        }
+
+        const threadName = `ticket-${username || userId}`.toLowerCase().replace(/[^a-z0-9-_]/g, "").substring(0, 100);
+        const createThreadRes = await fetch(`${DISCORD_API}/channels/${parentChannelId}/threads`, {
+          method: "POST",
+          headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ name: threadName, type: 12, auto_archive_duration: 10080 }),
+        });
+
+        if (!createThreadRes.ok) {
+          await editFollowup(interaction, botToken, "❌ Não foi possível criar o ticket.");
+          return ok();
+        }
+
+        const ticketThread = await createThreadRes.json();
+        await fetch(`${DISCORD_API}/channels/${ticketThread.id}/thread-members/${userId}`, {
+          method: "PUT",
+          headers: { Authorization: `Bot ${botToken}` },
+        });
+
+        const { data: ticket } = await supabase
+          .from("tickets")
+          .insert({ tenant_id: tenant.id, discord_user_id: userId, discord_username: username, discord_channel_id: ticketThread.id, status: "open" })
+          .select()
+          .single();
+
+        if (ticket) {
+          const embedColor = parseInt((storeConfig?.ticket_embed_color || "#5865F2").replace("#", ""), 16);
+          await fetch(`${DISCORD_API}/channels/${ticketThread.id}/messages`, {
+            method: "POST",
+            headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              content: `<@${userId}>`,
+              embeds: [{ title: storeConfig?.ticket_embed_title || "🎫 Ticket de Suporte", description: (storeConfig?.ticket_embed_description || "Seu ticket foi criado! Aguarde atendimento.").replace("{user}", `<@${userId}>`).replace("{ticket_id}", ticket.id.slice(0, 8)), color: embedColor }],
+              components: [
+                { type: 1, components: [
+                  { type: 2, style: 2, label: storeConfig?.ticket_embed_button_label || "Lembrar", custom_id: `ticket_remind_${ticket.id}` },
+                  { type: 2, style: 2, label: "Renomear", custom_id: `ticket_rename_${ticket.id}` },
+                  { type: 2, style: 2, label: "Arquivar", custom_id: `ticket_close_${ticket.id}` },
+                  { type: 2, style: 4, label: "Deletar", custom_id: `ticket_delete_${ticket.id}` },
+                ]},
+                { type: 1, components: [{ type: 5, custom_id: `ticket_assign_${ticket.id}`, placeholder: "Selecione algum membro", min_values: 1, max_values: 1 }]},
+              ],
+            }),
+          });
+        }
+
+        await editFollowup(interaction, botToken, `✅ Ticket criado! Acesse <#${ticketThread.id}>`);
+        return ok();
+      }
+
+      // ─── /fechar - Fecha o ticket atual ───────────────────
+      if (commandName === "fechar") {
+        const { data: ticket } = await supabase
+          .from("tickets")
+          .select("*, tenant_id")
+          .eq("discord_channel_id", channelId)
+          .in("status", ["open", "in_progress"])
+          .single();
+
+        if (!ticket) return respondImmediate(interaction, "❌ Este canal não é um ticket ativo.");
+
+        await respondDeferred(interaction, botToken);
+
+        await supabase.from("tickets").update({ status: "closed", closed_by: username || userId, closed_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", ticket.id);
+
+        const { data: closeTenant } = await supabase.from("tenants").select("name").eq("id", ticket.tenant_id).single();
+        await sendTicketLog(supabase, botToken, ticket, channelId, userId, username, "closed", closeTenant?.name || "Servidor");
+
+        await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+          method: "POST",
+          headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ embeds: [{ title: "📁 Ticket Arquivado", description: `Ticket arquivado por <@${userId}>.`, color: 0xFEE75C }] }),
+        });
+        await fetch(`${DISCORD_API}/channels/${channelId}`, {
+          method: "PATCH",
+          headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ archived: true, locked: true }),
+        });
+
+        await editFollowup(interaction, botToken, "✅ Ticket fechado e arquivado.");
+        return ok();
+      }
+
+      // ─── /estoque - Verifica estoque ──────────────────────
+      if (commandName === "estoque") {
+        const { data: tenant } = await supabase.from("tenants").select("id").eq("discord_guild_id", guildId).single();
+        if (!tenant) return respondImmediate(interaction, "❌ Servidor não configurado.");
+
+        const { data: products } = await supabase
+          .from("products")
+          .select("name, stock, active")
+          .eq("tenant_id", tenant.id)
+          .eq("active", true)
+          .order("name");
+
+        if (!products || products.length === 0) return respondImmediate(interaction, "ℹ️ Nenhum produto encontrado.");
+
+        const lines = products.map((p: any) => {
+          const stockText = p.stock !== null ? `${p.stock}` : "∞";
+          const emoji = (p.stock === null || p.stock > 0) ? "🟢" : "🔴";
+          return `${emoji} **${p.name}** — ${stockText} em estoque`;
+        });
+
+        return respondImmediate(interaction, {
+          embeds: [{ title: "📦 Estoque", description: lines.join("\n"), color: 0x2B2D31 }],
+        });
+      }
+
+      // ─── Default: unknown command ─────────────────────────
+      return respondImmediate(interaction, `❌ Comando \`/${commandName}\` não reconhecido.`);
+
+    } catch (err) {
+      console.error("Slash command error:", err);
+      try {
+        await editFollowup(interaction, botToken, `❌ Erro: ${err instanceof Error ? err.message : "Erro desconhecido"}`);
+      } catch {
+        return respondImmediate(interaction, `❌ Erro ao processar comando.`);
+      }
+      return ok();
+    }
+  }
+
   // Type 3: MESSAGE_COMPONENT (button clicks)
   if (interaction.type === 3) {
     const customId = interaction.data?.custom_id || "";
