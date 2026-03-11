@@ -61,10 +61,21 @@ serve(async (req) => {
 
       const hasVariations = fields && fields.length > 0;
 
+      // Map button_style to Discord button style number
+      const styleMap: Record<string, number> = {
+        primary: 1,
+        secondary: 2,
+        success: 3,
+        danger: 4,
+        link: 2,
+        glass: 2,
+      };
+      const discordBuyStyle = styleMap[product?.button_style || "success"] || 3;
+
       const buttons: any[] = [
         {
           type: 2, // Button
-          style: 3, // Success (green)
+          style: discordBuyStyle,
           label: "Comprar",
           emoji: { name: "🛒" },
           custom_id: `buy_product:${product_id}`,

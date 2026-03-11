@@ -54,6 +54,8 @@ Deno.serve(async (req) => {
       embed.image = { url: image_url };
     }
 
+    // Verification button is a URL button (style 5) since it redirects to verification page
+    // URL buttons MUST use style 5 per Discord API - no other style is allowed with url
     const payload: any = {
       embeds: [embed],
       components: [
