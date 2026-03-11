@@ -141,6 +141,16 @@ serve(async (req) => {
     const userId = interaction.member?.user?.id || interaction.user?.id;
     const username = interaction.member?.user?.username || interaction.user?.username;
 
+    // Helper to get store embed color for a tenant
+    const getStoreEmbedColor = async (tid: string): Promise<number> => {
+      const { data: sc } = await supabase
+        .from("store_configs")
+        .select("embed_color")
+        .eq("tenant_id", tid)
+        .single();
+      return sc?.embed_color ? parseInt(sc.embed_color.replace("#", ""), 16) : 0x2B2D31;
+    };
+
     try {
       // ─── BUY PRODUCT ─────────────────────────────────────
       if (customId.startsWith("buy_product:")) {
