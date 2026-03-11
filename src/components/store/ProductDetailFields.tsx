@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "@/hooks/use-toast";
-import { AddStockModal } from "./AddStockModal";
+
 import { EmojiPicker } from "./EmojiPicker";
 import { ProductImageUpload } from "./ProductImageUpload";
 
@@ -47,20 +47,16 @@ const FieldExpandedContent = ({
   field,
   tenantId,
   saving,
-  stockCounts,
   updateField,
   saveField,
   deleteField,
-  setStockModalFieldId,
 }: {
   field: ProductField;
   tenantId: string | null;
   saving: boolean;
-  stockCounts: Record<string, number>;
   updateField: (id: string, updates: Partial<ProductField>) => void;
   saveField: (field: ProductField) => void;
   deleteField: (id: string) => void;
-  setStockModalFieldId: (id: string | null) => void;
 }) => {
   const [priceDisplay, setPriceDisplay] = useState((field.price_cents / 100).toFixed(2));
   const [comparePriceDisplay, setComparePriceDisplay] = useState(
@@ -77,7 +73,7 @@ const FieldExpandedContent = ({
       <Tabs defaultValue="geral">
         <TabsList className="bg-muted mb-4">
           <TabsTrigger value="geral">Geral</TabsTrigger>
-          <TabsTrigger value="estoque">Estoque</TabsTrigger>
+          <TabsTrigger value="entrega">Entrega</TabsTrigger>
         </TabsList>
 
         <TabsContent value="geral" className="space-y-5">
@@ -264,12 +260,12 @@ const FieldExpandedContent = ({
           </div>
         </TabsContent>
 
-        <TabsContent value="estoque" className="space-y-4">
+        <TabsContent value="entrega" className="space-y-4">
           {/* Delivery quantity config */}
           <div className="space-y-2">
             <Label className="text-sm font-bold">Quantidade por Entrega</Label>
             <p className="text-xs text-muted-foreground">
-              Quantos itens do estoque serão enviados por pedido na entrega automática.
+              Quantos itens do estoque geral serão enviados por pedido nesta variação.
             </p>
             <Input
               type="number"
@@ -278,25 +274,6 @@ const FieldExpandedContent = ({
               onChange={(e) => updateField(field.id, { delivery_quantity: parseInt(e.target.value) || 1 })}
               className="bg-muted border-border w-32"
             />
-          </div>
-
-          <div className="flex items-center justify-between rounded-lg bg-muted p-4">
-            <div>
-              <p className="text-sm font-medium">Estoque disponível</p>
-              <p className="text-2xl font-bold">{stockCounts[field.id] || 0} itens</p>
-              {(field.delivery_quantity || 1) > 1 && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  ≈ {Math.floor((stockCounts[field.id] || 0) / (field.delivery_quantity || 1))} entregas possíveis
-                </p>
-              )}
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setStockModalFieldId(field.id)}
-            >
-              <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar Estoque
-            </Button>
           </div>
         </TabsContent>
       </Tabs>
@@ -312,8 +289,6 @@ export const ProductDetailFields = ({ productId, onFieldsChange }: ProductDetail
   const [fields, setFields] = useState<ProductField[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [stockCounts, setStockCounts] = useState<Record<string, number>>({});
-  const [stockModalFieldId, setStockModalFieldId] = useState<string | null>(null);
 
   const fetchFields = useCallback(async () => {
     if (!tenantId || !productId) return;
@@ -324,7 +299,7 @@ export const ProductDetailFields = ({ productId, onFieldsChange }: ProductDetail
       });
       if (error) throw error;
       if (data?.fields) setFields(data.fields);
-      if (data?.stockCounts) setStockCounts(data.stockCounts);
+      
     } catch (e: any) {
       console.error(e);
     }
@@ -530,11 +505,9 @@ export const ProductDetailFields = ({ productId, onFieldsChange }: ProductDetail
                   field={field}
                   tenantId={tenantId}
                   saving={saving}
-                  stockCounts={stockCounts}
                   updateField={updateField}
                   saveField={saveField}
                   deleteField={deleteField}
-                  setStockModalFieldId={setStockModalFieldId}
                 />
               )}
             </div>
@@ -552,19 +525,6 @@ export const ProductDetailFields = ({ productId, onFieldsChange }: ProductDetail
         </div>
       )}
 
-      {/* Stock modal */}
-      {stockModalFieldId && tenantId && (
-        <AddStockModal
-          open={!!stockModalFieldId}
-          onOpenChange={(open) => !open && setStockModalFieldId(null)}
-          fieldId={stockModalFieldId}
-          tenantId={tenantId}
-          onAdded={() => {
-            fetchFields();
-            setStockModalFieldId(null);
-          }}
-        />
-      )}
     </div>
   );
 };

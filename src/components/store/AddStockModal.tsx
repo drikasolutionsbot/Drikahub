@@ -18,7 +18,7 @@ import { toast } from "@/hooks/use-toast";
 interface AddStockModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  fieldId: string;
+  productId: string;
   tenantId: string;
   onAdded: () => void;
 }
@@ -26,7 +26,7 @@ interface AddStockModalProps {
 export const AddStockModal = ({
   open,
   onOpenChange,
-  fieldId,
+  productId,
   tenantId,
   onAdded,
 }: AddStockModalProps) => {
@@ -51,7 +51,7 @@ export const AddStockModal = ({
         body: {
           action: "add_stock",
           tenant_id: tenantId,
-          field_id: fieldId,
+          product_id: productId,
           items: filtered,
         },
       });

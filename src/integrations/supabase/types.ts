@@ -981,8 +981,9 @@ export type Database = {
           delivered: boolean
           delivered_at: string | null
           delivered_to: string | null
-          field_id: string
+          field_id: string | null
           id: string
+          product_id: string | null
           tenant_id: string
         }
         Insert: {
@@ -991,8 +992,9 @@ export type Database = {
           delivered?: boolean
           delivered_at?: string | null
           delivered_to?: string | null
-          field_id: string
+          field_id?: string | null
           id?: string
+          product_id?: string | null
           tenant_id: string
         }
         Update: {
@@ -1001,8 +1003,9 @@ export type Database = {
           delivered?: boolean
           delivered_at?: string | null
           delivered_to?: string | null
-          field_id?: string
+          field_id?: string | null
           id?: string
+          product_id?: string | null
           tenant_id?: string
         }
         Relationships: [
@@ -1011,6 +1014,13 @@ export type Database = {
             columns: ["field_id"]
             isOneToOne: false
             referencedRelation: "product_fields"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_stock_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
           {

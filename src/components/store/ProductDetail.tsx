@@ -18,6 +18,7 @@ import { ProductDetailGeneral } from "./ProductDetailGeneral";
 import { ProductDetailFields } from "./ProductDetailFields";
 import { ProductDetailCoupons } from "./ProductDetailCoupons";
 import { ProductDetailHooks } from "./ProductDetailHooks";
+import { ProductDetailStock } from "./ProductDetailStock";
 import { PostMessageModal } from "./PostMessageModal";
 import { ProductDiscordPreview } from "./ProductDiscordPreview";
 import { supabase } from "@/integrations/supabase/client";
@@ -155,6 +156,7 @@ export const ProductDetail = ({ product, onBack, onSave, onDelete, categories = 
             <TabsList className="bg-muted">
               <TabsTrigger value="geral">Geral</TabsTrigger>
               <TabsTrigger value="campos">Campos</TabsTrigger>
+              <TabsTrigger value="estoque">Estoque</TabsTrigger>
               <TabsTrigger value="cupons">Cupons</TabsTrigger>
               <TabsTrigger value="hooks">Hooks</TabsTrigger>
             </TabsList>
@@ -216,6 +218,10 @@ export const ProductDetail = ({ product, onBack, onSave, onDelete, categories = 
                   </div>
                 )}
               </div>
+            </TabsContent>
+
+            <TabsContent value="estoque" className="mt-0">
+              <ProductDetailStock productId={product.id} />
             </TabsContent>
 
             <TabsContent value="cupons" className="mt-0">

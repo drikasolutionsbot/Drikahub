@@ -1,0 +1,2 @@
+ALTER TABLE public.product_stock_items ADD COLUMN IF NOT EXISTS product_id uuid REFERENCES public.products(id) ON DELETE CASCADE;
+ALTER TABLE public.product_stock_items ALTER COLUMN field_id DROP NOT NULL;
