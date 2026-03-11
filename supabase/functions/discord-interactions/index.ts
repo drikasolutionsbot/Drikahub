@@ -1534,6 +1534,9 @@ async function processPurchase(
   const storeName = storeConfigForCheckout?.store_title || tenantInfo?.name || "Loja";
   const storeLogo = storeConfigForCheckout?.store_logo_url || tenantInfo?.logo_url;
   const timeoutMin = storeConfigForCheckout?.payment_timeout_minutes || 30;
+  const storeEmbedColor = storeConfigForCheckout?.embed_color
+    ? parseInt(storeConfigForCheckout.embed_color.replace("#", ""), 16)
+    : 0x2B2D31;
 
   const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(brcode)}`;
 
