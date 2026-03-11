@@ -28,7 +28,7 @@ interface Product {
   show_stock?: boolean;
   show_sold?: boolean;
   enable_instructions?: boolean;
-  button_style?: string;
+  button_style?: import("@/components/discord/DiscordButtonStylePicker").DiscordButtonStyle;
 }
 
 const StorePage = () => {
