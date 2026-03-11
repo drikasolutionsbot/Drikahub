@@ -28,6 +28,7 @@ const navGroups = [
     items: [
       { label: "Finanças", icon: DollarSign, path: "/finance" },
       { label: "Aprovações", icon: ClipboardCheck, path: "/approvals" },
+      { label: "Afiliados", icon: Users, path: "/affiliates" },
     ],
   },
   {
