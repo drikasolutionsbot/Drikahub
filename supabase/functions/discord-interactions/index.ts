@@ -1533,78 +1533,45 @@ async function processPurchase(
 
   const storeName = storeConfigForCheckout?.store_title || tenantInfo?.name || "Loja";
   const storeLogo = storeConfigForCheckout?.store_logo_url || tenantInfo?.logo_url;
-  const storeBanner = storeConfigForCheckout?.store_banner_url;
   const timeoutMin = storeConfigForCheckout?.payment_timeout_minutes || 30;
 
-  // Send PIX to user via DM
-  const dmChannelRes = await fetch(`${DISCORD_API}/users/@me/channels`, {
-    method: "POST",
-    headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ recipient_id: userId }),
-  });
+  const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(brcode)}`;
 
-  let dmSent = false;
-  if (dmChannelRes.ok) {
-    const dmChannel = await dmChannelRes.json();
-    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(brcode)}`;
+  const checkoutEmbed: any = {
+    title: `🛒 ${storeName} - Carrinho`,
+    description: `> <@${userId}>, escaneie o QR Code ou copie o código PIX abaixo!`,
+    color: 0x2B2D31,
+    fields: [
+      { name: "🕐 Informações do Pedido", value: `**${orderName}**`, inline: false },
+      { name: "💠 Pagamento PIX", value: `→ **Preço:** ${formatBRL(priceCents)}\n→ **Tempo Limite:** ${timeoutMin} minutos`, inline: false },
+    ],
+    image: { url: qrImageUrl },
+    footer: { 
+      text: `${storeName} • Pedido #${order.order_number}`,
+      icon_url: storeLogo || undefined,
+    },
+    timestamp: new Date().toISOString(),
+  };
 
-    const checkoutEmbed: any = {
-      title: `🛒 ${storeName} - Carrinho`,
-      description: `> <@${userId}>, escaneie o QR Code ou copie o código PIX!`,
-      color: 0x2B2D31,
-      fields: [
-        { name: "🕐 Informações do Pedido", value: `**${orderName}**`, inline: false },
-        { name: "💠 Pagamento PIX", value: `→ **Preço:** ${formatBRL(priceCents)}\n→ **Tempo Limite:** ${timeoutMin} minutos`, inline: false },
-      ],
-      image: { url: qrImageUrl },
-      footer: { 
-        text: `${storeName} • Pedido #${order.order_number}`,
-        icon_url: storeLogo || undefined,
-      },
-      timestamp: new Date().toISOString(),
-    };
-
-    if (storeLogo) {
-      checkoutEmbed.thumbnail = { url: storeLogo };
-    }
-
-    // Send: embed + brcode as plain text (easy copy on mobile) + cancel button
-    await fetch(`${DISCORD_API}/channels/${dmChannel.id}/messages`, {
-      method: "POST",
-      headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        embeds: [checkoutEmbed],
-      }),
-    });
-
-    // Send brcode as separate message for easy mobile copy
-    await fetch(`${DISCORD_API}/channels/${dmChannel.id}/messages`, {
-      method: "POST",
-      headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        content: `\`\`\`\n${brcode}\n\`\`\`\n↓ Após o pagamento, a conta será entregue automaticamente!`,
-        components: [{
-          type: 1,
-          components: [{
-            type: 2,
-            style: 4, // Danger (red)
-            label: "Cancelar Compra",
-            emoji: { name: "✕" },
-            custom_id: `cancel_order:${order.id}`,
-          }],
-        }],
-      }),
-    });
-
-    dmSent = true;
+  if (storeLogo) {
+    checkoutEmbed.thumbnail = { url: storeLogo };
   }
 
-  // Respond in the channel (ephemeral)
-  const responseContent = dmSent
-    ? `✅ Pedido **#${order.order_number}** criado! Enviei o PIX na sua DM. Valor: **${formatBRL(priceCents)}**`
-    : `✅ Pedido **#${order.order_number}** criado!\n\n**PIX Copia e Cola:**\n\`\`\`\n${brcode}\n\`\`\`\nValor: **${formatBRL(priceCents)}**`;
-
-  await editFollowup(interaction, botToken, responseContent);
+  // Respond inline (ephemeral) with QR code + brcode + cancel button
+  await editFollowup(interaction, botToken, {
+    content: `\`\`\`\n${brcode}\n\`\`\`\n↓ Após o pagamento, seu pedido será processado automaticamente!`,
+    embeds: [checkoutEmbed],
+    components: [{
+      type: 1,
+      components: [{
+        type: 2,
+        style: 4, // Danger (red)
+        label: "Cancelar Compra",
+        emoji: { name: "✕" },
+        custom_id: `cancel_order:${order.id}`,
+      }],
+    }],
+  });
 }
 
 // ─── Discord response helpers ───────────────────────────────
