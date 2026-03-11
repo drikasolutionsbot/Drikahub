@@ -218,7 +218,7 @@ const AffiliateList = ({ affiliates, loading, tenantId, onRefresh }: Props) => {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((aff) => {
-            const commissionEarned = Math.round(aff.total_revenue_cents * aff.commission_percent / 100);
+            const commissionEarned = calcCommission(aff, aff.total_revenue_cents);
             return (
               <div
                 key={aff.id}
