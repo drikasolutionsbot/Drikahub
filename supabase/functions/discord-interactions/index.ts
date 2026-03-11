@@ -1544,6 +1544,7 @@ async function processPurchase(
     fields: [
       { name: "🕐 Informações do Pedido", value: `**${orderName}**`, inline: false },
       { name: "💠 Pagamento PIX", value: `→ **Preço:** ${formatBRL(priceCents)}\n→ **Tempo Limite:** ${timeoutMin} minutos`, inline: false },
+      { name: "📋 PIX Copia e Cola", value: `\`\`\`\n${brcode}\n\`\`\``, inline: false },
     ],
     image: { url: qrImageUrl },
     footer: { 
@@ -1559,7 +1560,7 @@ async function processPurchase(
 
   // Respond inline (ephemeral) with QR code + brcode + cancel button
   await editFollowup(interaction, botToken, {
-    content: `\`\`\`\n${brcode}\n\`\`\`\n↓ Após o pagamento, seu pedido será processado automaticamente!`,
+    content: `↓ Após o pagamento, seu pedido será processado automaticamente!`,
     embeds: [checkoutEmbed],
     components: [{
       type: 1,
