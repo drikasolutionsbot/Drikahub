@@ -49,6 +49,7 @@ import TutorialsPage from "./pages/TutorialsPage";
 import MarketplacePage from "./pages/MarketplacePage";
 import VerifyResultPage from "./pages/VerifyResultPage";
 import GiveawaysPage from "./pages/GiveawaysPage";
+import AdminAffiliatesPage from "./pages/admin/AdminAffiliatesPage";
 
 const queryClient = new QueryClient();
 
