@@ -181,7 +181,14 @@ export const ProductDetail = ({ product, onBack, onSave, onDelete, categories = 
                         <input
                           type="color"
                           value={embedColor}
-                          onChange={(e) => setEmbedColor(e.target.value)}
+                          onChange={(e) => {
+                            setEmbedColor(e.target.value);
+                            if (tenantId) {
+                              supabase.functions.invoke("manage-store-config", {
+                                body: { action: "upsert", tenant_id: tenantId, config: { embed_color: e.target.value } },
+                              });
+                            }
+                          }}
                           className="h-9 w-12 rounded border border-border cursor-pointer bg-transparent"
                         />
                         <input
