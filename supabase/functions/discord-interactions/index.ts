@@ -1535,3 +1535,174 @@ async function editFollowup(interaction: any, botToken: string, content: string 
     console.log("editFollowup OK:", res.status);
   }
 }
+
+// ─── HTML Transcript Generator ──────────────────────────────
+function generateHtmlTranscript(msgs: any[], serverName: string, ticketName: string, status: string): string {
+  const escHtml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const now = new Date().toLocaleString("pt-BR");
+
+  let rows = "";
+  for (const m of msgs) {
+    const ts = new Date(m.timestamp).toLocaleString("pt-BR");
+    const author = m.author?.username || "Desconhecido";
+    const avatar = m.author?.avatar
+      ? `https://cdn.discordapp.com/avatars/${m.author.id}/${m.author.avatar}.png?size=40`
+      : `https://cdn.discordapp.com/embed/avatars/${(parseInt(m.author?.id || "0") >> 22) % 6}.png`;
+    let content = escHtml(m.content || "");
+    if (!content && m.embeds?.length) content = "<em>[embed]</em>";
+    if (!content && m.attachments?.length) content = m.attachments.map((a: any) => `<a href="${escHtml(a.url)}">${escHtml(a.filename)}</a>`).join(", ");
+    if (!content) content = "<em>[sem conteúdo]</em>";
+
+    // Convert Discord mentions
+    content = content.replace(/&lt;@!?(\d+)&gt;/g, '<span style="color:#7289da;font-weight:600">@user</span>');
+
+    rows += `<div style="display:flex;gap:12px;padding:8px 16px;border-bottom:1px solid #2f3136;">
+      <img src="${avatar}" style="width:40px;height:40px;border-radius:50%;flex-shrink:0;margin-top:2px;" />
+      <div>
+        <div><strong style="color:#fff;">${escHtml(author)}</strong> <span style="color:#72767d;font-size:12px;">${ts}</span></div>
+        <div style="color:#dcddde;margin-top:2px;">${content}</div>
+      </div>
+    </div>`;
+  }
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escHtml(serverName)} - ${escHtml(status)} ${escHtml(ticketName)}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #36393f; color: #dcddde; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 14px; }
+    .header { background: #2f3136; padding: 20px; border-bottom: 2px solid #202225; }
+    .header h1 { color: #fff; font-size: 18px; }
+    .header p { color: #72767d; font-size: 12px; margin-top: 4px; }
+    .messages { padding: 8px 0; }
+    .footer { background: #2f3136; padding: 12px 16px; text-align: center; color: #72767d; font-size: 11px; border-top: 2px solid #202225; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>${escHtml(serverName)} — Transcript</h1>
+    <p>${escHtml(ticketName)} · ${escHtml(status)} · Gerado em ${now}</p>
+  </div>
+  <div class="messages">${rows}</div>
+  <div class="footer">Transcript gerado automaticamente por Drika Hub</div>
+</body>
+</html>`;
+}
+
+// ─── Send Ticket Log + Transcript ───────────────────────────
+async function sendTicketLog(
+  supabase: any,
+  botToken: string,
+  ticket: any,
+  channelId: string | null,
+  closedByUserId: string,
+  closedByUsername: string,
+  action: "closed" | "deleted",
+  serverName: string
+) {
+  const { data: sc } = await supabase
+    .from("store_configs")
+    .select("ticket_logs_channel_id")
+    .eq("tenant_id", ticket.tenant_id)
+    .single();
+
+  // Fetch messages for transcript
+  let msgs: any[] = [];
+  if (channelId) {
+    try {
+      const msgsRes = await fetch(`${DISCORD_API}/channels/${channelId}/messages?limit=100`, {
+        headers: { Authorization: `Bot ${botToken}` },
+      });
+      if (msgsRes.ok) {
+        msgs = await msgsRes.json();
+        msgs = msgs.reverse();
+      }
+    } catch (e) { console.error("Transcript fetch error:", e); }
+  }
+
+  const closedAt = new Date();
+  const closedTs = Math.floor(closedAt.getTime() / 1000);
+  const ticketName = `ticket-${ticket.discord_username || ticket.discord_user_id}`;
+  const statusLabel = action === "deleted" ? "Deletado" : "Fechado";
+
+  // Generate HTML transcript
+  const htmlTranscript = msgs.length > 0
+    ? generateHtmlTranscript(msgs, serverName, ticketName, `Suporte · ${statusLabel.toLowerCase()} esperando resposta...`)
+    : "";
+
+  if (sc?.ticket_logs_channel_id) {
+    // Compact log embed matching reference style
+    const logEmbed: any = {
+      title: `Ticket - ${statusLabel}`,
+      color: action === "deleted" ? 0xED4245 : 0x2B2D31,
+      fields: [
+        { name: "👤 Moderador", value: `<@${closedByUserId}>\n@${closedByUsername}`, inline: false },
+      ],
+      timestamp: closedAt.toISOString(),
+    };
+
+    if (ticket.product_name) {
+      logEmbed.fields.push({ name: "📦 Produto", value: ticket.product_name, inline: false });
+    }
+
+    // Send embed + transcript as single message with button
+    if (htmlTranscript) {
+      const formData = new FormData();
+      const blob = new Blob([htmlTranscript], { type: "text/html" });
+      formData.append("files[0]", blob, `transcript-${ticket.discord_channel_id || ticket.id.slice(0, 8)}.html`);
+      formData.append("payload_json", JSON.stringify({
+        embeds: [logEmbed],
+        components: [{
+          type: 1,
+          components: [{
+            type: 2,
+            style: 2,
+            label: "Ver transcript",
+            emoji: { name: "📜" },
+            custom_id: `transcript_view_${ticket.id}`,
+          }],
+        }],
+      }));
+
+      await fetch(`${DISCORD_API}/channels/${sc.ticket_logs_channel_id}/messages`, {
+        method: "POST",
+        headers: { Authorization: `Bot ${botToken}` },
+        body: formData,
+      });
+    } else {
+      await fetch(`${DISCORD_API}/channels/${sc.ticket_logs_channel_id}/messages`, {
+        method: "POST",
+        headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ embeds: [logEmbed] }),
+      });
+    }
+  }
+
+  // Send transcript to user DM
+  try {
+    const dmChRes = await fetch(`${DISCORD_API}/users/@me/channels`, {
+      method: "POST",
+      headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ recipient_id: ticket.discord_user_id }),
+    });
+
+    if (dmChRes.ok && htmlTranscript) {
+      const dmCh = await dmChRes.json();
+      const dmFormData = new FormData();
+      const dmBlob = new Blob([htmlTranscript], { type: "text/html" });
+      dmFormData.append("files[0]", dmBlob, `transcript-${ticket.id.slice(0, 8)}.html`);
+      dmFormData.append("payload_json", JSON.stringify({
+        content: "📜 Aqui está o transcript do seu ticket encerrado.",
+      }));
+
+      await fetch(`${DISCORD_API}/channels/${dmCh.id}/messages`, {
+        method: "POST",
+        headers: { Authorization: `Bot ${botToken}` },
+        body: dmFormData,
+      });
+    }
+  } catch (e) { console.error("DM transcript error:", e); }
+}
