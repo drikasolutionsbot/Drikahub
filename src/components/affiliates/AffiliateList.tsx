@@ -30,6 +30,7 @@ interface Props {
   loading: boolean;
   tenantId: string | null;
   onRefresh: () => void;
+  adminMode?: boolean;
 }
 
 interface AffiliateForm {
