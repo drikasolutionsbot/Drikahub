@@ -213,7 +213,8 @@ Deno.serve(async (req) => {
             .select("bot_token_encrypted")
             .eq("id", tenant_id)
             .single();
-          if (tenant?.bot_token_encrypted) {
+          const botToken = tenant?.bot_token_encrypted || Deno.env.get("DISCORD_BOT_TOKEN");
+          if (botToken) {
             const winnerMentions = winners.map((w: any) => `<@${w.discord_user_id}>`).join(", ");
             const embed = {
               color: 0x57F287,
