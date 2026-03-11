@@ -48,6 +48,8 @@ import AIAssistantPage from "./pages/AIAssistantPage";
 import TutorialsPage from "./pages/TutorialsPage";
 import MarketplacePage from "./pages/MarketplacePage";
 import VerifyResultPage from "./pages/VerifyResultPage";
+import GiveawaysPage from "./pages/GiveawaysPage";
+import VipsPage from "./pages/VipsPage";
 
 const queryClient = new QueryClient();
 
