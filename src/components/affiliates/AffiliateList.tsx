@@ -229,7 +229,7 @@ const AffiliateList = ({ affiliates, loading, tenantId, onRefresh }: Props) => {
                 {/* Referral link */}
                 <div className="flex items-center gap-2 rounded-lg bg-muted/20 border border-border px-3 py-2">
                   <Link2 className="h-3.5 w-3.5 shrink-0 text-primary" />
-                  <span className="text-xs font-mono text-muted-foreground truncate flex-1">?ref={aff.code}</span>
+                  <span className="text-xs font-mono text-muted-foreground truncate flex-1">{getFullLink(aff.code)}</span>
                   <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => copyLink(aff)}>
                     {copiedId === aff.id ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
                   </Button>
