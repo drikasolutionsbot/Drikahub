@@ -75,11 +75,13 @@ const AffiliatePayouts = ({ affiliates, tenantId, payouts, onRefresh, adminMode 
   };
 
   const handleUpdateStatus = async (payoutId: string, newStatus: string) => {
+    const payout = payouts.find(p => p.id === payoutId);
+    const effectiveTenantId = payout ? getAffTenantId(payout.affiliate_id) : tenantId;
     try {
       await supabase.functions.invoke("manage-affiliates", {
         body: {
           action: "update_payout",
-          tenant_id: tenantId,
+          tenant_id: effectiveTenantId,
           payout_id: payoutId,
           payout: { status: newStatus },
         },
