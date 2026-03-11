@@ -1613,20 +1613,32 @@ function parseEmoji(emoji: string): any {
 
 // Deferred ephemeral response (for long operations - creates NEW message)
 async function respondDeferred(interaction: any, botToken: string) {
-  await fetch(`${DISCORD_API}/interactions/${interaction.id}/${interaction.token}/callback`, {
+  const res = await fetch(`${DISCORD_API}/interactions/${interaction.id}/${interaction.token}/callback`, {
     method: "POST",
     headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
     body: JSON.stringify({ type: 5, data: { flags: 64 } }), // 64 = ephemeral
   });
+  const resText = await res.text();
+  if (!res.ok) {
+    console.error("respondDeferred FAILED:", res.status, resText);
+  } else {
+    console.log("respondDeferred OK:", res.status);
+  }
 }
 
 // Deferred update (updates EXISTING message, no new message created)
 async function respondDeferredUpdate(interaction: any, botToken: string) {
-  await fetch(`${DISCORD_API}/interactions/${interaction.id}/${interaction.token}/callback`, {
+  const res = await fetch(`${DISCORD_API}/interactions/${interaction.id}/${interaction.token}/callback`, {
     method: "POST",
     headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
     body: JSON.stringify({ type: 6 }), // DEFERRED_UPDATE_MESSAGE
   });
+  const resText = await res.text();
+  if (!res.ok) {
+    console.error("respondDeferredUpdate FAILED:", res.status, resText);
+  } else {
+    console.log("respondDeferredUpdate OK:", res.status);
+  }
 }
 
 // Immediate ephemeral response
