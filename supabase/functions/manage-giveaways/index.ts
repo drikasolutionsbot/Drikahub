@@ -98,7 +98,7 @@ async function syncEntriesFromDiscord(
         giveaway_id: giveaway.id,
         tenant_id,
         discord_user_id: u.id,
-        discord_username: u.global_name || u.username || null,
+        discord_username: u.username || u.global_name || null,
         discord_avatar: u.avatar
           ? `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.png`
           : null,
