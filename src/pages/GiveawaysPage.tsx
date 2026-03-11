@@ -1,4 +1,4 @@
-import { LegoLoader } from "@/components/ui/lego-loader";
+import LegoLoader from "@/components/ui/lego-loader";
 
 export default function GiveawaysPage() {
   return (
