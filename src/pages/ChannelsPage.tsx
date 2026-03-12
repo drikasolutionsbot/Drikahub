@@ -189,21 +189,49 @@ const ChannelsPage = () => {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [createForKey, setCreateForKey] = useState<string | null>(null);
 
-  const [draft, setDraft] = useState<Record<string, string>>({});
-  const [saving, setSaving] = useState(false);
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = {};
-    channelSections.forEach(s => { initial[s.title] = true; });
-    return initial;
-  });
-
-  useEffect(() => {
+  // Build server state from configs
+  const serverDraft = useMemo(() => {
     const initial: Record<string, string> = {};
     configs.forEach(c => {
       if (c.discord_channel_id) initial[c.channel_key] = c.discord_channel_id;
     });
-    setDraft(initial);
+    return initial;
   }, [configs]);
+
+  const draftReady = !isLoading;
+  const storageKey = `draft:${tenantId}:channels`;
+  const draftInitialized = useRef(false);
+
+  const [draft, setDraft] = useState<Record<string, string>>({});
+
+  // Initialize draft from localStorage or server
+  useEffect(() => {
+    if (!draftReady || !tenantId || draftInitialized.current) return;
+    draftInitialized.current = true;
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        setDraft(JSON.parse(saved));
+      } else {
+        setDraft(serverDraft);
+      }
+    } catch {
+      setDraft(serverDraft);
+    }
+  }, [draftReady, tenantId, storageKey, serverDraft]);
+
+  // Auto-save draft to localStorage
+  useEffect(() => {
+    if (!tenantId || !draftInitialized.current) return;
+    const timer = setTimeout(() => {
+      try { localStorage.setItem(storageKey, JSON.stringify(draft)); } catch {}
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [draft, storageKey, tenantId]);
+
+  const clearChannelDraft = useCallback(() => {
+    if (tenantId) localStorage.removeItem(storageKey);
+  }, [storageKey, tenantId]);
 
   // Realtime subscription for channel_configs
   useEffect(() => {
