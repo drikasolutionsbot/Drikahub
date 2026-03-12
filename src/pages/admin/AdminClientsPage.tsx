@@ -624,6 +624,10 @@ const AdminClientsPage = () => {
                       <div className="border-t border-border bg-muted/30 px-4 py-4 space-y-4">
                         <div className="flex items-center justify-between">
                           <h4 className="text-sm font-semibold text-foreground">Tokens de Acesso</h4>
+                          {(() => {
+                            const activeTokens = tenantTokens.filter(t => !t.revoked);
+                            const hasActiveToken = activeTokens.length > 0;
+                            return (
                           <Dialog
                             open={tokenDialogTenantId === tenant.id}
                             onOpenChange={(open) => {
@@ -635,8 +639,8 @@ const AdminClientsPage = () => {
                             }}
                           >
                             <DialogTrigger asChild>
-                              <Button size="sm" className="gradient-pink text-primary-foreground border-none hover:opacity-90">
-                                <Key className="mr-1 h-3 w-3" /> Gerar Token
+                              <Button size="sm" className="gradient-pink text-primary-foreground border-none hover:opacity-90" disabled={hasActiveToken} title={hasActiveToken ? "Este cliente já possui um token ativo" : undefined}>
+                                <Key className="mr-1 h-3 w-3" /> {hasActiveToken ? "Token já gerado" : "Gerar Token"}
                               </Button>
                             </DialogTrigger>
                             <DialogContent className="bg-card border-border">
