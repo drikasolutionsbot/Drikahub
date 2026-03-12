@@ -1399,7 +1399,86 @@ serve(async (req) => {
         return ok();
       }
 
-      // ─── TICKET CLOSE (button inside ticket channel) ──────
+      // ─── TRANSCRIPT VIEW (button in log channel) ──────────
+      if (customId.startsWith("transcript_view_")) {
+        const ticketId = customId.replace("transcript_view_", "");
+        await respondDeferred(interaction, botToken);
+
+        const { data: ticket } = await supabase
+          .from("tickets")
+          .select("*, tenant_id")
+          .eq("id", ticketId)
+          .single();
+
+        if (!ticket) {
+          await editFollowup(interaction, botToken, "❌ Ticket não encontrado.");
+          return ok();
+        }
+
+        // Get tenant name
+        const { data: tTenant } = await supabase
+          .from("tenants")
+          .select("discord_guild_id")
+          .eq("id", ticket.tenant_id)
+          .single();
+
+        let serverName = "Servidor";
+        if (tTenant?.discord_guild_id) {
+          try {
+            const gRes = await fetch(`${DISCORD_API}/guilds/${tTenant.discord_guild_id}`, {
+              headers: { Authorization: `Bot ${botToken}` },
+            });
+            if (gRes.ok) {
+              const gData = await gRes.json();
+              serverName = gData.name || serverName;
+            }
+          } catch {}
+        }
+
+        // Try to fetch messages from the ticket channel (thread)
+        let msgs: any[] = [];
+        const chId = ticket.discord_channel_id;
+        if (chId) {
+          try {
+            const mRes = await fetch(`${DISCORD_API}/channels/${chId}/messages?limit=100`, {
+              headers: { Authorization: `Bot ${botToken}` },
+            });
+            if (mRes.ok) {
+              msgs = await mRes.json();
+              msgs = msgs.reverse();
+            }
+          } catch {}
+        }
+
+        if (msgs.length === 0) {
+          // If channel is deleted, try to get from the original message attachment
+          // Fall back to a message saying transcript unavailable
+          await editFollowup(interaction, botToken, "📜 O transcript está anexado como arquivo na mensagem acima. Clique no arquivo `.html` para visualizar.");
+          return ok();
+        }
+
+        const ticketName = `ticket-${ticket.discord_username || ticket.discord_user_id}`;
+        const htmlTranscript = generateHtmlTranscript(msgs, serverName, ticketName, "Suporte · transcript");
+
+        // Send as ephemeral file via webhook followup
+        const formData = new FormData();
+        const blob = new Blob([htmlTranscript], { type: "text/html" });
+        formData.append("files[0]", blob, `transcript-${ticket.id.slice(0, 8)}.html`);
+        formData.append("payload_json", JSON.stringify({
+          content: "📜 Aqui está o transcript do ticket:",
+          flags: 64,
+        }));
+
+        const url = `${DISCORD_API}/webhooks/${interaction.application_id}/${interaction.token}/messages/@original`;
+        await fetch(url, {
+          method: "PATCH",
+          headers: { Authorization: `Bot ${botToken}` },
+          body: formData,
+        });
+
+        return ok();
+      }
+
       if (customId.startsWith("ticket_close_")) {
         const ticketId = customId.replace("ticket_close_", "");
         await respondDeferredUpdate(interaction, botToken);
@@ -1978,6 +2057,16 @@ async function sendTicketLog(
       formData.append("files[0]", blob, `transcript-${ticket.discord_channel_id || ticket.id.slice(0, 8)}.html`);
       formData.append("payload_json", JSON.stringify({
         embeds: [logEmbed],
+        components: [{
+          type: 1,
+          components: [{
+            type: 2,
+            style: 2,
+            label: "Ver transcript",
+            emoji: { name: "📜" },
+            custom_id: `transcript_view_${ticket.id}`,
+          }],
+        }],
       }));
 
       await fetch(`${DISCORD_API}/channels/${sc.ticket_logs_channel_id}/messages`, {
