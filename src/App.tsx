@@ -48,6 +48,7 @@ import AIAssistantPage from "./pages/AIAssistantPage";
 import TutorialsPage from "./pages/TutorialsPage";
 import MarketplacePage from "./pages/MarketplacePage";
 import VerifyResultPage from "./pages/VerifyResultPage";
+import VerifyRedirectPage from "./pages/VerifyRedirectPage";
 import GiveawaysPage from "./pages/GiveawaysPage";
 import AdminAffiliatesPage from "./pages/admin/AdminAffiliatesPage";
 
@@ -81,6 +82,7 @@ const AppRoutes = () => (
     <Route path="/signup" element={<SignupPage />} />
     <Route path="/termos" element={<TermsPage />} />
     <Route path="/verify/result" element={<VerifyResultPage />} />
+    <Route path="/verify/:tenantId" element={<VerifyRedirectPage />} />
     <Route path="/admin/login" element={<AdminLoginPage />} />
     <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
     <Route path="/" element={<LandingPage />} />
