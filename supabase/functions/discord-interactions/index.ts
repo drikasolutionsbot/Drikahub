@@ -615,9 +615,7 @@ serve(async (req) => {
 
         const fieldLines = fields.map((f: any) => {
           const emoji = f.emoji || "•";
-          const priceStr = f.compare_price_cents && f.compare_price_cents > f.price_cents
-            ? `~~${formatBRL(f.compare_price_cents)}~~ → **${formatBRL(f.price_cents)}**`
-            : formatBRL(f.price_cents);
+          const priceStr = formatBRL(f.price_cents);
           const desc = f.description ? ` - ${f.description}` : "";
           return `${emoji} **${f.name}** — ${priceStr}${desc}`;
         });
