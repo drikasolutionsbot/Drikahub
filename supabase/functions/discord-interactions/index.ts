@@ -1978,6 +1978,16 @@ async function sendTicketLog(
       formData.append("files[0]", blob, `transcript-${ticket.discord_channel_id || ticket.id.slice(0, 8)}.html`);
       formData.append("payload_json", JSON.stringify({
         embeds: [logEmbed],
+        components: [{
+          type: 1,
+          components: [{
+            type: 2,
+            style: 2,
+            label: "Ver transcript",
+            emoji: { name: "📜" },
+            custom_id: `transcript_view_${ticket.id}`,
+          }],
+        }],
       }));
 
       await fetch(`${DISCORD_API}/channels/${sc.ticket_logs_channel_id}/messages`, {
