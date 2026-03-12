@@ -342,6 +342,7 @@ const ChannelsPage = () => {
       }
 
       await refetch();
+      clearChannelDraft();
       toast({ title: "Configurações salvas! ✅" });
     } catch (err: any) {
       toast({ title: "Erro ao salvar", description: err.message, variant: "destructive" });
