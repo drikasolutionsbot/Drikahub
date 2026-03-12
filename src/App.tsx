@@ -48,6 +48,7 @@ import AIAssistantPage from "./pages/AIAssistantPage";
 import TutorialsPage from "./pages/TutorialsPage";
 import MarketplacePage from "./pages/MarketplacePage";
 import VerifyResultPage from "./pages/VerifyResultPage";
+import VerifyRedirectPage from "./pages/VerifyRedirectPage";
 import GiveawaysPage from "./pages/GiveawaysPage";
 import AdminAffiliatesPage from "./pages/admin/AdminAffiliatesPage";
 
