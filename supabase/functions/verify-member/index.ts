@@ -154,6 +154,7 @@ Deno.serve(async (req) => {
 
     // ─── Send verification log to Discord channel ───────────
     const logsChannelId = tenantData.verify_logs_channel_id;
+    console.log("verify-member log channel:", logsChannelId, "botToken present:", Boolean(botToken));
     if (logsChannelId && botToken) {
       try {
         // Calculate account age in days
@@ -209,7 +210,8 @@ Deno.serve(async (req) => {
           ],
         };
 
-        await fetch(`${DISCORD_API}/channels/${logsChannelId}/messages`, {
+        console.log("Sending verification log to channel:", logsChannelId);
+        const logRes = await fetch(`${DISCORD_API}/channels/${logsChannelId}/messages`, {
           method: "POST",
           headers: {
             Authorization: `Bot ${botToken}`,
@@ -217,9 +219,13 @@ Deno.serve(async (req) => {
           },
           body: JSON.stringify(logPayload),
         });
+        const logResText = await logRes.text();
+        console.log("Verification log response:", logRes.status, logResText);
       } catch (logErr) {
         console.error("Failed to send verification log:", logErr);
       }
+    } else {
+      console.warn("Skipping verification log: logsChannelId=", logsChannelId, "botToken=", Boolean(botToken));
     }
 
     const serverName = tenantData.name || "o servidor";
