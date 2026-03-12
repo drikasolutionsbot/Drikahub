@@ -352,6 +352,7 @@ const ProviderForm = ({ provider, config, tenantId, onSave, onToggle }: Provider
     setSaving(true);
     const extra = isEfi ? { efi_cert_pem: efiCertPem, efi_key_pem: efiKeyPem, efi_pix_key: efiPixKey } : undefined;
     await onSave(provider.key, apiKey, secretKey, extra);
+    clearDraft();
     setSaving(false);
   };
 
