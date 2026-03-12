@@ -1821,6 +1821,7 @@ export type Database = {
           secondary_color: string | null
           updated_at: string
           verify_button_label: string | null
+          verify_button_style: string | null
           verify_channel_id: string | null
           verify_description: string | null
           verify_embed_color: string | null
@@ -1861,6 +1862,7 @@ export type Database = {
           secondary_color?: string | null
           updated_at?: string
           verify_button_label?: string | null
+          verify_button_style?: string | null
           verify_channel_id?: string | null
           verify_description?: string | null
           verify_embed_color?: string | null
@@ -1901,6 +1903,7 @@ export type Database = {
           secondary_color?: string | null
           updated_at?: string
           verify_button_label?: string | null
+          verify_button_style?: string | null
           verify_channel_id?: string | null
           verify_description?: string | null
           verify_embed_color?: string | null
