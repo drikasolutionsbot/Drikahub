@@ -1,0 +1,1 @@
+ALTER TABLE public.tenants ADD COLUMN verify_button_style text DEFAULT 'primary';
