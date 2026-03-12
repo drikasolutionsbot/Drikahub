@@ -205,32 +205,6 @@ export const ProductDetailGeneral = ({ product, onChange, categories = [] }: Pro
               className="bg-muted border-border"
             />
           </div>
-          <div className="space-y-2">
-            <Label className="text-sm font-bold">
-              Preço Original <span className="font-normal text-muted-foreground">(Opcional — aparece riscado)</span>
-            </Label>
-            <Input
-              type="text"
-              inputMode="decimal"
-              placeholder="Ex: 49.90"
-              value={comparePriceDisplay}
-              onChange={(e) => setComparePriceDisplay(e.target.value)}
-              onBlur={() => {
-                const raw = comparePriceDisplay.replace(/[^0-9.,]/g, "").replace(",", ".");
-                const num = parseFloat(raw);
-                if (!raw || isNaN(num) || num <= 0) {
-                  onChange({ compare_price_cents: null });
-                  setComparePriceDisplay("");
-                } else {
-                  const cents = Math.round(num * 100);
-                  onChange({ compare_price_cents: cents });
-                  setComparePriceDisplay((cents / 100).toFixed(2));
-                }
-              }}
-              className="bg-muted border-border"
-            />
-            <p className="text-[11px] text-muted-foreground">Se preenchido, o preço acima será exibido como promocional e este aparecerá riscado.</p>
-          </div>
         </div>
       </section>
 
