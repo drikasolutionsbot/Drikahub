@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Upload, Users, Crown, QrCode, Loader2, Copy, CheckCircle2, UserPlus, Sparkles, Zap, Shield, HelpCircle, ChevronDown, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -39,20 +39,48 @@ const SettingsPage = () => {
   const defaultTab = searchParams.get("tab") || "profile";
   const { user } = useAuth();
 
-  // PIX state
-  const [pixKey, setPixKey] = useState("");
-  const [pixKeyType, setPixKeyType] = useState("");
+  // PIX state with draft persistence
   const [savingPix, setSavingPix] = useState(false);
   const [editingPix, setEditingPix] = useState(false);
 
-  // Sync PIX data from tenant whenever it changes
+  const pixStorageKey = tenantId ? `draft:${tenantId}:pix-config` : null;
+  const pixInitialized = useRef(false);
+  const [pixKey, setPixKey] = useState("");
+  const [pixKeyType, setPixKeyType] = useState("");
+
+  // Initialize PIX from localStorage or tenant
   useEffect(() => {
-    if (tenant) {
+    if (!tenant || pixInitialized.current) return;
+    pixInitialized.current = true;
+    try {
+      const saved = pixStorageKey ? localStorage.getItem(pixStorageKey) : null;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setPixKey(parsed.pixKey || "");
+        setPixKeyType(parsed.pixKeyType || "");
+      } else {
+        setPixKey(tenant.pix_key || "");
+        setPixKeyType(tenant.pix_key_type || "");
+      }
+    } catch {
       setPixKey(tenant.pix_key || "");
       setPixKeyType(tenant.pix_key_type || "");
-      setEditingPix(false);
     }
-  }, [tenant?.pix_key, tenant?.pix_key_type]);
+    setEditingPix(false);
+  }, [tenant?.pix_key, tenant?.pix_key_type, pixStorageKey]);
+
+  // Auto-save PIX draft
+  useEffect(() => {
+    if (!pixStorageKey || !pixInitialized.current) return;
+    const timer = setTimeout(() => {
+      try { localStorage.setItem(pixStorageKey, JSON.stringify({ pixKey, pixKeyType })); } catch {}
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [pixKey, pixKeyType, pixStorageKey]);
+
+  const clearPixDraft = useCallback(() => {
+    if (pixStorageKey) localStorage.removeItem(pixStorageKey);
+  }, [pixStorageKey]);
 
   const { data: userRoles = [], isLoading: rolesLoading } = useQuery({
     queryKey: ["user-roles", tenantId],
@@ -100,6 +128,7 @@ const SettingsPage = () => {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       await refetchTenant();
+      clearPixDraft();
       toast({ title: "Chave PIX salva com sucesso!" });
     } catch (err: any) {
       toast({ title: "Erro ao salvar", description: err.message, variant: "destructive" });

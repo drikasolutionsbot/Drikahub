@@ -11,7 +11,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTenant } from "@/contexts/TenantContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import WebhookLogsPanel from "@/components/payments/WebhookLogsPanel";
 
 const SUPABASE_PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID || "krudxivcuygykoswjbbx";
@@ -209,29 +209,78 @@ interface ProviderFormProps {
 }
 
 const ProviderForm = ({ provider, config, tenantId, onSave, onToggle }: ProviderFormProps) => {
-  const [apiKey, setApiKey] = useState("");
-  const [secretKey, setSecretKey] = useState("");
   const [showApiKey, setShowApiKey] = useState(false);
   const [showSecretKey, setShowSecretKey] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [saving, setSaving] = useState(false);
-  const [efiPixKey, setEfiPixKey] = useState("");
-  const [efiCertPem, setEfiCertPem] = useState("");
-  const [efiKeyPem, setEfiKeyPem] = useState("");
   const [certFileName, setCertFileName] = useState<string | null>(null);
 
   const isEfi = provider.key === "efi";
 
+  // Build server state from config
+  const serverState = {
+    apiKey: config?.api_key_encrypted || "",
+    secretKey: config?.secret_key_encrypted || "",
+    efiPixKey: config?.efi_pix_key || "",
+    efiCertPem: config?.efi_cert_pem || "",
+    efiKeyPem: config?.efi_key_pem || "",
+  };
+
+  const storageKey = tenantId ? `draft:${tenantId}:payment-${provider.key}` : null;
+  const initialized = useRef(false);
+
+  const [formState, setFormState] = useState(serverState);
+
+  // Initialize from localStorage or server
   useEffect(() => {
-    setApiKey(config?.api_key_encrypted || "");
-    setSecretKey(config?.secret_key_encrypted || "");
-    setEfiPixKey(config?.efi_pix_key || "");
-    setEfiCertPem(config?.efi_cert_pem || "");
-    setEfiKeyPem(config?.efi_key_pem || "");
+    if (!tenantId || initialized.current) return;
+    initialized.current = true;
+    try {
+      const saved = storageKey ? localStorage.getItem(storageKey) : null;
+      if (saved) {
+        setFormState(JSON.parse(saved));
+      } else {
+        setFormState(serverState);
+      }
+    } catch {
+      setFormState(serverState);
+    }
     setCertFileName(config?.efi_cert_pem ? "Certificado carregado ✓" : null);
     setTestResult(null);
+  }, [tenantId, config?.id]);
+
+  // Reset when config changes (e.g. after save)
+  useEffect(() => {
+    if (initialized.current && config?.id) {
+      // Don't overwrite draft
+    }
   }, [config?.id]);
+
+  // Auto-save draft
+  useEffect(() => {
+    if (!storageKey || !initialized.current) return;
+    const timer = setTimeout(() => {
+      try { localStorage.setItem(storageKey, JSON.stringify(formState)); } catch {}
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [formState, storageKey]);
+
+  const clearDraft = useCallback(() => {
+    if (storageKey) localStorage.removeItem(storageKey);
+  }, [storageKey]);
+
+  const apiKey = formState.apiKey;
+  const secretKey = formState.secretKey;
+  const efiPixKey = formState.efiPixKey;
+  const efiCertPem = formState.efiCertPem;
+  const efiKeyPem = formState.efiKeyPem;
+
+  const setApiKey = (v: string) => setFormState(p => ({ ...p, apiKey: v }));
+  const setSecretKey = (v: string) => setFormState(p => ({ ...p, secretKey: v }));
+  const setEfiPixKey = (v: string) => setFormState(p => ({ ...p, efiPixKey: v }));
+  const setEfiCertPem = (v: string) => setFormState(p => ({ ...p, efiCertPem: v }));
+  const setEfiKeyPem = (v: string) => setFormState(p => ({ ...p, efiKeyPem: v }));
 
   const webhookUrl = tenantId
     ? `https://${SUPABASE_PROJECT_ID}.supabase.co/functions/v1/payment-webhook/${provider.key}/${tenantId}`
@@ -303,6 +352,7 @@ const ProviderForm = ({ provider, config, tenantId, onSave, onToggle }: Provider
     setSaving(true);
     const extra = isEfi ? { efi_cert_pem: efiCertPem, efi_key_pem: efiKeyPem, efi_pix_key: efiPixKey } : undefined;
     await onSave(provider.key, apiKey, secretKey, extra);
+    clearDraft();
     setSaving(false);
   };
 
