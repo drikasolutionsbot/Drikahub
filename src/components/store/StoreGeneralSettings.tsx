@@ -272,57 +272,6 @@ const StoreGeneralSettings = () => {
           </CardContent>
         </Card>
 
-        {/* Aparência */}
-        <Card className="border-border/50">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Palette className="h-4 w-4 text-primary" />
-              Aparência da Loja
-            </CardTitle>
-            <CardDescription>Personalize a identidade visual da loja no Discord</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label>Cor padrão dos embeds</Label>
-              <div className="flex gap-2 mt-1">
-                <input
-                  type="color"
-                  value={config.embed_color}
-                  onChange={(e) => update("embed_color", e.target.value)}
-                  className="h-10 w-14 rounded border border-input cursor-pointer"
-                />
-                <Input
-                  value={config.embed_color}
-                  onChange={(e) => update("embed_color", e.target.value)}
-                  className="font-mono"
-                />
-              </div>
-            </div>
-            <div>
-              <Label>Título da loja</Label>
-              <Input
-                value={config.store_title}
-                onChange={(e) => update("store_title", e.target.value)}
-                placeholder="Nome exibido nos embeds da loja"
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label>Descrição da loja</Label>
-              <Textarea
-                value={config.store_description}
-                onChange={(e) => update("store_description", e.target.value)}
-                placeholder="Descrição curta exibida nos embeds..."
-                rows={2}
-                className="mt-1"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <ImageUploadField label="Logo da Loja" value={config.store_logo_url} onChange={(v) => update("store_logo_url", v)} folder="store/logo" />
-              <ImageUploadField label="Banner da Loja" value={config.store_banner_url} onChange={(v) => update("store_banner_url", v)} folder="store/banner" />
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Embed de Compra */}
         <Card className="border-border/50">
