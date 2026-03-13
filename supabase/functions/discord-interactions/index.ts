@@ -1717,6 +1717,123 @@ serve(async (req) => {
         await editFollowup(interaction, botToken, `✅ Ticket renomeado para: **${newName.substring(0, 100)}**`);
         return ok();
       }
+
+      // ─── COUPON MODAL SUBMIT ─────────────────────────────
+      if (customId.startsWith("coupon_modal_")) {
+        const orderId = customId.replace("coupon_modal_", "");
+        await respondDeferred(interaction, botToken);
+
+        const couponCode = interaction.data?.components?.[0]?.components?.[0]?.value?.trim()?.toUpperCase();
+        if (!couponCode) { await editFollowup(interaction, botToken, "❌ Código inválido."); return ok(); }
+
+        const { data: order } = await supabase.from("orders").select("*").eq("id", orderId).single();
+        if (!order || order.status !== "pending_payment") {
+          await editFollowup(interaction, botToken, "❌ Pedido não encontrado ou já processado.");
+          return ok();
+        }
+
+        // Find coupon
+        const { data: coupon } = await supabase
+          .from("coupons")
+          .select("*")
+          .eq("tenant_id", order.tenant_id)
+          .eq("code", couponCode)
+          .eq("active", true)
+          .single();
+
+        if (!coupon) {
+          await editFollowup(interaction, botToken, "❌ Cupom não encontrado ou inativo.");
+          return ok();
+        }
+
+        if (coupon.max_uses && coupon.used_count >= coupon.max_uses) {
+          await editFollowup(interaction, botToken, "❌ Este cupom atingiu o limite de uso.");
+          return ok();
+        }
+
+        if (coupon.product_id && coupon.product_id !== order.product_id) {
+          await editFollowup(interaction, botToken, "❌ Este cupom não é válido para este produto.");
+          return ok();
+        }
+
+        // Calculate discount
+        let discount = 0;
+        if (coupon.type === "percent") {
+          discount = Math.floor(order.total_cents * coupon.value / 100);
+        } else {
+          discount = coupon.value;
+        }
+        const newTotal = Math.max(0, order.total_cents - discount);
+
+        // Update order
+        await supabase.from("orders").update({ total_cents: newTotal, coupon_id: coupon.id }).eq("id", orderId);
+        await supabase.from("coupons").update({ used_count: coupon.used_count + 1 }).eq("id", coupon.id);
+
+        const channelId = interaction.channel_id;
+        // Send updated review in the thread
+        await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+          method: "POST",
+          headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            embeds: [{
+              title: "🏷️ Cupom Aplicado!",
+              description: `Cupom **${couponCode}** aplicado com sucesso!\n\n~~${formatBRL(order.total_cents)}~~ → **${formatBRL(newTotal)}**\nDesconto: **-${formatBRL(discount)}**`,
+              color: 0x57F287,
+            }],
+          }),
+        });
+
+        await editFollowup(interaction, botToken, `✅ Cupom aplicado!`);
+        return ok();
+      }
+
+      // ─── QUANTITY MODAL SUBMIT ────────────────────────────
+      if (customId.startsWith("quantity_modal_")) {
+        const orderId = customId.replace("quantity_modal_", "");
+        await respondDeferred(interaction, botToken);
+
+        const qtyStr = interaction.data?.components?.[0]?.components?.[0]?.value?.trim();
+        const qty = parseInt(qtyStr || "1");
+        if (isNaN(qty) || qty < 1 || qty > 99) {
+          await editFollowup(interaction, botToken, "❌ Quantidade inválida (1-99).");
+          return ok();
+        }
+
+        const { data: order } = await supabase.from("orders").select("*").eq("id", orderId).single();
+        if (!order || order.status !== "pending_payment") {
+          await editFollowup(interaction, botToken, "❌ Pedido não encontrado ou já processado.");
+          return ok();
+        }
+
+        // Get original unit price
+        let unitPrice = order.total_cents; // if qty was 1
+        if (order.field_id) {
+          const { data: field } = await supabase.from("product_fields").select("price_cents").eq("id", order.field_id).single();
+          if (field) unitPrice = field.price_cents;
+        } else if (order.product_id) {
+          const { data: prod } = await supabase.from("products").select("price_cents").eq("id", order.product_id).single();
+          if (prod) unitPrice = prod.price_cents;
+        }
+
+        const newTotal = unitPrice * qty;
+        await supabase.from("orders").update({ total_cents: newTotal }).eq("id", orderId);
+
+        const channelId = interaction.channel_id;
+        await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+          method: "POST",
+          headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            embeds: [{
+              title: "✏️ Quantidade Atualizada",
+              description: `Quantidade: **${qty}x**\nNovo total: **${formatBRL(newTotal)}**`,
+              color: 0x2B2D31,
+            }],
+          }),
+        });
+
+        await editFollowup(interaction, botToken, `✅ Quantidade atualizada para ${qty}x!`);
+        return ok();
+      }
     } catch (err) {
       console.error("Modal interaction error:", err);
       try {
