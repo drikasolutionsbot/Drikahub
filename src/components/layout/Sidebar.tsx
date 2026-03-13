@@ -34,7 +34,7 @@ const navGroups = [
   {
     label: "BOT",
     items: [
-      { label: "Personalização", icon: Palette, path: "/customization" },
+      { label: "Servidor", icon: Server, path: "/customization" },
       { label: "Recursos", icon: Box, path: "/resources" },
     ],
   },
