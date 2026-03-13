@@ -869,7 +869,6 @@ export const ProductDetailFields = ({ productId, onFieldsChange }: ProductDetail
                     updateField={updateField}
                     saveField={saveField}
                     deleteField={deleteField}
-                    stockCount={0}
                   />
                 )}
               </div>
