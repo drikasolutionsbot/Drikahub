@@ -101,7 +101,7 @@ const defaultConfig: WelcomeConfig = {
   dm_embed_data: defaultDmEmbed,
   auto_role_enabled: false,
   auto_role_id: "",
-  content: "",
+  content: "{user}",
   dm_content: "",
   goodbye_enabled: false,
   goodbye_channel_id: "",
