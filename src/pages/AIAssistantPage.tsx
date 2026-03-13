@@ -300,7 +300,7 @@ export default function AIAssistantPage() {
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">P-CON IA</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">DRIKA HUB IA</h1>
               <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/30">
                 <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_6px_rgba(34,197,94,0.6)]" />
                 <span className="text-[10px] font-bold uppercase tracking-widest text-green-500">IA Ativa</span>
