@@ -544,7 +544,6 @@ const FieldExpandedContent = ({
   updateField,
   saveField,
   deleteField,
-  stockCount,
 }: {
   field: ProductField;
   tenantId: string | null;
@@ -552,14 +551,24 @@ const FieldExpandedContent = ({
   updateField: (id: string, updates: Partial<ProductField>) => void;
   saveField: (field: ProductField) => void;
   deleteField: (id: string) => void;
-  stockCount: number;
 }) => {
   const [dirty, setDirty] = useState(false);
+  const [stockCount, setStockCount] = useState(0);
 
   const handleUpdate = (id: string, updates: Partial<ProductField>) => {
     updateField(id, updates);
     setDirty(true);
   };
+
+  // Fetch stock count for tab label
+  useEffect(() => {
+    if (!tenantId || !field.product_id) return;
+    supabase.functions.invoke("manage-product-fields", {
+      body: { action: "get_stock", tenant_id: tenantId, product_id: field.product_id },
+    }).then(({ data }) => {
+      if (data?.stock !== undefined) setStockCount(data.stock);
+    });
+  }, [tenantId, field.product_id]);
 
   return (
     <div className="border-t border-border p-4">
@@ -575,7 +584,12 @@ const FieldExpandedContent = ({
         </TabsContent>
 
         <TabsContent value="estoque">
-          <FieldEstoqueTab field={field} tenantId={tenantId} updateField={handleUpdate} />
+          <FieldEstoqueTab
+            field={field}
+            tenantId={tenantId}
+            updateField={handleUpdate}
+            onStockChange={setStockCount}
+          />
         </TabsContent>
 
         <TabsContent value="mensagens">
