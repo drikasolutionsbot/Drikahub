@@ -21,6 +21,7 @@ import ChannelSelectWithCreate from "@/components/channels/ChannelSelectWithCrea
 import { DiscordButtonStylePicker, type DiscordButtonStyle, getDiscordButtonStyles } from "@/components/discord/DiscordButtonStylePicker";
 
 interface ServerConfig {
+  server_name: string;
   bot_status: string;
   bot_status_interval: string;
   bot_prefix: string;
@@ -38,6 +39,7 @@ interface ServerConfig {
 }
 
 const defaultConfig: ServerConfig = {
+  server_name: "",
   bot_status: "/panel",
   bot_status_interval: "30",
   bot_prefix: "d!",
@@ -110,6 +112,7 @@ const CustomizationPage = () => {
       const t = tenantRes.data || tenant;
       if (t) {
         const loaded: ServerConfig = {
+          server_name: t.name || "",
           bot_status: t.bot_status || "/panel",
           bot_status_interval: String(t.bot_status_interval || 30),
           bot_prefix: t.bot_prefix || "d!",
@@ -167,6 +170,7 @@ const CustomizationPage = () => {
         body: {
           tenant_id: tenantId,
           updates: {
+            name: config.server_name,
             bot_status: config.bot_status,
             bot_status_interval: parseInt(config.bot_status_interval) || 30,
             bot_prefix: config.bot_prefix,
@@ -282,7 +286,7 @@ const CustomizationPage = () => {
           {/* Discord Server */}
           <Card className="border-border/50 bg-sidebar">
             <CardContent className="pt-6 space-y-5">
-              <div>
+               <div>
                 <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Servidor Discord</Label>
                 <div className="flex items-center gap-3 mt-3 p-3 rounded-xl bg-background border border-border">
                   <div className="h-10 w-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center overflow-hidden shrink-0">
@@ -298,7 +302,6 @@ const CustomizationPage = () => {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm truncate">{guildInfo?.name || botName}</p>
                     <p className="text-xs font-mono text-muted-foreground">{guildId}</p>
                   </div>
                   <Badge variant={botOnline ? "default" : "destructive"} className="gap-1.5 shrink-0">
@@ -306,6 +309,17 @@ const CustomizationPage = () => {
                     {botOnline === null ? "..." : botOnline ? "Online" : "Offline"}
                   </Badge>
                 </div>
+              </div>
+
+              <div>
+                <Label htmlFor="server_name" className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Nome do Servidor</Label>
+                <Input
+                  id="server_name"
+                  value={config.server_name}
+                  onChange={e => update("server_name", e.target.value)}
+                  placeholder="Nome do seu servidor"
+                  className="mt-2"
+                />
               </div>
 
               {guildInfo && (
