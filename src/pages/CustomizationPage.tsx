@@ -294,7 +294,7 @@ const CustomizationPage = () => {
                   <div className="h-10 w-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center overflow-hidden shrink-0">
                     {guildInfo?.icon ? (
                       <img
-                        src={`https://cdn.discordapp.com/icons/${tenant?.discord_guild_id}/${guildInfo.icon}.png?size=64`}
+                        src={guildInfo.icon.startsWith("http") ? guildInfo.icon : `https://cdn.discordapp.com/icons/${tenant?.discord_guild_id}/${guildInfo.icon}.png?size=64`}
                         alt="" className="h-full w-full object-cover"
                       />
                     ) : botAvatar ? (
