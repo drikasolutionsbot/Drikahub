@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Search, ChevronUp, ChevronDown, Package, Loader2, Copy, GripVertical } from "lucide-react";
+import { Plus, Search, ChevronUp, ChevronDown, Package, Loader2, Copy, GripVertical, Trash2 } from "lucide-react";
 import TrashIcon from "@/components/ui/trash-icon";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -184,15 +184,19 @@ const FieldGeralTab = ({
 const FieldEstoqueTab = ({
   field,
   tenantId,
+  updateField,
 }: {
   field: ProductField;
   tenantId: string | null;
+  updateField: (id: string, updates: Partial<ProductField>) => void;
 }) => {
   const [stockCount, setStockCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [addModalOpen, setAddModalOpen] = useState(false);
-  const [stockItems, setStockItems] = useState<Array<{ id: string; content: string }>>([]);
+  const [stockItems, setStockItems] = useState<Array<{ id: string; content: string; created_at: string }>>([]);
   const [stockSearch, setStockSearch] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [clearing, setClearing] = useState(false);
 
   const fetchStock = useCallback(async () => {
     if (!tenantId || !field.product_id) return;
@@ -201,7 +205,7 @@ const FieldEstoqueTab = ({
       const { data, error } = await supabase.functions.invoke("manage-product-fields", {
         body: { action: "get_stock", tenant_id: tenantId, product_id: field.product_id },
       });
-      if (!error) {
+      if (!error && !data?.error) {
         setStockCount(data?.stock || 0);
         setStockItems(data?.items || []);
       }
@@ -214,6 +218,46 @@ const FieldEstoqueTab = ({
   useEffect(() => {
     fetchStock();
   }, [fetchStock]);
+
+  const handleDeleteItem = async (itemId: string) => {
+    if (!tenantId) return;
+    setDeletingId(itemId);
+    try {
+      const { error } = await supabase.functions.invoke("manage-product-fields", {
+        body: { action: "delete_stock_item", tenant_id: tenantId, stock_item_id: itemId },
+      });
+      if (!error) {
+        setStockItems((prev) => prev.filter((i) => i.id !== itemId));
+        setStockCount((prev) => prev - 1);
+        toast({ title: "Item removido!" });
+      }
+    } catch (e: any) {
+      toast({ title: "Erro ao remover", variant: "destructive" });
+    }
+    setDeletingId(null);
+  };
+
+  const handleClearStock = async () => {
+    if (!tenantId) return;
+    setClearing(true);
+    try {
+      const { error } = await supabase.functions.invoke("manage-product-fields", {
+        body: { action: "clear_stock", tenant_id: tenantId, product_id: field.product_id },
+      });
+      if (!error) {
+        setStockItems([]);
+        setStockCount(0);
+        toast({ title: "Estoque limpo! ✅" });
+      }
+    } catch (e: any) {
+      toast({ title: "Erro ao limpar estoque", variant: "destructive" });
+    }
+    setClearing(false);
+  };
+
+  const filteredItems = stockSearch
+    ? stockItems.filter((i) => i.content.toLowerCase().includes(stockSearch.toLowerCase()))
+    : stockItems;
 
   return (
     <div className="space-y-5">
@@ -229,8 +273,40 @@ const FieldEstoqueTab = ({
             <p className="text-sm font-bold">Estoque Fictício</p>
             <p className="text-xs text-muted-foreground">Ativar estoque fictício para este campo</p>
           </div>
-          <Switch checked={false} />
+          <Switch
+            checked={field.show_stock}
+            onCheckedChange={(val) => updateField(field.id, { show_stock: val })}
+          />
         </div>
+
+        {field.show_stock && (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold">Quantidade mínima</Label>
+              <Input
+                type="number"
+                min={0}
+                value={field.min_quantity ?? 1}
+                onChange={(e) => updateField(field.id, { min_quantity: parseInt(e.target.value) || 0 })}
+                className="bg-muted border-border h-9"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-bold">Quantidade máxima</Label>
+              <Input
+                type="number"
+                min={0}
+                value={field.max_quantity ?? ""}
+                onChange={(e) => {
+                  const val = e.target.value ? parseInt(e.target.value) : null;
+                  updateField(field.id, { max_quantity: val });
+                }}
+                placeholder="Sem limite"
+                className="bg-muted border-border h-9"
+              />
+            </div>
+          </div>
+        )}
 
         <div className="rounded-lg border border-border bg-muted/30 p-3 flex items-start gap-2">
           <span className="text-muted-foreground mt-0.5">ℹ️</span>
@@ -240,16 +316,49 @@ const FieldEstoqueTab = ({
         </div>
       </div>
 
-      {/* Estoque */}
+      {/* Quantidade por Entrega */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="w-0.5 h-5 bg-foreground rounded-full" />
+          <h4 className="text-sm font-bold">Quantidade por Entrega</h4>
+        </div>
+        <div className="space-y-2">
+          <Label className="text-xs font-bold">Itens enviados por compra</Label>
+          <Input
+            type="number"
+            min={1}
+            value={field.delivery_quantity}
+            onChange={(e) => updateField(field.id, { delivery_quantity: parseInt(e.target.value) || 1 })}
+            className="bg-muted border-border h-9 max-w-[200px]"
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Define quantos itens do estoque geral serão enviados ao comprador nesta variação.
+          </p>
+        </div>
+      </div>
+
+      {/* Estoque Real */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h4 className="text-sm font-bold">Estoque</h4>
+          <div className="flex items-center gap-2">
+            <div className="w-0.5 h-5 bg-foreground rounded-full" />
+            <h4 className="text-sm font-bold">Estoque ({stockCount})</h4>
+          </div>
           <div className="flex gap-2">
+            {stockCount > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs h-7 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
+                onClick={handleClearStock}
+                disabled={clearing}
+              >
+                {clearing ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Trash2 className="h-3 w-3 mr-1" />}
+                Limpar Tudo
+              </Button>
+            )}
             <Button variant="outline" size="sm" className="text-xs h-7" onClick={fetchStock}>
               <span className="mr-1">↻</span> Atualizar
-            </Button>
-            <Button variant="outline" size="sm" className="text-xs h-7">
-              Modo Texto
             </Button>
           </div>
         </div>
@@ -258,18 +367,44 @@ const FieldEstoqueTab = ({
           placeholder="Pesquisar item no estoque..."
           value={stockSearch}
           onChange={(e) => setStockSearch(e.target.value)}
-          className="bg-muted border-border"
+          className="bg-muted border-border h-9"
         />
 
         {loading ? (
           <div className="flex justify-center py-6">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
+        ) : filteredItems.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+            <Package className="h-8 w-8 mb-2 opacity-30" />
+            <p className="text-sm font-medium">{stockSearch ? "Nenhum item encontrado" : "Estoque vazio"}</p>
+            <p className="text-xs mt-1">{stockSearch ? "Tente outro termo de busca" : "Adicione itens abaixo"}</p>
+          </div>
         ) : (
-          <div className="min-h-[100px]">
-            {stockItems.length === 0 && (
-              <p className="text-center text-sm text-muted-foreground py-6">Estoque vazio</p>
-            )}
+          <div className="max-h-[300px] overflow-y-auto rounded-lg border border-border divide-y divide-border">
+            {filteredItems.map((item) => (
+              <div
+                key={item.id}
+                className="flex items-center justify-between px-3 py-2 hover:bg-muted/50 transition-colors group"
+              >
+                <div className="flex-1 min-w-0 mr-2">
+                  <p className="text-sm font-mono truncate">{item.content}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all"
+                  onClick={() => handleDeleteItem(item.id)}
+                  disabled={deletingId === item.id}
+                >
+                  {deletingId === item.id ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -440,7 +575,7 @@ const FieldExpandedContent = ({
         </TabsContent>
 
         <TabsContent value="estoque">
-          <FieldEstoqueTab field={field} tenantId={tenantId} />
+          <FieldEstoqueTab field={field} tenantId={tenantId} updateField={handleUpdate} />
         </TabsContent>
 
         <TabsContent value="mensagens">
