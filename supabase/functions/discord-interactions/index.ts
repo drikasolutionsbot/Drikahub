@@ -980,6 +980,34 @@ serve(async (req) => {
         return respondImmediate(interaction, "📋 O código PIX está na mensagem acima.");
       }
 
+      // ─── COPY DELIVERED PRODUCT (ephemeral) ───────────────
+      if (customId.startsWith("copy_delivered:")) {
+        const orderId = customId.replace("copy_delivered:", "");
+        const { data: order } = await supabase.from("orders").select("id, tenant_id, product_id, discord_user_id, order_number").eq("id", orderId).single();
+        if (!order) return respondImmediate(interaction, "❌ Pedido não encontrado.");
+
+        // Get delivered stock items for this order
+        const { data: items } = await supabase
+          .from("product_stock_items")
+          .select("content")
+          .eq("product_id", order.product_id)
+          .eq("tenant_id", order.tenant_id)
+          .eq("delivered_to", order.discord_user_id)
+          .eq("delivered", true)
+          .order("delivered_at", { ascending: false })
+          .limit(10);
+
+        if (!items || items.length === 0) {
+          return respondImmediate(interaction, "❌ Nenhum conteúdo entregue encontrado para este pedido.");
+        }
+
+        const content = items.map((i: any) => i.content).join("\n");
+        return respondImmediate(interaction, `📋 **Produto entregue:**\n\`\`\`\n${content}\n\`\`\``);
+      }
+
+      // ─── BUY AGAIN (link to server) ───────────────────────
+      // This is handled as a Link button (style 5) so no handler needed here.
+
       // ─── TICKET OPEN (from ticket embed button) ───────────
       if (customId.startsWith("ticket_open_")) {
         // Parse: ticket_open_{tenantId}_{channelId}
@@ -1960,6 +1988,9 @@ async function processPurchase(
   }
 
   const checkoutThread = await createThreadRes.json();
+
+  // Store checkout thread ID on order
+  await supabase.from("orders").update({ checkout_thread_id: checkoutThread.id }).eq("id", order.id);
 
   // Add buyer to thread
   await fetch(`${DISCORD_API}/channels/${checkoutThread.id}/thread-members/${userId}`, {
