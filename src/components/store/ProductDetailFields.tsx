@@ -13,6 +13,11 @@ import { toast } from "@/hooks/use-toast";
 import { EmojiPicker } from "./EmojiPicker";
 import { AddStockModal } from "./AddStockModal";
 
+interface AutoMessage {
+  id: string;
+  content: string;
+}
+
 interface ProductField {
   id: string;
   product_id: string;
@@ -34,6 +39,8 @@ interface ProductField {
   min_quantity: number;
   max_quantity: number | null;
   delivery_quantity: number;
+  pre_purchase_messages: AutoMessage[];
+  post_purchase_messages: AutoMessage[];
 }
 
 interface ProductDetailFieldsProps {
