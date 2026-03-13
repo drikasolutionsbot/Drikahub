@@ -43,6 +43,7 @@ const navGroups = [
     items: [
       { label: "Canais", icon: Hash, path: "/channels" },
       { label: "Cargos", icon: ShieldCheck, path: "/roles" },
+      { label: "Verificação", icon: Shield, path: "/verification" },
       { label: "Loja", icon: Store, path: "/store" },
       { label: "Marketplace", icon: ShoppingBag, path: "/marketplace" },
       { label: "Proteção", icon: Shield, path: "/protection" },
