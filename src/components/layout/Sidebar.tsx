@@ -47,7 +47,6 @@ const navGroups = [
       { label: "Marketplace", icon: ShoppingBag, path: "/marketplace" },
       { label: "Proteção", icon: Shield, path: "/protection" },
       { label: "Boas-vindas", icon: HandMetal, path: "/welcome" },
-      { label: "Boas-vindas", icon: HandMetal, path: "/welcome" },
       { label: "Tickets", icon: Ticket, path: "/tickets" },
       { label: "Sorteios", icon: Gift, path: "/giveaways" },
       
