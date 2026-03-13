@@ -198,7 +198,7 @@ export const ProductDetailHooks = ({ productId }: ProductDetailHooksProps) => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
