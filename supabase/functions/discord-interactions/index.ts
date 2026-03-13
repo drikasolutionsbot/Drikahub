@@ -1961,6 +1961,9 @@ async function processPurchase(
 
   const checkoutThread = await createThreadRes.json();
 
+  // Store checkout thread ID on order
+  await supabase.from("orders").update({ checkout_thread_id: checkoutThread.id }).eq("id", order.id);
+
   // Add buyer to thread
   await fetch(`${DISCORD_API}/channels/${checkoutThread.id}/thread-members/${userId}`, {
     method: "PUT",
