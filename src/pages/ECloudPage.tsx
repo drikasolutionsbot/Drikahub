@@ -1,9 +1,13 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, lazy, Suspense } from "react";
 import { useTenant } from "@/contexts/TenantContext";
 import { supabase } from "@/integrations/supabase/client";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { ECloudCharts } from "@/components/ecloud/ECloudCharts";
 import { ECloudDataTab } from "@/components/ecloud/ECloudDataTab";
+import { Loader2 } from "lucide-react";
+
+const VerificationPage = lazy(() => import("@/pages/VerificationPage"));
+const VerifiedMembersPage = lazy(() => import("@/pages/VerifiedMembersPage"));
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge, getStatusLabel } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
