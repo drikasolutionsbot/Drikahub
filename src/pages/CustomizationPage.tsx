@@ -375,6 +375,26 @@ const CustomizationPage = () => {
 
         {/* === VERIFICAÇÃO === */}
         <TabsContent value="verificacao" className="mt-6">
+          {/* Verified Members Button */}
+          <Card className="border-border/50 bg-sidebar mb-6">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                    <ShieldCheck className="h-5 w-5 text-emerald-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold">Membros Verificados</p>
+                    <p className="text-xs text-muted-foreground">Visualize e gerencie todos os membros verificados</p>
+                  </div>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => navigate("/verified-members")} className="gap-2">
+                  Ver Membros <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
             <div className="space-y-6">
               {/* Toggle */}

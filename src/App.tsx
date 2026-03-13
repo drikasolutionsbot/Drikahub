@@ -124,6 +124,7 @@ const AppRoutes = () => (
       <Route path="/automations" element={<AutomationsPage />} />
       <Route path="/protection" element={<ProtectionPage />} />
       <Route path="/verification" element={<VerificationPage />} />
+      <Route path="/verified-members" element={<VerifiedMembersPage />} />
       <Route path="/ecloud" element={<ECloudPage />} />
       <Route path="/support" element={<SupportPage />} />
       <Route path="/tutorials" element={<TutorialsPage />} />
