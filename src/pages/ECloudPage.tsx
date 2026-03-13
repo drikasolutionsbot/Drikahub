@@ -471,6 +471,18 @@ const ECloudPage = () => {
         <TabsContent value="dados" className="mt-6">
           {tenantId && <ECloudDataTab tenantId={tenantId} />}
         </TabsContent>
+
+        <TabsContent value="verificacao" className="mt-6">
+          <Suspense fallback={<div className="flex items-center justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>}>
+            <VerificationPage embedded />
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="verificados" className="mt-6">
+          <Suspense fallback={<div className="flex items-center justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>}>
+            <VerifiedMembersPage embedded />
+          </Suspense>
+        </TabsContent>
       </Tabs>
     </div>
   );
