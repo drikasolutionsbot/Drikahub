@@ -458,7 +458,7 @@ export default function AIAssistantPage() {
                     <div className="absolute inset-0 rounded-full border-2 border-primary/20" />
                     <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-primary animate-spin" />
                   </div>
-                  <span className="text-[10px] font-semibold text-primary tracking-wide">P-CON processando...</span>
+                  <span className="text-[10px] font-semibold text-primary tracking-wide">Drika IA processando...</span>
                 </div>
               )}
             </div>
