@@ -337,8 +337,14 @@ const CustomizationPage = () => {
                <div>
                 <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Servidor Discord</Label>
                 <div className="flex items-center gap-3 mt-3 p-3 rounded-xl bg-background border border-border">
-                  <div className="h-10 w-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center overflow-hidden shrink-0">
-                    {guildInfo?.icon ? (
+                  <div
+                    className="relative h-12 w-12 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center overflow-hidden shrink-0 cursor-pointer group"
+                    onClick={() => guildIconInputRef.current?.click()}
+                    title="Clique para alterar o ícone do servidor"
+                  >
+                    {uploadingIcon ? (
+                      <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                    ) : guildInfo?.icon ? (
                       <img
                         src={guildInfo.icon.startsWith("http") ? guildInfo.icon : `https://cdn.discordapp.com/icons/${tenant?.discord_guild_id}/${guildInfo.icon}.png?size=64`}
                         alt="" className="h-full w-full object-cover"
@@ -348,7 +354,17 @@ const CustomizationPage = () => {
                     ) : (
                       <Bot className="h-5 w-5 text-primary" />
                     )}
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
+                      <Camera className="h-4 w-4 text-white" />
+                    </div>
                   </div>
+                  <input
+                    ref={guildIconInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleGuildIconUpload}
+                  />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-mono text-muted-foreground">{guildId}</p>
                   </div>
