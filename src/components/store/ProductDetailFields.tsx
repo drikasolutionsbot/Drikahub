@@ -444,7 +444,7 @@ const FieldExpandedContent = ({
         </TabsContent>
 
         <TabsContent value="mensagens">
-          <FieldMensagensTab />
+          <FieldMensagensTab field={field} updateField={handleUpdate} />
         </TabsContent>
       </Tabs>
 
