@@ -300,7 +300,7 @@ export default function AIAssistantPage() {
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">P-CON IA</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">DRIKA HUB IA</h1>
               <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/30">
                 <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_6px_rgba(34,197,94,0.6)]" />
                 <span className="text-[10px] font-bold uppercase tracking-widest text-green-500">IA Ativa</span>
@@ -316,7 +316,7 @@ export default function AIAssistantPage() {
           <div className="hidden sm:flex flex-col items-end gap-1">
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-card/80 border border-border/30">
               <Zap className="h-3.5 w-3.5 text-yellow-500" />
-              <span className="text-[11px] font-semibold text-foreground/80">P-CON Engine</span>
+              <span className="text-[11px] font-semibold text-foreground/80">Drika Engine</span>
             </div>
             <span className="text-[10px] text-muted-foreground/50">Multi-modelo inteligente</span>
           </div>
@@ -458,7 +458,7 @@ export default function AIAssistantPage() {
                     <div className="absolute inset-0 rounded-full border-2 border-primary/20" />
                     <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-primary animate-spin" />
                   </div>
-                  <span className="text-[10px] font-semibold text-primary tracking-wide">P-CON processando...</span>
+                  <span className="text-[10px] font-semibold text-primary tracking-wide">Drika IA processando...</span>
                 </div>
               )}
             </div>
@@ -542,7 +542,7 @@ export default function AIAssistantPage() {
                               </div>
                             </div>
                             <div className="flex flex-col gap-1">
-                              <span className="text-[11px] font-semibold text-foreground/70">P-CON IA está pensando</span>
+                              <span className="text-[11px] font-semibold text-foreground/70">Drika IA está pensando</span>
                               <div className="flex gap-1">
                                 <span className="h-1 w-1 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "0ms" }} />
                                 <span className="h-1 w-1 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "150ms" }} />
