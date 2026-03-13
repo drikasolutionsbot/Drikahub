@@ -2086,6 +2086,171 @@ async function respondDeferredUpdate(interaction: any, botToken: string) {
   }
 }
 
+// ─── Generate PIX and send in checkout thread ───────────────
+async function generatePixInThread(
+  supabase: any,
+  botToken: string,
+  order: any,
+  channelId: string,
+  userId: string
+) {
+  const tenantId = order.tenant_id;
+  const priceCents = order.total_cents;
+  const orderName = order.product_name;
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+
+  // Check for active payment provider
+  const { data: providers } = await supabase
+    .from("payment_providers")
+    .select("provider_key, api_key_encrypted, secret_key_encrypted, active, efi_cert_pem, efi_key_pem, efi_pix_key")
+    .eq("tenant_id", tenantId)
+    .eq("active", true);
+
+  const activeProvider = providers?.find((p: any) => p.api_key_encrypted);
+  const amountBRL = priceCents / 100;
+  const webhookBaseUrl = `${supabaseUrl}/functions/v1/payment-webhook`;
+  let brcode = "";
+  let paymentId = "";
+
+  if (activeProvider && amountBRL > 0) {
+    const providerKey = activeProvider.provider_key;
+    const apiKey = activeProvider.api_key_encrypted;
+    const webhookUrl = `${webhookBaseUrl}/${providerKey}/${tenantId}`;
+    const externalRef = `order_${order.id}`;
+
+    if (providerKey === "mercadopago") {
+      const result = await generateMercadoPagoPix(apiKey, amountBRL, orderName, externalRef, webhookUrl);
+      brcode = result.brcode;
+      paymentId = result.payment_id;
+    } else if (providerKey === "pushinpay") {
+      const result = await generatePushinPayPix(apiKey, priceCents, webhookUrl);
+      brcode = result.brcode;
+      paymentId = result.payment_id;
+    } else if (providerKey === "efi" || providerKey === "misticpay") {
+      const pixRes = await fetch(`${supabaseUrl}/functions/v1/generate-pix`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
+        body: JSON.stringify({ tenant_id: tenantId, amount_cents: priceCents, product_name: orderName, tx_id: externalRef }),
+      });
+      const pixData = await pixRes.json();
+      if (pixData.error) throw new Error(pixData.error);
+      brcode = pixData.brcode || "";
+      paymentId = pixData.payment_id || externalRef;
+    }
+
+    await supabase.from("orders").update({ payment_id: paymentId, payment_provider: providerKey }).eq("id", order.id);
+  } else {
+    // Static PIX fallback
+    const { data: tenant } = await supabase.from("tenants").select("name, pix_key, pix_key_type").eq("id", tenantId).single();
+    if (!tenant?.pix_key) {
+      await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+        method: "POST",
+        headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ embeds: [{ title: "❌ Erro", description: "Nenhum método de pagamento configurado.", color: 0xED4245 }] }),
+      });
+      return;
+    }
+    brcode = generateStaticBRCode(tenant.pix_key, tenant.name || "Loja", amountBRL, `PED${order.order_number}`);
+    await supabase.from("orders").update({ payment_provider: "static_pix" }).eq("id", order.id);
+
+    // Send admin notification
+    const { data: storeConfig } = await supabase
+      .from("store_configs")
+      .select("logs_channel_id")
+      .eq("tenant_id", tenantId)
+      .single();
+
+    if (storeConfig?.logs_channel_id) {
+      await fetch(`${DISCORD_API}/channels/${storeConfig.logs_channel_id}/messages`, {
+        method: "POST",
+        headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          embeds: [{
+            title: "🔔 Novo Pedido — PIX Estático",
+            description: `Aguardando confirmação manual do pagamento.`,
+            color: 0xFEE75C,
+            fields: [
+              { name: "📦 Produto", value: orderName, inline: true },
+              { name: "💰 Valor", value: formatBRL(priceCents), inline: true },
+              { name: "🔢 Pedido", value: `#${order.order_number}`, inline: true },
+              { name: "👤 Comprador", value: `<@${order.discord_user_id}> (${order.discord_username})`, inline: false },
+            ],
+            timestamp: new Date().toISOString(),
+          }],
+          components: [{
+            type: 1,
+            components: [
+              { type: 2, style: 3, label: "Aprovar Pagamento", emoji: { name: "✅" }, custom_id: `approve_order:${order.id}` },
+              { type: 2, style: 4, label: "Recusar", emoji: { name: "❌" }, custom_id: `reject_order:${order.id}` },
+            ],
+          }],
+        }),
+      });
+    }
+  }
+
+  // Get store branding
+  const { data: scBrand } = await supabase
+    .from("store_configs")
+    .select("store_logo_url, store_title, payment_timeout_minutes, embed_color")
+    .eq("tenant_id", tenantId)
+    .single();
+
+  const { data: tInfo } = await supabase.from("tenants").select("name, logo_url").eq("id", tenantId).single();
+  const storeName = scBrand?.store_title || tInfo?.name || "Loja";
+  const storeLogo = scBrand?.store_logo_url || tInfo?.logo_url;
+  const timeoutMin = scBrand?.payment_timeout_minutes || 30;
+  const embedColor = scBrand?.embed_color ? parseInt(scBrand.embed_color.replace("#", ""), 16) : 0x2B2D31;
+
+  const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(brcode)}`;
+
+  // Send PIX embed in the thread
+  const pixEmbed: any = {
+    author: { name: order.discord_username || userId },
+    title: "Pagamento via PIX criado",
+    description: [
+      "🟢 **Ambiente Seguro**",
+      "Seu pagamento será processado em um ambiente 100% seguro e protegido.\n",
+      "🟢 **Pagamento Instantâneo**",
+      "Assim que o pagamento for confirmado, o seu pedido será processado imediatamente.\n",
+      "**Código copia e cola**",
+      `\`\`\`\n${brcode}\n\`\`\``,
+    ].join("\n"),
+    color: embedColor,
+    image: { url: qrImageUrl },
+    footer: {
+      text: `${storeName} – Pagamento expira em ${timeoutMin} minutos.\n• Hoje às ${new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`,
+      icon_url: storeLogo || undefined,
+    },
+  };
+
+  if (storeLogo) pixEmbed.thumbnail = { url: storeLogo };
+
+  await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+    method: "POST",
+    headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      embeds: [pixEmbed],
+      components: [{
+        type: 1,
+        components: [
+          { type: 2, style: 2, label: "Código copia e cola", emoji: { name: "📋" }, custom_id: `copy_pix:${order.id}` },
+          { type: 2, style: 4, label: "Cancelar", custom_id: `checkout_cancel:${order.id}` },
+        ],
+      }],
+    }),
+  });
+
+  // Rename thread to show payment status
+  try {
+    await fetch(`${DISCORD_API}/channels/${channelId}`, {
+      method: "PATCH",
+      headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ name: `🛒 • ${order.discord_username || userId} • ${order.order_number}` }),
+    });
+  } catch {}
+}
+
 // Immediate ephemeral response
 function respondImmediate(interaction: any, content: string | Record<string, any>) {
   const data = typeof content === "string" ? { content, flags: 64 } : { ...content, flags: 64 };
