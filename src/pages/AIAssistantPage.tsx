@@ -316,7 +316,7 @@ export default function AIAssistantPage() {
           <div className="hidden sm:flex flex-col items-end gap-1">
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-card/80 border border-border/30">
               <Zap className="h-3.5 w-3.5 text-yellow-500" />
-              <span className="text-[11px] font-semibold text-foreground/80">P-CON Engine</span>
+              <span className="text-[11px] font-semibold text-foreground/80">Drika Engine</span>
             </div>
             <span className="text-[10px] text-muted-foreground/50">Multi-modelo inteligente</span>
           </div>
