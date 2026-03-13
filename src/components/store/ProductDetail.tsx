@@ -101,20 +101,26 @@ export const ProductDetail = ({ product, onBack, onSave, onDelete, categories = 
                 Excluir
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Excluir produto</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Tem certeza que deseja excluir "{edited.name}"? Esta ação não pode ser desfeita. Todo o estoque e campos serão removidos.
+            <AlertDialogContent className="border-destructive/20 bg-card/95 backdrop-blur-xl max-w-md">
+              <AlertDialogHeader className="space-y-4">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10 border border-destructive/20">
+                  <Trash2 className="h-6 w-6 text-destructive" />
+                </div>
+                <AlertDialogTitle className="text-center text-lg">Excluir produto</AlertDialogTitle>
+                <AlertDialogDescription className="text-center text-sm leading-relaxed">
+                  Tem certeza que deseja excluir <span className="font-semibold text-foreground">"{edited.name}"</span>?
+                  <br />
+                  Esta ação não pode ser desfeita. Todo o estoque e campos serão removidos permanentemente.
                 </AlertDialogDescription>
               </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogFooter className="mt-2 flex gap-3 sm:justify-center">
+                <AlertDialogCancel className="flex-1 sm:flex-none">Cancelar</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={() => onDelete(product.id)}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  className="flex-1 sm:flex-none bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-2"
                 >
-                  Excluir
+                  <Trash2 className="h-4 w-4" />
+                  Excluir Produto
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
