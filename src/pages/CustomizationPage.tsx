@@ -112,6 +112,7 @@ const CustomizationPage = () => {
       const t = tenantRes.data || tenant;
       if (t) {
         const loaded: ServerConfig = {
+          server_name: t.name || "",
           bot_status: t.bot_status || "/panel",
           bot_status_interval: String(t.bot_status_interval || 30),
           bot_prefix: t.bot_prefix || "d!",
