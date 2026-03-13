@@ -560,6 +560,8 @@ export const ProductDetailFields = ({ productId, onFieldsChange }: ProductDetail
             min_quantity: field.min_quantity,
             max_quantity: field.max_quantity,
             delivery_quantity: field.delivery_quantity || 1,
+            pre_purchase_messages: field.pre_purchase_messages || [],
+            post_purchase_messages: field.post_purchase_messages || [],
           },
         },
       });
