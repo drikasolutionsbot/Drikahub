@@ -963,6 +963,7 @@ serve(async (req) => {
           }),
         });
         return ok();
+      }
 
       // ─── COPY PIX CODE (ephemeral) ────────────────────────
       if (customId.startsWith("copy_pix:")) {
