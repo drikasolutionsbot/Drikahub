@@ -255,6 +255,7 @@ const FieldEstoqueTab = ({
       if (!error) {
         setStockItems([]);
         setStockCount(0);
+        onStockChange?.(0);
         toast({ title: "Estoque limpo! ✅" });
       }
     } catch (e: any) {
