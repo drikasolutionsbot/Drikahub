@@ -7,60 +7,70 @@ const corsHeaders = {
 
 const DISCORD_API = "https://discord.com/api/v10";
 
-function escHtml(s: string) {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
+// Transcript is now sent as Discord embeds + .txt backup
 
-function generateHtmlTranscript(msgs: any[], serverName: string, ticketName: string, status: string): string {
+function generateTranscriptText(msgs: any[], serverName: string, ticketName: string, status: string): string {
   const now = new Date().toLocaleString("pt-BR");
+  let lines = `══════════════════════════════════════\n`;
+  lines += `  ${serverName} — Transcript\n`;
+  lines += `  ${ticketName} · ${status} · ${now}\n`;
+  lines += `══════════════════════════════════════\n\n`;
 
-  let rows = "";
   for (const m of msgs) {
     const ts = new Date(m.timestamp).toLocaleString("pt-BR");
     const author = m.author?.username || "Desconhecido";
-    const avatar = m.author?.avatar
-      ? `https://cdn.discordapp.com/avatars/${m.author.id}/${m.author.avatar}.png?size=40`
-      : `https://cdn.discordapp.com/embed/avatars/${(parseInt(m.author?.id || "0") >> 22) % 6}.png`;
-    let content = escHtml(m.content || "");
-    if (!content && m.embeds?.length) content = "<em>[embed]</em>";
-    if (!content && m.attachments?.length) content = m.attachments.map((a: any) => `<a href="${escHtml(a.url)}">${escHtml(a.filename)}</a>`).join(", ");
-    if (!content) content = "<em>[sem conteúdo]</em>";
-    content = content.replace(/&lt;@!?(\d+)&gt;/g, '<span style="color:#7289da;font-weight:600">@user</span>');
-
-    rows += `<div style="display:flex;gap:12px;padding:8px 16px;border-bottom:1px solid #2f3136;">
-      <img src="${avatar}" style="width:40px;height:40px;border-radius:50%;flex-shrink:0;margin-top:2px;" />
-      <div>
-        <div><strong style="color:#fff;">${escHtml(author)}</strong> <span style="color:#72767d;font-size:12px;">${ts}</span></div>
-        <div style="color:#dcddde;margin-top:2px;">${content}</div>
-      </div>
-    </div>`;
+    let content = m.content || "";
+    if (!content && m.embeds?.length) content = "[embed]";
+    if (!content && m.attachments?.length) content = m.attachments.map((a: any) => a.url).join("\n");
+    if (!content) content = "[sem conteúdo]";
+    lines += `[${ts}] ${author}: ${content}\n`;
   }
 
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${escHtml(serverName)} - ${escHtml(status)}</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #36393f; color: #dcddde; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 14px; }
-    .header { background: #2f3136; padding: 20px; border-bottom: 2px solid #202225; }
-    .header h1 { color: #fff; font-size: 18px; }
-    .header p { color: #72767d; font-size: 12px; margin-top: 4px; }
-    .messages { padding: 8px 0; }
-    .footer { background: #2f3136; padding: 12px 16px; text-align: center; color: #72767d; font-size: 11px; border-top: 2px solid #202225; }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h1>${escHtml(serverName)} — Transcript</h1>
-    <p>${escHtml(ticketName)} · ${escHtml(status)} · Gerado em ${now}</p>
-  </div>
-  <div class="messages">${rows}</div>
-  <div class="footer">Transcript gerado automaticamente por Drika Hub</div>
-</body>
-</html>`;
+  lines += `\n══════════════════════════════════════\n`;
+  lines += `  Gerado automaticamente por Drika Hub\n`;
+  lines += `══════════════════════════════════════`;
+  return lines;
+}
+
+function generateTranscriptEmbeds(msgs: any[], serverName: string, ticketName: string, status: string): any[] {
+  const now = new Date().toLocaleString("pt-BR");
+  const embeds: any[] = [];
+
+  // Header embed
+  const headerEmbed: any = {
+    title: "📜 Transcript",
+    description: `**Servidor:** ${serverName}\n**Ticket:** ${ticketName}\n**Status:** ${status}\n**Gerado em:** ${now}`,
+    color: 0x2B2D31,
+  };
+  embeds.push(headerEmbed);
+
+  // Build message lines and split into chunks for embed fields (max 4096 chars per embed description)
+  let chunk = "";
+  for (const m of msgs) {
+    const ts = new Date(m.timestamp).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    const author = m.author?.username || "Desconhecido";
+    let content = m.content || "";
+    if (!content && m.embeds?.length) content = "*[embed]*";
+    if (!content && m.attachments?.length) content = m.attachments.map((a: any) => `[${a.filename}](${a.url})`).join(", ");
+    if (!content) content = "*[sem conteúdo]*";
+    // Truncate very long messages
+    if (content.length > 200) content = content.substring(0, 197) + "...";
+
+    const line = `\`${ts}\` **${author}:** ${content}\n`;
+    
+    if ((chunk + line).length > 3900) {
+      embeds.push({ description: chunk, color: 0x2B2D31 });
+      chunk = line;
+    } else {
+      chunk += line;
+    }
+  }
+  if (chunk) {
+    embeds.push({ description: chunk, color: 0x2B2D31 });
+  }
+
+  // Discord max 10 embeds per message
+  return embeds.slice(0, 10);
 }
 
 Deno.serve(async (req) => {
@@ -167,43 +177,32 @@ Deno.serve(async (req) => {
     const statusLabel = action === "deleted" ? "Deletado" : "Fechado";
     const ticketName = `ticket-${ticket.discord_username || ticket.discord_user_id}`;
 
-    // Generate HTML transcript
-    const htmlTranscript = msgs.length > 0
-      ? generateHtmlTranscript(msgs, serverName, ticketName, `Suporte · ${statusLabel.toLowerCase()}`)
-      : "";
-
-    // Send log embed + transcript to logs channel
-    if (sc?.ticket_logs_channel_id && action === "closed") {
+    // Send log + transcript as Discord embeds (viewable directly in channel)
+    if (sc?.ticket_logs_channel_id && (action === "closed" || action === "deleted")) {
       const logEmbed: any = {
         title: `Ticket - ${statusLabel}`,
-        color: 0x2B2D31,
+        color: action === "deleted" ? 0xED4245 : 0x2B2D31,
         fields: [
-          { name: "👤 Moderador", value: `${closed_by || "Painel"}\n@${closed_by || "painel"}`, inline: false },
+          { name: "👤 Moderador", value: `${closed_by || "Painel"}`, inline: true },
+          { name: "🎫 Ticket", value: ticketName, inline: true },
         ],
         timestamp: closedAt.toISOString(),
+        footer: { text: "Drika Hub • Transcript" },
       };
 
       if (ticket.product_name) {
-        logEmbed.fields.push({ name: "📦 Produto", value: ticket.product_name, inline: false });
+        logEmbed.fields.push({ name: "📦 Produto", value: ticket.product_name, inline: true });
       }
 
-      if (htmlTranscript) {
+      if (msgs.length > 0) {
+        const transcriptEmbeds = generateTranscriptEmbeds(msgs, serverName, ticketName, `Suporte · ${statusLabel.toLowerCase()}`);
+        const allEmbeds = [logEmbed, ...transcriptEmbeds].slice(0, 10);
+
+        const txtTranscript = generateTranscriptText(msgs, serverName, ticketName, `Suporte · ${statusLabel.toLowerCase()}`);
         const formData = new FormData();
-        const blob = new Blob([htmlTranscript], { type: "text/html" });
-        formData.append("files[0]", blob, `transcript-${ticket.discord_channel_id || ticket.id.slice(0, 8)}.html`);
-        formData.append("payload_json", JSON.stringify({
-          embeds: [logEmbed],
-          components: [{
-            type: 1,
-            components: [{
-              type: 2,
-              style: 2,
-              label: "Ver transcript",
-              emoji: { name: "📜" },
-              custom_id: `transcript_view_${ticket.id}`,
-            }],
-          }],
-        }));
+        const blob = new Blob([txtTranscript], { type: "text/plain; charset=utf-8" });
+        formData.append("files[0]", blob, `transcript-${ticketName}.txt`);
+        formData.append("payload_json", JSON.stringify({ embeds: allEmbeds }));
 
         await fetch(`${DISCORD_API}/channels/${sc.ticket_logs_channel_id}/messages`, {
           method: "POST",
