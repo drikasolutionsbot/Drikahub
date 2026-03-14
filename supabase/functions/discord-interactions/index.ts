@@ -390,6 +390,12 @@ serve(async (req) => {
 
       // ─── /fechar - Fecha o ticket atual ───────────────────
       if (commandName === "fechar") {
+        // Only staff with MANAGE_THREADS can close tickets
+        const memberPerms = BigInt(interaction.member?.permissions || "0");
+        if (!(memberPerms & BigInt(0x4000000000)) && !(memberPerms & BigInt(0x8))) {
+          return respondImmediate(interaction, "❌ Você não tem permissão para fechar tickets.");
+        }
+
         const { data: ticket } = await supabase
           .from("tickets")
           .select("*, tenant_id")
@@ -1319,6 +1325,13 @@ serve(async (req) => {
 
       // ─── TICKET DELETE (permanently delete channel) ────────
       if (customId.startsWith("ticket_delete_")) {
+        // Only staff with MANAGE_THREADS can delete tickets
+        const memberPermsDelete = BigInt(interaction.member?.permissions || "0");
+        if (!(memberPermsDelete & BigInt(0x4000000000)) && !(memberPermsDelete & BigInt(0x8))) {
+          await respondImmediate(interaction, "❌ Você não tem permissão para deletar tickets.");
+          return ok();
+        }
+
         const ticketId = customId.replace("ticket_delete_", "");
         await respondDeferredUpdate(interaction, botToken);
 
@@ -1642,6 +1655,13 @@ serve(async (req) => {
       }
 
       if (customId.startsWith("ticket_close_")) {
+        // Only staff with MANAGE_THREADS can close tickets
+        const memberPermsClose = BigInt(interaction.member?.permissions || "0");
+        if (!(memberPermsClose & BigInt(0x4000000000)) && !(memberPermsClose & BigInt(0x8))) {
+          await respondImmediate(interaction, "❌ Você não tem permissão para arquivar tickets.");
+          return ok();
+        }
+
         const ticketId = customId.replace("ticket_close_", "");
         await respondDeferredUpdate(interaction, botToken);
 
