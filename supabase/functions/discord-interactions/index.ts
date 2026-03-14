@@ -390,6 +390,12 @@ serve(async (req) => {
 
       // ─── /fechar - Fecha o ticket atual ───────────────────
       if (commandName === "fechar") {
+        // Only staff with MANAGE_THREADS can close tickets
+        const memberPerms = BigInt(interaction.member?.permissions || "0");
+        if (!(memberPerms & BigInt(0x4000000000)) && !(memberPerms & BigInt(0x8))) {
+          return respondImmediate(interaction, "❌ Você não tem permissão para fechar tickets.");
+        }
+
         const { data: ticket } = await supabase
           .from("tickets")
           .select("*, tenant_id")
