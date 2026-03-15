@@ -180,6 +180,7 @@ const StorePage = () => {
                 categories={categories}
                 selectedCategoryId={selectedCategoryId}
                 onCategoryChange={setSelectedCategoryId}
+                fieldCounts={fieldCounts}
               />
 
               <div className="flex-1">

@@ -120,7 +120,7 @@ export const ProductList = ({
           <div className="p-2 space-y-0.5">
             {filtered.map((product) => {
               const hasStock = product.stock !== null && product.stock > 0;
-              const variationCount = product.stock ?? 0;
+              const variationCount = fieldCounts[product.id] ?? 0;
 
               return (
                 <button
