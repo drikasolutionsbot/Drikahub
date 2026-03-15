@@ -553,10 +553,7 @@ async function executeHook(hook: any, order: any, tenant: any, botToken: string)
       });
       if (dmRes.ok) {
         const dm = await dmRes.json();
-        const msg = config.message
-          .replace("{user}", `<@${order.discord_user_id}>`)
-          .replace("{product}", order.product_name)
-          .replace("{order}", `#${order.order_number}`);
+        const msg = replaceHookPlaceholders(config.message, order);
         await fetch(`${DISCORD_API}/channels/${dm.id}/messages`, {
           method: "POST",
           headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
@@ -568,10 +565,7 @@ async function executeHook(hook: any, order: any, tenant: any, botToken: string)
 
     case "send_channel_message": {
       if (!config.channel_id || !config.message) return;
-      const msg = config.message
-        .replace("{user}", `<@${order.discord_user_id}>`)
-        .replace("{product}", order.product_name)
-        .replace("{order}", `#${order.order_number}`);
+      const msg = replaceHookPlaceholders(config.message, order);
       await fetch(`${DISCORD_API}/channels/${config.channel_id}/messages`, {
         method: "POST",
         headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
@@ -590,10 +584,25 @@ async function executeHook(hook: any, order: any, tenant: any, botToken: string)
           order_number: order.order_number,
           product_name: order.product_name,
           discord_user_id: order.discord_user_id,
+          discord_username: order.discord_username,
           total_cents: order.total_cents,
         }),
       });
       break;
     }
   }
+}
+
+// Replace all supported placeholders in hook messages
+function replaceHookPlaceholders(message: string, order: any): string {
+  return message
+    .replace(/\{user\}/g, `<@${order.discord_user_id}>`)
+    .replace(/\{user_id\}/g, order.discord_user_id || "")
+    .replace(/\{username\}/g, order.discord_username || "")
+    .replace(/\{product\}/g, order.product_name || "")
+    .replace(/\{product_name\}/g, order.product_name || "")
+    .replace(/\{order\}/g, `#${order.order_number}`)
+    .replace(/\{order_id\}/g, order.id || "")
+    .replace(/\{order_number\}/g, String(order.order_number || ""))
+    .replace(/\{total\}/g, formatBRL(order.total_cents || 0));
 }
