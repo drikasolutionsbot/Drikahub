@@ -2147,8 +2147,15 @@ async function processPurchase(
       .eq("tenant_id", tenantId)
       .eq("delivered", false);
     if (count !== null) stockCount = String(count);
-  } else if (product.stock !== null) {
-    stockCount = String(product.stock);
+  } else {
+    // Count actual stock items for the product (global pool)
+    const { count } = await supabase
+      .from("product_stock_items")
+      .select("id", { count: "exact", head: true })
+      .eq("product_id", product.id)
+      .eq("tenant_id", tenantId)
+      .eq("delivered", false);
+    if (count !== null) stockCount = String(count);
   }
 
   // Build description from product description
