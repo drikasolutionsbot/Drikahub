@@ -165,7 +165,7 @@ export const ProductDetail = ({ product, onBack, onSave, onDelete, categories = 
             </TabsContent>
 
             <TabsContent value="embed" className="mt-0">
-              <ProductDetailEmbed product={edited} onChange={handleChange} />
+              <ProductDetailEmbed product={edited} onChange={handleChange} storeEmbedColor={embedColor} />
             </TabsContent>
 
             <TabsContent value="campos" className="mt-0">

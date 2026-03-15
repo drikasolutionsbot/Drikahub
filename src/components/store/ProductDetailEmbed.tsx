@@ -63,6 +63,7 @@ interface Product {
 interface ProductDetailEmbedProps {
   product: Product;
   onChange: (updates: Partial<Product>) => void;
+  storeEmbedColor?: string;
 }
 
 const bgOptions: { value: EmbedBgStyle; label: string; desc: string; preview: string }[] = [
@@ -71,7 +72,7 @@ const bgOptions: { value: EmbedBgStyle; label: string; desc: string; preview: st
   { value: "transparent", label: "Invisível", desc: "Sem fundo visível", preview: "transparent" },
 ];
 
-export const ProductDetailEmbed = ({ product, onChange }: ProductDetailEmbedProps) => {
+export const ProductDetailEmbed = ({ product, onChange, storeEmbedColor }: ProductDetailEmbedProps) => {
   const config: EmbedConfig = { ...DEFAULT_EMBED, ...(product.embed_config || {}) };
 
   const update = (key: keyof EmbedConfig, value: unknown) => {
@@ -305,7 +306,7 @@ export const ProductDetailEmbed = ({ product, onChange }: ProductDetailEmbedProp
       <div className="sticky top-4">
         <ProductDiscordPreview
           product={product}
-          embedColor={config.color || undefined}
+          embedColor={config.color || storeEmbedColor || undefined}
           embedConfig={config}
         />
       </div>
