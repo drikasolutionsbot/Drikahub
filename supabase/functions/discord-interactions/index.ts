@@ -2183,9 +2183,8 @@ async function processPurchase(
     },
   };
 
-  if (fieldName) {
-    reviewEmbed.fields.unshift({ name: "🛒 Carrinho", value: `1x ${orderName}`, inline: false });
-  }
+  // Always show cart field
+  reviewEmbed.fields.unshift({ name: "🛒 Carrinho", value: `1x ${orderName}`, inline: false });
 
   if (product.banner_url) reviewEmbed.image = { url: product.banner_url };
   if (product.icon_url) reviewEmbed.thumbnail = { url: product.icon_url };
