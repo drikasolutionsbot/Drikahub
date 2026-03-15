@@ -243,7 +243,9 @@ const DashboardPage = () => {
     setServerModalOpen(true);
     setLoadingGuilds(true);
     try {
-      const { data, error } = await supabase.functions.invoke("discord-bot-guilds");
+      const { data, error } = await supabase.functions.invoke("discord-bot-guilds", {
+        body: { tenant_id: tenantId },
+      });
       if (error) throw error;
       setGuilds(Array.isArray(data) ? data : []);
     } catch {
