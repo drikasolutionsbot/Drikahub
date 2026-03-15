@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,6 +16,16 @@ serve(async (req) => {
     const botToken = Deno.env.get("DISCORD_BOT_TOKEN");
     if (!botToken) throw new Error("Bot token not configured");
 
+    // Parse tenant_id from request body (optional for backward compat)
+    let tenantId: string | null = null;
+    try {
+      const body = await req.json();
+      tenantId = body?.tenant_id || null;
+    } catch {
+      // No body sent — backward compat
+    }
+
+    // Fetch all guilds the bot is in
     const res = await fetch("https://discord.com/api/v10/users/@me/guilds", {
       headers: { Authorization: `Bot ${botToken}` },
     });
@@ -34,6 +45,45 @@ serve(async (req) => {
         : null,
     }));
 
+    // If tenant_id provided, filter to only show:
+    // 1. The tenant's own guild
+    // 2. Guilds not claimed by ANY other tenant
+    if (tenantId) {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+      // Get the current tenant's guild
+      const { data: currentTenant } = await supabase
+        .from("tenants")
+        .select("discord_guild_id")
+        .eq("id", tenantId)
+        .single();
+
+      const myGuildId = currentTenant?.discord_guild_id;
+
+      // Get all guild IDs claimed by OTHER tenants
+      const { data: otherTenants } = await supabase
+        .from("tenants")
+        .select("discord_guild_id")
+        .neq("id", tenantId)
+        .not("discord_guild_id", "is", null);
+
+      const claimedGuildIds = new Set(
+        (otherTenants || []).map((t: any) => t.discord_guild_id).filter(Boolean)
+      );
+
+      // Filter: show only my guild + unclaimed guilds
+      const filtered = mapped.filter((g: any) =>
+        g.id === myGuildId || !claimedGuildIds.has(g.id)
+      );
+
+      return new Response(JSON.stringify(filtered), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // No tenant_id: return all (backward compat for onboarding)
     return new Response(JSON.stringify(mapped), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
