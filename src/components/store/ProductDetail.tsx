@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProductDetailGeneral } from "./ProductDetailGeneral";
 import { ProductDetailFields } from "./ProductDetailFields";
 import { ProductDetailHooks } from "./ProductDetailHooks";
+import { ProductDetailStock } from "./ProductDetailStock";
 import { PostMessageModal } from "./PostMessageModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
@@ -143,6 +144,7 @@ export const ProductDetail = ({ product, onBack, onSave, onDelete, categories = 
             <TabsList className="bg-muted">
               <TabsTrigger value="geral">Geral</TabsTrigger>
               <TabsTrigger value="campos">Campos</TabsTrigger>
+              <TabsTrigger value="estoque">Estoque</TabsTrigger>
               <TabsTrigger value="hooks">Hooks</TabsTrigger>
             </TabsList>
           </div>
@@ -154,6 +156,10 @@ export const ProductDetail = ({ product, onBack, onSave, onDelete, categories = 
 
             <TabsContent value="campos" className="mt-0">
               <ProductDetailFields productId={product.id} />
+            </TabsContent>
+
+            <TabsContent value="estoque" className="mt-0">
+              <ProductDetailStock productId={product.id} />
             </TabsContent>
 
             <TabsContent value="hooks" className="mt-0">
