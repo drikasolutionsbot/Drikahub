@@ -390,9 +390,12 @@ serve(async (req) => {
 
       // ─── /fechar - Fecha o ticket atual ───────────────────
       if (commandName === "fechar") {
-        // Only staff with MANAGE_THREADS can close tickets
-        const memberPerms = BigInt(interaction.member?.permissions || "0");
-        if (!(memberPerms & BigInt(0x4000000000)) && !(memberPerms & BigInt(0x8))) {
+        // Find tenant by guild_id to check staff role
+        const { data: fecharTenant } = await supabase.from("tenants").select("id").eq("discord_guild_id", guildId).single();
+        if (!fecharTenant) return respondImmediate(interaction, "❌ Servidor não configurado.");
+
+        const isStaff = await checkTicketStaffPermission(supabase, botToken, fecharTenant.id, guildId, userId, interaction.member);
+        if (!isStaff) {
           return respondImmediate(interaction, "❌ Você não tem permissão para fechar tickets.");
         }
 
