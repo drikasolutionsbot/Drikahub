@@ -102,8 +102,37 @@ async function generatePushinPayPix(apiKey: string, amountCents: number, webhook
 // ─── Format price ───────────────────────────────────────────
 const formatBRL = (cents: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
+// ─── Check ticket staff permission ──────────────────────────
+async function checkTicketStaffPermission(
+  supabase: any,
+  botToken: string,
+  tenantId: string,
+  guildId: string,
+  userId: string,
+  member: any
+): Promise<boolean> {
+  // Always allow server Administrators
+  const memberPerms = BigInt(member?.permissions || "0");
+  if (memberPerms & BigInt(0x8)) return true;
 
-serve(async (req) => {
+  // Fetch configured staff role
+  const { data: config } = await supabase
+    .from("store_configs")
+    .select("ticket_staff_role_id")
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+
+  const staffRoleId = config?.ticket_staff_role_id;
+  
+  // If no staff role configured, only admins can manage
+  if (!staffRoleId) return false;
+
+  // Check if user has the staff role
+  const memberRoles: string[] = member?.roles || [];
+  return memberRoles.includes(staffRoleId);
+}
+
+
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
