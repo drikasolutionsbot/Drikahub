@@ -39,6 +39,7 @@ interface ProductListProps {
   categories?: Category[];
   selectedCategoryId?: string | null;
   onCategoryChange?: (id: string | null) => void;
+  fieldCounts?: Record<string, number>;
 }
 
 export const ProductList = ({
