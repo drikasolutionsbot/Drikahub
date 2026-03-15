@@ -158,6 +158,10 @@ export const ProductDetail = ({ product, onBack, onSave, onDelete, categories = 
               <ProductDetailFields productId={product.id} />
             </TabsContent>
 
+            <TabsContent value="estoque" className="mt-0">
+              <ProductDetailStock productId={product.id} />
+            </TabsContent>
+
             <TabsContent value="hooks" className="mt-0">
               <ProductDetailHooks productId={product.id} />
             </TabsContent>
