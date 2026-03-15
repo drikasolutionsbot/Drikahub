@@ -40,7 +40,7 @@ interface Product {
 interface ProductDetailProps {
   product: Product;
   onBack: () => void;
-  onSave: (product: Product) => void;
+  onSave: (product: Product) => Promise<boolean>;
   onDelete: (productId: string) => void;
   categories?: Category[];
 }
