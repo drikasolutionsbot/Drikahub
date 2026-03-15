@@ -104,7 +104,13 @@ export const ProductDiscordPreview = ({ product, storeName, fields = [], embedCo
         </div>
 
         {/* Embed */}
-        <div className="flex rounded" style={{ borderLeft: `4px solid ${sideColor}` }}>
+        <div
+          className="flex rounded"
+          style={{
+            borderLeft: `4px solid ${sideColor}`,
+            backgroundColor: embedBgMap[bgStyle],
+          }}
+        >
           <div className="flex-1 p-3 space-y-2">
             {/* Title */}
             <p className="text-white font-semibold text-sm">{title}</p>
