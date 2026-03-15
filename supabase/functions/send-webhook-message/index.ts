@@ -40,19 +40,40 @@ serve(async (req) => {
 
       const { data: product } = await supabase
         .from("products")
-        .select("auto_delivery, button_style, stock")
+        .select("auto_delivery, button_style")
         .eq("id", product_id)
         .eq("tenant_id", tenant_id)
         .single();
 
-      // Always add stock field "Restam"
-      if (embeds && embeds.length > 0 && product) {
+      const { count: realStockCount, error: stockError } = await supabase
+        .from("product_stock_items")
+        .select("id", { count: "exact", head: true })
+        .eq("product_id", product_id)
+        .eq("tenant_id", tenant_id)
+        .eq("delivered", false);
+
+      if (stockError) {
+        console.error("Failed to fetch real stock count:", stockError.message);
+      }
+
+      // Always add/update stock field "Restam" using real stock pool
+      if (embeds && embeds.length > 0) {
         embeds[0].fields = embeds[0].fields || [];
-        embeds[0].fields.push({
+        const stockField = {
           name: "Restam",
-          value: `${product.stock ?? 0}`,
+          value: `${realStockCount ?? 0}`,
           inline: true,
-        });
+        };
+
+        const existingStockFieldIndex = embeds[0].fields.findIndex(
+          (field: any) => typeof field?.name === "string" && field.name.toLowerCase() === "restam"
+        );
+
+        if (existingStockFieldIndex >= 0) {
+          embeds[0].fields[existingStockFieldIndex] = stockField;
+        } else {
+          embeds[0].fields.push(stockField);
+        }
       }
 
       // Prepend auto delivery badge to embed description if applicable
