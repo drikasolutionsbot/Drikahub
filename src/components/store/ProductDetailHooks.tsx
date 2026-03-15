@@ -369,10 +369,10 @@ const HookConfigForm = ({
             : [];
 
         const uniqueChannels = Array.from(
-          new Map(
+          new Map<string, { id: string; name: string }>(
             parsedChannels
               .filter((c: any) => c?.id && c?.name)
-              .map((c: any) => [c.id, { id: c.id, name: c.name }])
+              .map((c: any) => [String(c.id), { id: String(c.id), name: String(c.name) }] as const)
           ).values()
         );
 
