@@ -27,8 +27,10 @@ export function useLocalDraft<T extends Record<string, any>>(
   const [draft, setDraft] = useState<T>(serverState);
   const [hasDraft, setHasDraft] = useState(false);
   const initialized = useRef(false);
+  const userEdited = useRef(false);
   const draftRef = useRef<T>(draft);
   const storageKeyRef = useRef(storageKey);
+  const serverStateRef = useRef(serverState);
 
   // Keep refs in sync
   useEffect(() => {
@@ -39,41 +41,55 @@ export function useLocalDraft<T extends Record<string, any>>(
     storageKeyRef.current = storageKey;
   }, [storageKey]);
 
+  useEffect(() => {
+    serverStateRef.current = serverState;
+  }, [serverState]);
+
   // On server state ready, check if there's a saved draft
   useEffect(() => {
-    if (!isReady || !storageKey || initialized.current) return;
+    if (!isReady || !storageKey) return;
+
+    // Allow re-initialization on every ready cycle (handles remounts)
     initialized.current = true;
+    userEdited.current = false;
 
     try {
       const saved = localStorage.getItem(storageKey);
       if (saved) {
         const parsed = JSON.parse(saved) as T;
-        setDraft(parsed);
-        setHasDraft(true);
-      } else {
-        setDraft(serverState);
+        // Only restore draft if it actually differs from server state
+        const isDifferent = JSON.stringify(parsed) !== JSON.stringify(serverState);
+        if (isDifferent) {
+          setDraft(parsed);
+          setHasDraft(true);
+          return;
+        } else {
+          // Draft matches server - clean it up
+          localStorage.removeItem(storageKey);
+        }
       }
     } catch {
-      setDraft(serverState);
+      // ignore parse errors
     }
-  }, [isReady, storageKey]);
 
-  // When server state changes and we haven't initialized yet, update draft
-  useEffect(() => {
-    if (!initialized.current && isReady) {
-      // Already handled above
-      return;
-    }
-  }, [serverState, isReady]);
+    setDraft(serverState);
+    setHasDraft(false);
+  }, [isReady, storageKey, serverState]);
 
-  // Debounced save to localStorage on draft changes
+  // Debounced save to localStorage on draft changes — only if user has edited
   useEffect(() => {
-    if (!storageKey || !initialized.current) return;
+    if (!storageKey || !initialized.current || !userEdited.current) return;
 
     const timer = setTimeout(() => {
       try {
-        localStorage.setItem(storageKey, JSON.stringify(draft));
-        setHasDraft(true);
+        // Don't save if draft matches server state
+        if (JSON.stringify(draftRef.current) === JSON.stringify(serverStateRef.current)) {
+          localStorage.removeItem(storageKey);
+          setHasDraft(false);
+        } else {
+          localStorage.setItem(storageKey, JSON.stringify(draftRef.current));
+          setHasDraft(true);
+        }
       } catch {
         // localStorage full or unavailable
       }
@@ -89,7 +105,7 @@ export function useLocalDraft<T extends Record<string, any>>(
     const handleBeforeUnload = () => {
       const key = storageKeyRef.current;
       const value = draftRef.current;
-      if (key && initialized.current) {
+      if (key && initialized.current && userEdited.current) {
         try {
           localStorage.setItem(key, JSON.stringify(value));
         } catch {
@@ -102,17 +118,27 @@ export function useLocalDraft<T extends Record<string, any>>(
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [storageKey]);
 
+  // Wrap setDraft to track user edits
+  const setDraftWithTracking = useCallback<React.Dispatch<React.SetStateAction<T>>>(
+    (value) => {
+      userEdited.current = true;
+      setDraft(value);
+    },
+    []
+  );
+
   const clearDraft = useCallback(() => {
     if (storageKey) {
       localStorage.removeItem(storageKey);
     }
     setHasDraft(false);
+    userEdited.current = false;
   }, [storageKey]);
 
   const discardDraft = useCallback(() => {
     clearDraft();
-    setDraft(serverState);
-  }, [clearDraft, serverState]);
+    setDraft(serverStateRef.current);
+  }, [clearDraft]);
 
-  return { draft, setDraft, clearDraft, hasDraft, discardDraft };
+  return { draft, setDraft: setDraftWithTracking, clearDraft, hasDraft, discardDraft };
 }
