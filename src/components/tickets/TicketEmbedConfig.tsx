@@ -26,6 +26,7 @@ interface TicketEmbedData {
   ticket_embed_button_style: DiscordButtonStyle;
   ticket_channel_id: string;
   ticket_logs_channel_id: string;
+  ticket_staff_role_id: string;
 }
 
 const defaults: TicketEmbedData = {
