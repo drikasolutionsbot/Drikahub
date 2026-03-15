@@ -51,6 +51,7 @@ const TicketEmbedConfig = () => {
   const [sending, setSending] = useState(false);
   const [channels, setChannels] = useState<{ id: string; name: string; parent_id?: string | null }[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string; position: number }[]>([]);
+  const { roles: discordRoles, loading: rolesLoading } = useDiscordRoles();
 
   const { draft: data, setDraft: setData, clearDraft, hasDraft, discardDraft } = useLocalDraft<TicketEmbedData>(
     "ticket-embed",
