@@ -160,7 +160,7 @@ export const ProductDiscordPreview = ({ product, storeName, fields = [], embedCo
               {cfg.show_stock_field !== false && (
                 <div>
                   <p className="text-[#dcddde] text-[10px] font-semibold">{cfg.stock_label || "Restam"}</p>
-                  <p className="text-[#dcddde] text-xs">{product.stock ?? 0}</p>
+                  <p className="text-[#dcddde] text-xs">{realStockCount}</p>
                 </div>
               )}
             </div>
