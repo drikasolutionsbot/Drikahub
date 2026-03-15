@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Save, Palette, Type, Image, MessageSquare, Send, Undo2 } from "lucide-react";
+import { Loader2, Save, Palette, Type, Image, MessageSquare, Send, Undo2, Shield } from "lucide-react";
 import ImageUploadField from "@/components/customization/ImageUploadField";
 import ChannelSelectWithCreate from "@/components/channels/ChannelSelectWithCreate";
 import { DiscordButtonStylePicker, getDiscordButtonStyles, type DiscordButtonStyle } from "@/components/discord/DiscordButtonStylePicker";
@@ -12,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "sonner";
 import { useLocalDraft } from "@/hooks/useLocalDraft";
+import { useDiscordRoles } from "@/hooks/useDiscordRoles";
 
 interface TicketEmbedData {
   ticket_embed_title: string;
@@ -24,6 +26,7 @@ interface TicketEmbedData {
   ticket_embed_button_style: DiscordButtonStyle;
   ticket_channel_id: string;
   ticket_logs_channel_id: string;
+  ticket_staff_role_id: string;
 }
 
 const defaults: TicketEmbedData = {
@@ -37,6 +40,7 @@ const defaults: TicketEmbedData = {
   ticket_embed_button_style: "glass",
   ticket_channel_id: "",
   ticket_logs_channel_id: "",
+  ticket_staff_role_id: "",
 };
 
 const TicketEmbedConfig = () => {
@@ -47,6 +51,7 @@ const TicketEmbedConfig = () => {
   const [sending, setSending] = useState(false);
   const [channels, setChannels] = useState<{ id: string; name: string; parent_id?: string | null }[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string; position: number }[]>([]);
+  const { roles: discordRoles, loading: rolesLoading } = useDiscordRoles();
 
   const { draft: data, setDraft: setData, clearDraft, hasDraft, discardDraft } = useLocalDraft<TicketEmbedData>(
     "ticket-embed",
@@ -81,7 +86,7 @@ const TicketEmbedConfig = () => {
     const load = async () => {
       const { data: config } = await (supabase as any)
         .from("store_configs")
-        .select("ticket_embed_title, ticket_embed_description, ticket_embed_color, ticket_embed_image_url, ticket_embed_thumbnail_url, ticket_embed_footer, ticket_embed_button_label, ticket_embed_button_style, ticket_channel_id, ticket_logs_channel_id")
+        .select("ticket_embed_title, ticket_embed_description, ticket_embed_color, ticket_embed_image_url, ticket_embed_thumbnail_url, ticket_embed_footer, ticket_embed_button_label, ticket_embed_button_style, ticket_channel_id, ticket_logs_channel_id, ticket_staff_role_id")
         .eq("tenant_id", tenantId)
         .maybeSingle();
       if (config) {
@@ -96,6 +101,7 @@ const TicketEmbedConfig = () => {
           ticket_embed_button_style: (config.ticket_embed_button_style as DiscordButtonStyle) || defaults.ticket_embed_button_style,
           ticket_channel_id: config.ticket_channel_id || "",
           ticket_logs_channel_id: config.ticket_logs_channel_id || "",
+          ticket_staff_role_id: config.ticket_staff_role_id || "",
         };
         setServerData(loaded);
       }
@@ -119,6 +125,7 @@ const TicketEmbedConfig = () => {
         ticket_embed_button_style: data.ticket_embed_button_style || "glass",
         ticket_channel_id: data.ticket_channel_id || null,
         ticket_logs_channel_id: data.ticket_logs_channel_id || null,
+        ticket_staff_role_id: data.ticket_staff_role_id || null,
       };
 
       const { data: savedConfig, error } = await supabase.functions.invoke("manage-store-config", {
@@ -143,6 +150,7 @@ const TicketEmbedConfig = () => {
         ticket_embed_button_style: (savedConfig?.ticket_embed_button_style as DiscordButtonStyle) || data.ticket_embed_button_style,
         ticket_channel_id: savedConfig?.ticket_channel_id || data.ticket_channel_id,
         ticket_logs_channel_id: savedConfig?.ticket_logs_channel_id || data.ticket_logs_channel_id,
+        ticket_staff_role_id: savedConfig?.ticket_staff_role_id || data.ticket_staff_role_id,
       });
       toast.success("Configuração do ticket salva!");
       return true;
@@ -331,6 +339,37 @@ const TicketEmbedConfig = () => {
               />
               <p className="text-xs text-muted-foreground">
                 Quando um ticket for fechado, o transcript será enviado neste canal
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Shield className="h-3.5 w-3.5" />
+                Cargo de Staff (Gerenciar Tickets)
+              </Label>
+              <Select
+                value={data.ticket_staff_role_id || "none"}
+                onValueChange={(val) => update("ticket_staff_role_id", val === "none" ? "" : val)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um cargo..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum (somente Administradores)</SelectItem>
+                  {discordRoles.map((role) => (
+                    <SelectItem key={role.id} value={role.id}>
+                      <span className="flex items-center gap-2">
+                        <span
+                          className="w-3 h-3 rounded-full inline-block"
+                          style={{ backgroundColor: typeof role.color === "string" ? role.color : `#${(role.color as number).toString(16).padStart(6, "0")}` }}
+                        />
+                        {role.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Somente membros com este cargo poderão fechar, arquivar e deletar tickets
               </p>
             </div>
             <DiscordButtonStylePicker

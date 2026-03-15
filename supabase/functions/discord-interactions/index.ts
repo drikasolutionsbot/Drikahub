@@ -102,6 +102,35 @@ async function generatePushinPayPix(apiKey: string, amountCents: number, webhook
 // ─── Format price ───────────────────────────────────────────
 const formatBRL = (cents: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
+// ─── Check ticket staff permission ──────────────────────────
+async function checkTicketStaffPermission(
+  supabase: any,
+  botToken: string,
+  tenantId: string,
+  guildId: string,
+  userId: string,
+  member: any
+): Promise<boolean> {
+  // Always allow server Administrators
+  const memberPerms = BigInt(member?.permissions || "0");
+  if (memberPerms & BigInt(0x8)) return true;
+
+  // Fetch configured staff role
+  const { data: config } = await supabase
+    .from("store_configs")
+    .select("ticket_staff_role_id")
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+
+  const staffRoleId = config?.ticket_staff_role_id;
+  
+  // If no staff role configured, only admins can manage
+  if (!staffRoleId) return false;
+
+  // Check if user has the staff role
+  const memberRoles: string[] = member?.roles || [];
+  return memberRoles.includes(staffRoleId);
+}
 
 serve(async (req) => {
   if (req.method !== "POST") {
@@ -390,9 +419,12 @@ serve(async (req) => {
 
       // ─── /fechar - Fecha o ticket atual ───────────────────
       if (commandName === "fechar") {
-        // Only staff with MANAGE_THREADS can close tickets
-        const memberPerms = BigInt(interaction.member?.permissions || "0");
-        if (!(memberPerms & BigInt(0x4000000000)) && !(memberPerms & BigInt(0x8))) {
+        // Find tenant by guild_id to check staff role
+        const { data: fecharTenant } = await supabase.from("tenants").select("id").eq("discord_guild_id", guildId).single();
+        if (!fecharTenant) return respondImmediate(interaction, "❌ Servidor não configurado.");
+
+        const isStaff = await checkTicketStaffPermission(supabase, botToken, fecharTenant.id, guildId, userId, interaction.member);
+        if (!isStaff) {
           return respondImmediate(interaction, "❌ Você não tem permissão para fechar tickets.");
         }
 
@@ -1325,9 +1357,12 @@ serve(async (req) => {
 
       // ─── TICKET DELETE (permanently delete channel) ────────
       if (customId.startsWith("ticket_delete_")) {
-        // Only staff with MANAGE_THREADS can delete tickets
-        const memberPermsDelete = BigInt(interaction.member?.permissions || "0");
-        if (!(memberPermsDelete & BigInt(0x4000000000)) && !(memberPermsDelete & BigInt(0x8))) {
+        const ticketIdDel = customId.replace("ticket_delete_", "");
+        const { data: delTicket } = await supabase.from("tickets").select("tenant_id").eq("id", ticketIdDel).single();
+        const delTenantId = delTicket?.tenant_id;
+        
+        const isStaffDel = delTenantId ? await checkTicketStaffPermission(supabase, botToken, delTenantId, interaction.guild_id, userId, interaction.member) : false;
+        if (!isStaffDel) {
           await respondImmediate(interaction, "❌ Você não tem permissão para deletar tickets.");
           return ok();
         }
@@ -1655,9 +1690,12 @@ serve(async (req) => {
       }
 
       if (customId.startsWith("ticket_close_")) {
-        // Only staff with MANAGE_THREADS can close tickets
-        const memberPermsClose = BigInt(interaction.member?.permissions || "0");
-        if (!(memberPermsClose & BigInt(0x4000000000)) && !(memberPermsClose & BigInt(0x8))) {
+        const ticketIdClose = customId.replace("ticket_close_", "");
+        const { data: closeTicketPerm } = await supabase.from("tickets").select("tenant_id").eq("id", ticketIdClose).single();
+        const closeTenantId = closeTicketPerm?.tenant_id;
+        
+        const isStaffClose = closeTenantId ? await checkTicketStaffPermission(supabase, botToken, closeTenantId, interaction.guild_id, userId, interaction.member) : false;
+        if (!isStaffClose) {
           await respondImmediate(interaction, "❌ Você não tem permissão para arquivar tickets.");
           return ok();
         }
