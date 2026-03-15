@@ -152,6 +152,7 @@ export const ProductDetail = ({ product, onBack, onSave, onDelete, categories = 
           <div className="px-6 pt-4">
             <TabsList className="bg-muted">
               <TabsTrigger value="geral">Geral</TabsTrigger>
+              <TabsTrigger value="embed">Embed</TabsTrigger>
               <TabsTrigger value="campos">Campos</TabsTrigger>
               <TabsTrigger value="estoque">Estoque</TabsTrigger>
               <TabsTrigger value="hooks">Hooks</TabsTrigger>
