@@ -66,23 +66,32 @@ Deno.serve(async (req) => {
       embed.image = { url: image_url };
     }
 
-    // Verification button is a URL button (style 5) since it redirects to verification page
-    // URL buttons MUST use style 5 per Discord API - no other style is allowed with url
+    const rawLabel = button_label || "Verificar";
+    const { emoji: btnEmoji, cleanLabel: btnLabel, isCustom, customId, customName, animated } = parseEmojiFromLabel(rawLabel);
+
+    const verifyButton: any = {
+      type: 2,
+      style: 5,
+      label: btnLabel || "Verificar",
+      url: tenant?.verify_slug
+        ? `https://drikahub.com/verify/${tenant.verify_slug}`
+        : `https://drikahub.com/verify/${tenant_id}`,
+    };
+
+    if (btnEmoji) {
+      if (isCustom && customId) {
+        verifyButton.emoji = { id: customId, name: customName, animated: !!animated };
+      } else {
+        verifyButton.emoji = { name: btnEmoji };
+      }
+    }
+
     const payload: any = {
       embeds: [embed],
       components: [
         {
           type: 1,
-          components: [
-            {
-              type: 2,
-              style: 5,
-              label: button_label || "Verificar",
-              url: tenant?.verify_slug
-                ? `https://drikahub.com/verify/${tenant.verify_slug}`
-                : `https://drikahub.com/verify/${tenant_id}`,
-            },
-          ],
+          components: [verifyButton],
         },
       ],
     };

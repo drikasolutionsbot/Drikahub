@@ -93,19 +93,30 @@ Deno.serve(async (req) => {
 
     const discordStyle = styleMap[button_style || "glass"] || 2;
 
+    const rawLabel = button_label || "📩 Abrir Ticket";
+    const { emoji: btnEmoji, cleanLabel: btnLabel, isCustom, customId, customName, animated } = parseEmojiFromLabel(rawLabel);
+
+    const ticketButton: any = {
+      type: 2,
+      style: discordStyle,
+      label: btnLabel || "Abrir Ticket",
+      custom_id: `ticket_open_${tenant_id}_${channel_id}`,
+    };
+
+    if (btnEmoji) {
+      if (isCustom && customId) {
+        ticketButton.emoji = { id: customId, name: customName, animated: !!animated };
+      } else {
+        ticketButton.emoji = { name: btnEmoji };
+      }
+    }
+
     const payload: any = {
       embeds: [embed],
       components: [
         {
           type: 1,
-          components: [
-            {
-              type: 2,
-              style: discordStyle,
-              label: button_label || "📩 Abrir Ticket",
-              custom_id: `ticket_open_${tenant_id}_${channel_id}`,
-            },
-          ],
+          components: [ticketButton],
         },
       ],
     };
