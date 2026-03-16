@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import ImageUploadField from "@/components/customization/ImageUploadField";
 import ChannelSelectWithCreate from "@/components/channels/ChannelSelectWithCreate";
 import { DiscordButtonStylePicker, getDiscordButtonStyles, type DiscordButtonStyle } from "@/components/discord/DiscordButtonStylePicker";
+import ButtonLabelWithEmoji from "@/components/discord/ButtonLabelWithEmoji";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "sonner";
@@ -254,10 +255,10 @@ const TicketEmbedConfig = () => {
             </div>
             <div className="space-y-2">
               <Label>Texto do Botão</Label>
-              <Input
+              <ButtonLabelWithEmoji
                 value={data.ticket_embed_button_label}
-                onChange={(e) => update("ticket_embed_button_label", e.target.value)}
-                placeholder="📩 Abrir Ticket"
+                onChange={(val) => update("ticket_embed_button_label", val)}
+                placeholder="Abrir Ticket"
               />
             </div>
             <div className="space-y-2">

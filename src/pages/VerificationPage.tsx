@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import ChannelSelectWithCreate from "@/components/channels/ChannelSelectWithCreate";
 import { DiscordButtonStylePicker, type DiscordButtonStyle, getDiscordButtonStyles } from "@/components/discord/DiscordButtonStylePicker";
+import ButtonLabelWithEmoji from "@/components/discord/ButtonLabelWithEmoji";
 
 interface VerifyConfig {
   verify_enabled: boolean;
@@ -348,11 +349,13 @@ const VerificationPage = ({ embedded }: { embedded?: boolean }) => {
               </div>
               <div>
                 <Label>Texto do Botão</Label>
-                <Input
-                  value={config.verify_button_label}
-                  onChange={(e) => update("verify_button_label", e.target.value)}
-                  className="mt-1"
-                />
+                <div className="mt-1">
+                  <ButtonLabelWithEmoji
+                    value={config.verify_button_label}
+                    onChange={(val) => update("verify_button_label", val)}
+                    placeholder="Verificar"
+                  />
+                </div>
               </div>
               <DiscordButtonStylePicker
                 value={config.verify_button_style}

@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { ProductDiscordPreview } from "./ProductDiscordPreview";
 import { DiscordButtonStylePicker, type DiscordButtonStyle } from "@/components/discord/DiscordButtonStylePicker";
+import ButtonLabelWithEmoji from "@/components/discord/ButtonLabelWithEmoji";
 
 export type EmbedBgStyle = "default" | "clean" | "transparent";
 
@@ -23,6 +24,7 @@ export interface EmbedConfig {
   show_footer?: boolean;
   footer_available_text?: string;
   footer_unavailable_text?: string;
+  buy_button_label?: string;
 }
 
 const DEFAULT_EMBED: EmbedConfig = {
@@ -84,12 +86,20 @@ export const ProductDetailEmbed = ({ product, onChange, storeEmbedColor }: Produ
       {/* Form */}
       <div className="space-y-6">
         {/* Estilo do Botão */}
-        <section>
+        <section className="space-y-3">
           <DiscordButtonStylePicker
             value={product.button_style || "success"}
             onChange={(style) => onChange({ button_style: style })}
             label="Estilo do Botão de Compra"
           />
+          <div className="space-y-2">
+            <Label className="text-sm font-bold">Texto do Botão</Label>
+            <ButtonLabelWithEmoji
+              value={config.buy_button_label || "Comprar"}
+              onChange={(val) => update("buy_button_label", val)}
+              placeholder="Comprar"
+            />
+          </div>
         </section>
 
         {/* Fundo do Embed */}
