@@ -255,10 +255,10 @@ const TicketEmbedConfig = () => {
             </div>
             <div className="space-y-2">
               <Label>Texto do Botão</Label>
-              <Input
+              <ButtonLabelWithEmoji
                 value={data.ticket_embed_button_label}
-                onChange={(e) => update("ticket_embed_button_label", e.target.value)}
-                placeholder="📩 Abrir Ticket"
+                onChange={(val) => update("ticket_embed_button_label", val)}
+                placeholder="Abrir Ticket"
               />
             </div>
             <div className="space-y-2">

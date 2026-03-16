@@ -349,11 +349,13 @@ const VerificationPage = ({ embedded }: { embedded?: boolean }) => {
               </div>
               <div>
                 <Label>Texto do Botão</Label>
-                <Input
-                  value={config.verify_button_label}
-                  onChange={(e) => update("verify_button_label", e.target.value)}
-                  className="mt-1"
-                />
+                <div className="mt-1">
+                  <ButtonLabelWithEmoji
+                    value={config.verify_button_label}
+                    onChange={(val) => update("verify_button_label", val)}
+                    placeholder="Verificar"
+                  />
+                </div>
               </div>
               <DiscordButtonStylePicker
                 value={config.verify_button_style}

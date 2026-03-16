@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { ProductDiscordPreview } from "./ProductDiscordPreview";
 import { DiscordButtonStylePicker, type DiscordButtonStyle } from "@/components/discord/DiscordButtonStylePicker";
+import ButtonLabelWithEmoji from "@/components/discord/ButtonLabelWithEmoji";
 
 export type EmbedBgStyle = "default" | "clean" | "transparent";
 
