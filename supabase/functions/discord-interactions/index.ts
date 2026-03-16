@@ -538,6 +538,7 @@ serve(async (req) => {
     const customId = interaction.data?.custom_id || "";
     const userId = interaction.member?.user?.id || interaction.user?.id;
     const username = interaction.member?.user?.username || interaction.user?.username;
+    console.log(`[INTERACTION] Type 3 button click: customId=${customId}, userId=${userId}`);
 
     // Helper to get store embed color for a tenant
     const getStoreEmbedColor = async (tid: string): Promise<number> => {
