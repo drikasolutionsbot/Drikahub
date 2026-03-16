@@ -1498,6 +1498,7 @@ serve(async (req) => {
       if (customId.startsWith("ticket_assign_")) {
         const ticketId = customId.replace("ticket_assign_", "");
         const selectedUserId = interaction.data?.values?.[0];
+        console.log(`[TICKET_ASSIGN] ticketId=${ticketId}, selectedUserId=${selectedUserId}`);
         if (!selectedUserId) return ok();
 
         await respondDeferred(interaction, botToken);
@@ -1515,23 +1516,13 @@ serve(async (req) => {
 
         const channelId = ticket.discord_channel_id || interaction.channel_id;
 
-        // Add selected user to channel permissions
-        const { data: tenantInfo } = await supabase
-          .from("tenants")
-          .select("discord_guild_id")
-          .eq("id", ticket.tenant_id)
-          .single();
-
         if (channelId) {
-          // Grant VIEW_CHANNEL + SEND_MESSAGES to the assigned user
-          await fetch(`${DISCORD_API}/channels/${channelId}/permissions/${selectedUserId}`, {
+          // Add user to the private thread as a member
+          const addMemberRes = await fetch(`${DISCORD_API}/channels/${channelId}/thread-members/${selectedUserId}`, {
             method: "PUT",
-            headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-              allow: "3072", // VIEW_CHANNEL (1024) + SEND_MESSAGES (2048)
-              type: 1, // member
-            }),
+            headers: { Authorization: `Bot ${botToken}` },
           });
+          console.log(`[TICKET_ASSIGN] addMember status=${addMemberRes.status}`);
 
           await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
             method: "POST",
