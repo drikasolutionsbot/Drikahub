@@ -1754,13 +1754,13 @@ serve(async (req) => {
 
       if (customId.startsWith("ticket_close_")) {
         const ticketIdClose = customId.replace("ticket_close_", "");
+        console.log(`[TICKET_CLOSE] ticketId=${ticketIdClose}`);
         const { data: closeTicketPerm } = await supabase.from("tickets").select("tenant_id").eq("id", ticketIdClose).single();
         const closeTenantId = closeTicketPerm?.tenant_id;
         
         const isStaffClose = closeTenantId ? await checkTicketStaffPermission(supabase, botToken, closeTenantId, interaction.guild_id, userId, interaction.member) : false;
         if (!isStaffClose) {
-          await respondImmediate(interaction, "❌ Você não tem permissão para arquivar tickets.");
-          return ok();
+          return respondImmediate(interaction, "❌ Você não tem permissão para arquivar tickets.");
         }
 
         const ticketId = customId.replace("ticket_close_", "");
