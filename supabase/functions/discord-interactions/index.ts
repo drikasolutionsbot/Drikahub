@@ -538,6 +538,7 @@ serve(async (req) => {
     const customId = interaction.data?.custom_id || "";
     const userId = interaction.member?.user?.id || interaction.user?.id;
     const username = interaction.member?.user?.username || interaction.user?.username;
+    console.log(`[INTERACTION] Type 3 button click: customId=${customId}, userId=${userId}`);
 
     // Helper to get store embed color for a tenant
     const getStoreEmbedColor = async (tid: string): Promise<number> => {
@@ -1339,6 +1340,7 @@ serve(async (req) => {
       // ─── TICKET REMIND (send DM to ticket creator) ───────
       if (customId.startsWith("ticket_remind_")) {
         const ticketId = customId.replace("ticket_remind_", "");
+        console.log(`[TICKET_REMIND] ticketId=${ticketId}`);
         await respondDeferred(interaction, botToken);
 
         const { data: ticket } = await supabase
@@ -1420,13 +1422,13 @@ serve(async (req) => {
       // ─── TICKET DELETE (permanently delete channel) ────────
       if (customId.startsWith("ticket_delete_")) {
         const ticketIdDel = customId.replace("ticket_delete_", "");
+        console.log(`[TICKET_DELETE] ticketId=${ticketIdDel}`);
         const { data: delTicket } = await supabase.from("tickets").select("tenant_id").eq("id", ticketIdDel).single();
         const delTenantId = delTicket?.tenant_id;
         
         const isStaffDel = delTenantId ? await checkTicketStaffPermission(supabase, botToken, delTenantId, interaction.guild_id, userId, interaction.member) : false;
         if (!isStaffDel) {
-          await respondImmediate(interaction, "❌ Você não tem permissão para deletar tickets.");
-          return ok();
+          return respondImmediate(interaction, "❌ Você não tem permissão para deletar tickets.");
         }
 
         const ticketId = customId.replace("ticket_delete_", "");
@@ -1753,13 +1755,13 @@ serve(async (req) => {
 
       if (customId.startsWith("ticket_close_")) {
         const ticketIdClose = customId.replace("ticket_close_", "");
+        console.log(`[TICKET_CLOSE] ticketId=${ticketIdClose}`);
         const { data: closeTicketPerm } = await supabase.from("tickets").select("tenant_id").eq("id", ticketIdClose).single();
         const closeTenantId = closeTicketPerm?.tenant_id;
         
         const isStaffClose = closeTenantId ? await checkTicketStaffPermission(supabase, botToken, closeTenantId, interaction.guild_id, userId, interaction.member) : false;
         if (!isStaffClose) {
-          await respondImmediate(interaction, "❌ Você não tem permissão para arquivar tickets.");
-          return ok();
+          return respondImmediate(interaction, "❌ Você não tem permissão para arquivar tickets.");
         }
 
         const ticketId = customId.replace("ticket_close_", "");
