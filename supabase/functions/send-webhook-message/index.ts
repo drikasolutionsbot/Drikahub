@@ -66,7 +66,7 @@ serve(async (req) => {
 
       const { data: product } = await supabase
         .from("products")
-        .select("auto_delivery, button_style")
+        .select("auto_delivery, button_style, embed_config")
         .eq("id", product_id)
         .eq("tenant_id", tenant_id)
         .single();
