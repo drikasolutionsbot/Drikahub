@@ -24,6 +24,7 @@ export interface EmbedConfig {
   show_footer?: boolean;
   footer_available_text?: string;
   footer_unavailable_text?: string;
+  buy_button_label?: string;
 }
 
 const DEFAULT_EMBED: EmbedConfig = {
