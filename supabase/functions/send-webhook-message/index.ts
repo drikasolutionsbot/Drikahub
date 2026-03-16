@@ -9,6 +9,32 @@ const corsHeaders = {
 
 const DISCORD_API = "https://discord.com/api/v10";
 
+function parseEmojiFromLabel(label: string) {
+  const customMatch = label.match(/^<(a?):(\w+):(\d+)>\s*/);
+  if (customMatch) {
+    return {
+      emoji: customMatch[0].trim(),
+      cleanLabel: label.slice(customMatch[0].length),
+      isCustom: true,
+      animated: customMatch[1] === "a",
+      customName: customMatch[2],
+      customId: customMatch[3],
+    };
+  }
+  const unicodeMatch = label.match(/^(\p{Emoji_Presentation}|\p{Emoji}\uFE0F?)\s*/u);
+  if (unicodeMatch) {
+    return {
+      emoji: unicodeMatch[1],
+      cleanLabel: label.slice(unicodeMatch[0].length),
+      isCustom: false,
+      animated: false,
+      customName: undefined,
+      customId: undefined,
+    };
+  }
+  return { emoji: null, cleanLabel: label, isCustom: false, animated: false, customName: undefined, customId: undefined };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
