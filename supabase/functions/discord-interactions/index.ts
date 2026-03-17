@@ -906,7 +906,7 @@ serve(async (req) => {
           embeds: [{
             title: "❌ Compra Cancelada",
             description: `Pedido **#${order.order_number}** (${order.product_name}) foi cancelado.`,
-            color: 0xED4245,
+            color: 0x2B2D31,
             timestamp: new Date().toISOString(),
           }],
           components: [],
