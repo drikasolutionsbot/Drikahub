@@ -822,7 +822,7 @@ serve(async (req) => {
           embeds: [{
             title: "✅ Pedido Aprovado",
             description: `Pedido **#${order.order_number}** aprovado por <@${userId}>`,
-            color: 0x57F287,
+            color: 0x2B2D31,
             fields: [
               { name: "📦 Produto", value: order.product_name, inline: true },
               { name: "💰 Valor", value: formatBRL(order.total_cents), inline: true },
