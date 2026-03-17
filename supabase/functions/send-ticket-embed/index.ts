@@ -124,10 +124,9 @@ Deno.serve(async (req) => {
     const existingMessageId = storeConfig?.ticket_message_id;
     const existingChannelId = storeConfig?.ticket_channel_id;
     let messageId: string;
-    let edited = false;
 
-    // If channel changed, delete old message first
-    if (existingMessageId && existingChannelId && existingChannelId !== channel_id) {
+    // Delete old message if exists (any channel)
+    if (existingMessageId && existingChannelId) {
       try {
         await fetch(
           `https://discord.com/api/v10/channels/${existingChannelId}/messages/${existingMessageId}`,
@@ -142,52 +141,27 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Try to EDIT existing message if same channel
-    if (existingMessageId && existingChannelId === channel_id) {
-      const editRes = await fetch(
-        `https://discord.com/api/v10/channels/${channel_id}/messages/${existingMessageId}`,
-        {
-          method: "PATCH",
-          headers: {
-            Authorization: `Bot ${botToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        }
-      );
+    // Always send a NEW message
+    const res = await fetch(`https://discord.com/api/v10/channels/${channel_id}/messages`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bot ${botToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
 
-      if (editRes.ok) {
-        const result = await editRes.json();
-        messageId = result.id;
-        edited = true;
-      } else {
-        console.log("Edit failed, sending new message. Status:", editRes.status);
-      }
-    }
-
-    // Send NEW message if no existing or edit failed
-    if (!edited) {
-      const res = await fetch(`https://discord.com/api/v10/channels/${channel_id}/messages`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bot ${botToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error("Discord API error:", errText);
+      return new Response(JSON.stringify({ error: "Failed to send message", details: errText }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-
-      if (!res.ok) {
-        const errText = await res.text();
-        console.error("Discord API error:", errText);
-        return new Response(JSON.stringify({ error: "Failed to send message", details: errText }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const result = await res.json();
-      messageId = result.id;
     }
+
+    const result = await res.json();
+    messageId = result.id;
 
     // Save the message_id AND channel_id for future edits
     await supabase
@@ -195,7 +169,7 @@ Deno.serve(async (req) => {
       .update({ ticket_message_id: messageId!, ticket_channel_id: channel_id })
       .eq("tenant_id", tenant_id);
 
-    return new Response(JSON.stringify({ success: true, message_id: messageId!, edited }), {
+    return new Response(JSON.stringify({ success: true, message_id: messageId! }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
