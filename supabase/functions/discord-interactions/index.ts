@@ -810,7 +810,7 @@ serve(async (req) => {
                 embeds: [{
                   title: "✅ Pagamento Confirmado!",
                   description: `Seu pedido **#${order.order_number}** (${order.product_name}) foi aprovado!\nSeu produto será entregue em instantes.`,
-                  color: 0x57F287,
+                  color: 0x2B2D31,
                   timestamp: new Date().toISOString(),
                 }],
               }),
