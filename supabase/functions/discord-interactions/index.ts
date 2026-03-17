@@ -1476,7 +1476,7 @@ serve(async (req) => {
               embeds: [{
                 title: "🗑️ Ticket Deletado",
                 description: `Este ticket foi deletado por <@${userId}>.\nO tópico será excluído em 5 segundos.`,
-                color: 0xED4245,
+                color: 0x2B2D31,
               }],
             }),
           });
