@@ -56,7 +56,7 @@ export const PostMessageModal = ({
   const [loadingChannels, setLoadingChannels] = useState(false);
   const [posting, setPosting] = useState(false);
   const [channelSearch, setChannelSearch] = useState("");
-  const [embedColor, setEmbedColor] = useState<string>(externalEmbedColor || "#5865F2");
+  const [embedColor, setEmbedColor] = useState<string>(externalEmbedColor || "#2B2D31");
 
   const guildId = tenant?.discord_guild_id;
 

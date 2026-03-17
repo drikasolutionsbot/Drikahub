@@ -44,7 +44,7 @@ const defaultConfig: StoreConfig = {
   store_logo_url: "",
   purchase_embed_title: "Compra realizada! ✅",
   purchase_embed_description: "Obrigado pela sua compra, {user}!",
-  purchase_embed_color: "#57F287",
+  purchase_embed_color: "#2B2D31",
   purchase_embed_footer: "",
   purchase_embed_image_url: "",
   purchase_embed_thumbnail_url: "",

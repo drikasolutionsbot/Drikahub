@@ -51,7 +51,7 @@ export const ProductDiscordPreview = ({ product, storeName, fields = [], embedCo
   const botName = storeName || tenant?.name || "Bot";
   const botAvatar = tenant?.logo_url;
   const cfg: EmbedConfig = { ...DEFAULT_EMBED, ...embedConfig };
-  const sideColor = embedColor || cfg.color || "#5865F2";
+  const sideColor = embedColor || cfg.color || "#2B2D31";
   const bgStyle = cfg.bg_style || "default";
 
   const { data: realStockCount = product.stock ?? 0 } = useQuery({
