@@ -229,7 +229,7 @@ const TicketEmbedConfig = () => {
       });
       if (error) throw error;
       if (res?.error) throw new Error(res.error);
-      toast.success(res?.edited ? "Embed de ticket atualizado no canal!" : "Embed de ticket enviado ao canal!");
+      toast.success("Embed de ticket enviado ao canal!");
     } catch (err: any) {
       toast.error("Erro ao enviar: " + err.message);
     } finally {
