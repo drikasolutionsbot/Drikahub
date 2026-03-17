@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const colorInt = parseInt((embed_color || "#5865F2").replace("#", ""), 16);
+    const colorInt = parseInt((embed_color || "#2B2D31").replace("#", ""), 16);
 
     const embed: any = {
       title: title || "🎫 Ticket de Suporte",

@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
       if (!tenant?.bot_token_encrypted) throw new Error("Bot token not configured");
 
       const embedPayload: any = {
-        color: parseInt((embed_data.color || "#5865F2").replace("#", ""), 16),
+        color: parseInt((embed_data.color || "#2B2D31").replace("#", ""), 16),
         title: embed_data.title || undefined,
         description: embed_data.description || undefined,
       };

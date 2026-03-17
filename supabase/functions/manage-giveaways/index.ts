@@ -17,7 +17,7 @@ async function getBotToken(supabase: any, tenant_id: string): Promise<string | n
 function buildGiveawayEmbed(giveaway: any, embedConfig: any) {
   const cfg = embedConfig && Object.keys(embedConfig).length > 0 ? embedConfig : null;
 
-  const colorHex = cfg?.color || "#FEE75C";
+  const colorHex = cfg?.color || "#2B2D31";
   const colorInt = parseInt(colorHex.replace("#", ""), 16);
 
   const titleTemplate = cfg?.title || "🎉 SORTEIO: {title}";

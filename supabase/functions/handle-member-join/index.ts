@@ -189,7 +189,7 @@ function buildEmbed(embedData: any, replaceVars: (t: string) => string, tenant: 
   if (!embedData) return {};
 
   const embed: any = {
-    color: parseInt((embedData.color || "#5865F2").replace("#", ""), 16),
+    color: parseInt((embedData.color || "#2B2D31").replace("#", ""), 16),
   };
 
   if (embedData.title) embed.title = replaceVars(embedData.title);

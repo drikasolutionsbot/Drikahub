@@ -272,7 +272,7 @@ serve(async (req) => {
             title: "🔨 Usuário Banido",
             description: `<@${targetUser}> foi banido por <@${userId}>.`,
             fields: [{ name: "Motivo", value: String(reason) }],
-            color: 0xED4245,
+            color: 0x2B2D31,
             timestamp: new Date().toISOString(),
           }],
         });
@@ -308,7 +308,7 @@ serve(async (req) => {
             title: "👢 Usuário Expulso",
             description: `<@${targetUser}> foi expulso por <@${userId}>.`,
             fields: [{ name: "Motivo", value: String(reason) }],
-            color: 0xFEE75C,
+            color: 0x2B2D31,
             timestamp: new Date().toISOString(),
           }],
         });
@@ -428,7 +428,7 @@ serve(async (req) => {
           .single();
 
         if (ticket) {
-          const embedColor = parseInt((storeConfig?.ticket_embed_color || "#5865F2").replace("#", ""), 16);
+          const embedColor = parseInt((storeConfig?.ticket_embed_color || "#2B2D31").replace("#", ""), 16);
           await fetch(`${DISCORD_API}/channels/${ticketThread.id}/messages`, {
             method: "POST",
             headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
@@ -482,7 +482,7 @@ serve(async (req) => {
         await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
           method: "POST",
           headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ embeds: [{ title: "📁 Ticket Arquivado", description: `Ticket arquivado por <@${userId}>.`, color: 0xFEE75C }] }),
+          body: JSON.stringify({ embeds: [{ title: "📁 Ticket Arquivado", description: `Ticket arquivado por <@${userId}>.`, color: 0x2B2D31 }] }),
         });
         await fetch(`${DISCORD_API}/channels/${channelId}`, {
           method: "PATCH",
@@ -810,7 +810,7 @@ serve(async (req) => {
                 embeds: [{
                   title: "✅ Pagamento Confirmado!",
                   description: `Seu pedido **#${order.order_number}** (${order.product_name}) foi aprovado!\nSeu produto será entregue em instantes.`,
-                  color: 0x57F287,
+                  color: 0x2B2D31,
                   timestamp: new Date().toISOString(),
                 }],
               }),
@@ -822,7 +822,7 @@ serve(async (req) => {
           embeds: [{
             title: "✅ Pedido Aprovado",
             description: `Pedido **#${order.order_number}** aprovado por <@${userId}>`,
-            color: 0x57F287,
+            color: 0x2B2D31,
             fields: [
               { name: "📦 Produto", value: order.product_name, inline: true },
               { name: "💰 Valor", value: formatBRL(order.total_cents), inline: true },
@@ -864,7 +864,7 @@ serve(async (req) => {
                 embeds: [{
                   title: "❌ Pedido Recusado",
                   description: `Seu pedido **#${order.order_number}** (${order.product_name}) foi recusado pelo administrador.`,
-                  color: 0xED4245,
+                  color: 0x2B2D31,
                   timestamp: new Date().toISOString(),
                 }],
               }),
@@ -876,7 +876,7 @@ serve(async (req) => {
           embeds: [{
             title: "❌ Pedido Recusado",
             description: `Pedido **#${order.order_number}** recusado por <@${userId}>`,
-            color: 0xED4245,
+            color: 0x2B2D31,
             fields: [
               { name: "📦 Produto", value: order.product_name, inline: true },
               { name: "👤 Comprador", value: `<@${order.discord_user_id}>`, inline: true },
@@ -906,7 +906,7 @@ serve(async (req) => {
           embeds: [{
             title: "❌ Compra Cancelada",
             description: `Pedido **#${order.order_number}** (${order.product_name}) foi cancelado.`,
-            color: 0xED4245,
+            color: 0x2B2D31,
             timestamp: new Date().toISOString(),
           }],
           components: [],
@@ -959,7 +959,7 @@ serve(async (req) => {
           method: "POST",
           headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
           body: JSON.stringify({
-            embeds: [{ title: "❌ Compra Cancelada", description: `Pedido **#${order.order_number}** foi cancelado.\nO tópico será arquivado.`, color: 0xED4245 }],
+            embeds: [{ title: "❌ Compra Cancelada", description: `Pedido **#${order.order_number}** foi cancelado.\nO tópico será arquivado.`, color: 0x2B2D31 }],
           }),
         });
 
@@ -1245,7 +1245,7 @@ serve(async (req) => {
         }
 
         // Send welcome embed with action buttons (including Rename)
-        const embedColor = parseInt((storeConfig?.ticket_embed_color || "#5865F2").replace("#", ""), 16);
+        const embedColor = parseInt((storeConfig?.ticket_embed_color || "#2B2D31").replace("#", ""), 16);
         const welcomeEmbed: any = {
           title: storeConfig?.ticket_embed_title || "🎫 Ticket de Suporte",
           description: (storeConfig?.ticket_embed_description || "Seu ticket foi criado com sucesso! Aguarde atendimento.")
@@ -1476,7 +1476,7 @@ serve(async (req) => {
               embeds: [{
                 title: "🗑️ Ticket Deletado",
                 description: `Este ticket foi deletado por <@${userId}>.\nO tópico será excluído em 5 segundos.`,
-                color: 0xED4245,
+                color: 0x2B2D31,
               }],
             }),
           });
@@ -1564,7 +1564,7 @@ serve(async (req) => {
               embeds: [{
                 title: "✅ Entrega Confirmada",
                 description: `Pedido **#${order.order_number}** marcado como entregue por <@${userId}>.`,
-                color: 0x57F287,
+                color: 0x2B2D31,
               }],
             }),
           });

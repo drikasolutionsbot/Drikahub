@@ -117,8 +117,8 @@ serve(async (req) => {
       .eq("tenant_id", tenant_id)
       .single();
 
-    const embedColor = parseInt((storeConfig?.embed_color || "#5865F2").replace("#", ""), 16);
-    const purchaseEmbedColor = parseInt((storeConfig?.purchase_embed_color || "#57F287").replace("#", ""), 16);
+    const embedColor = parseInt((storeConfig?.embed_color || "#2B2D31").replace("#", ""), 16);
+    const purchaseEmbedColor = parseInt((storeConfig?.purchase_embed_color || "#2B2D31").replace("#", ""), 16);
 
     // ═══════════════════════════════════════════════════════════
     // 5. SEND "Pedido aprovado" in the CHECKOUT THREAD
@@ -291,7 +291,7 @@ serve(async (req) => {
         body: JSON.stringify({
           embeds: [{
             description: `✅ **Entrega realizada!** Verifique seu privado, esse ticket será excluído **em 2 minutos**`,
-            color: 0x57F287,
+            color: 0x2B2D31,
           }],
           components: [{
             type: 1,
@@ -431,7 +431,7 @@ serve(async (req) => {
       try {
         const salesEmbedColor = storeConfig?.purchase_embed_color
           ? parseInt(storeConfig.purchase_embed_color.replace("#", ""), 16)
-          : 0xFF69B4;
+          : 0x2B2D31;
 
         const salesEmbed: any = {
           author: {
