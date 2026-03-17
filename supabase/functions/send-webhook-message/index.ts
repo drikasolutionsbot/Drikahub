@@ -137,7 +137,7 @@ serve(async (req) => {
       };
       const discordBuyStyle = styleMap[product?.button_style || "success"] || 3;
 
-      const rawBuyLabel = (product?.embed_config as any)?.buy_button_label || "🛒 Comprar";
+      const rawBuyLabel = (product?.embed_config as any)?.buy_button_label || "Comprar";
       const { emoji: btnEmoji, cleanLabel: btnLabel, isCustom, customId, customName, animated } = parseEmojiFromLabel(rawBuyLabel);
 
       const buyButton: any = {
