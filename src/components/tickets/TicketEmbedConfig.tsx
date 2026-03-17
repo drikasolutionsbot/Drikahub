@@ -262,7 +262,33 @@ const TicketEmbedConfig = () => {
             </Button>
           </div>
         )}
-        <Card>
+        {savedEmbeds.length > 0 && (
+          <Card>
+            <CardContent className="pt-4 pb-3">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <FolderOpen className="h-3.5 w-3.5" />
+                  Aplicar Embed Salvo
+                </Label>
+                <Select onValueChange={applySavedEmbed}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um embed salvo para aplicar..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {savedEmbeds.map(embed => (
+                      <SelectItem key={embed.id} value={embed.id}>
+                        {embed.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Os embeds salvos na aba Personalização podem ser aplicados aqui
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <Type className="h-4 w-4 text-primary" />
