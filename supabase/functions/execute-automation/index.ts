@@ -209,7 +209,7 @@ async function executeAction(
       const embed: any = {
         title: replaceVars(config.title || ""),
         description: replaceVars(config.description || ""),
-        color: parseInt((config.color || "#5865F2").replace("#", ""), 16),
+        color: parseInt((config.color || "#2B2D31").replace("#", ""), 16),
       };
       if (config.thumbnail_url) embed.thumbnail = { url: config.thumbnail_url };
       if (config.image_url) embed.image = { url: config.image_url };

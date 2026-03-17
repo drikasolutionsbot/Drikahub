@@ -181,7 +181,7 @@ Deno.serve(async (req) => {
     if (sc?.ticket_logs_channel_id && (action === "closed" || action === "deleted")) {
       const logEmbed: any = {
         title: `Ticket - ${statusLabel}`,
-        color: action === "deleted" ? 0xED4245 : 0x2B2D31,
+        color: 0x2B2D31,
         fields: [
           { name: "👤 Moderador", value: `${closed_by || "Painel"}`, inline: true },
           { name: "🎫 Ticket", value: ticketName, inline: true },
