@@ -1124,134 +1124,132 @@ serve(async (req) => {
           .single();
 
         const guildId = tenant.discord_guild_id;
-        const staffRoleIds = (storeConfig?.ticket_staff_role_id || "")
+        const configuredStaffRoleIds = (storeConfig?.ticket_staff_role_id || "")
           .split(",")
           .map((roleId: string) => roleId.trim())
           .filter(Boolean);
 
-        // Check if user already has an open ticket — verify thread still exists
-        const { data: existingTickets } = await supabase
-          .from("tickets")
-          .select("id, discord_channel_id")
+        // Fallback: if explicit ticket staff roles are empty, use internal management roles
+        let staffRoleIds = [...configuredStaffRoleIds];
+        if (staffRoleIds.length === 0) {
+          const managementRoleFilter = [
+            "can_manage_app.eq.true",
+            "can_manage_permissions.eq.true",
+            "can_manage_store.eq.true",
+            "can_manage_stock.eq.true",
+            "can_manage_resources.eq.true",
+            "can_manage_protection.eq.true",
+          ].join(",");
+
+          const { data: fallbackTenantRoles, error: fallbackRolesErr } = await supabase
+            .from("tenant_roles")
+            .select("discord_role_id")
+            .eq("tenant_id", ticketTenantId)
+            .or(managementRoleFilter);
+
+          if (fallbackRolesErr) {
+            console.warn("[TICKET_OPEN] failed to load fallback tenant roles:", fallbackRolesErr.message || fallbackRolesErr);
+          } else {
+            staffRoleIds = Array.from(
+              new Set(
+                (fallbackTenantRoles || [])
+                  .map((r: any) => r?.discord_role_id)
+                  .filter((rid: string | null) => typeof rid === "string" && rid.trim().length > 0)
+                  .map((rid: string) => rid.trim())
+              )
+            );
+
+            if (staffRoleIds.length > 0) {
+              console.log(`[TICKET_OPEN] using fallback tenant_roles for staff (${staffRoleIds.length})`);
+            }
+          }
+        }
+
+        // Also include panel users with management permissions (direct user-based fallback)
+        const managementUserFilter = [
+          "can_manage_app.eq.true",
+          "can_manage_permissions.eq.true",
+          "can_manage_store.eq.true",
+          "can_manage_stock.eq.true",
+          "can_manage_resources.eq.true",
+          "can_manage_protection.eq.true",
+        ].join(",");
+
+        const { data: panelStaffRows, error: panelStaffErr } = await supabase
+          .from("tenant_permissions")
+          .select("discord_user_id")
           .eq("tenant_id", ticketTenantId)
-          .eq("discord_user_id", userId)
-          .in("status", ["open", "in_progress"]);
+          .or(managementUserFilter);
 
-        let hasRealOpenTicket = false;
-        if (existingTickets && existingTickets.length > 0) {
-          for (const t of existingTickets) {
-            if (!t.discord_channel_id) {
-              await supabase.from("tickets").update({ status: "closed" }).eq("id", t.id);
-              continue;
-            }
-            try {
-              const chRes = await fetch(`${DISCORD_API}/channels/${t.discord_channel_id}`, {
+        const panelStaffUserIds = panelStaffErr
+          ? []
+          : Array.from(
+              new Set(
+                (panelStaffRows || [])
+                  .map((row: any) => row?.discord_user_id)
+                  .filter((id: string | null) => typeof id === "string" && id.trim().length > 0)
+                  .map((id: string) => id.trim())
+              )
+            );
+
+        if (panelStaffErr) {
+          console.warn("[TICKET_OPEN] failed to load panel staff users:", panelStaffErr.message || panelStaffErr);
+        }
+
+        // Add staff members to the private thread
+        if (staffRoleIds.length > 0 || panelStaffUserIds.length > 0) {
+          try {
+            const [membersRes, rolesRes] = await Promise.all([
+              fetch(`${DISCORD_API}/guilds/${guildId}/members?limit=1000`, {
                 headers: { Authorization: `Bot ${botToken}` },
-              });
-              if (!chRes.ok) {
-                await supabase.from("tickets").update({ status: "closed" }).eq("id", t.id);
-              } else {
-                const chData = await chRes.json();
-                if (chData.thread_metadata?.archived) {
-                  await supabase.from("tickets").update({ status: "closed" }).eq("id", t.id);
-                } else {
-                  hasRealOpenTicket = true;
-                }
-              }
-            } catch {
-              await supabase.from("tickets").update({ status: "closed" }).eq("id", t.id);
-            }
-          }
-        }
-
-        if (hasRealOpenTicket) {
-          await editFollowup(interaction, botToken, "⚠️ Você já possui um ticket aberto. Feche o ticket atual antes de abrir outro.");
-          return ok();
-        }
-
-        // Determine parent text channel for creating a private thread
-        let parentChannelId: string | null = null;
-        const configuredChannelId = targetChannelId || storeConfig?.ticket_channel_id || null;
-
-        if (configuredChannelId) {
-          try {
-            const chInfoRes = await fetch(`${DISCORD_API}/channels/${configuredChannelId}`, {
-              headers: { Authorization: `Bot ${botToken}` },
-            });
-            if (chInfoRes.ok) {
-              const chInfo = await chInfoRes.json();
-              if (chInfo.type === 4) {
-                // It's a category - find first text channel inside it
-                const guildChRes = await fetch(`${DISCORD_API}/guilds/${guildId}/channels`, {
-                  headers: { Authorization: `Bot ${botToken}` },
-                });
-                if (guildChRes.ok) {
-                  const allChannels = await guildChRes.json();
-                  const textCh = allChannels.find((c: any) => c.parent_id === configuredChannelId && c.type === 0);
-                  if (textCh) parentChannelId = textCh.id;
-                }
-              } else if (chInfo.type === 0 || chInfo.type === 5) {
-                // Text or announcement channel - use directly
-                parentChannelId = configuredChannelId;
-              }
-            }
-          } catch (e) {
-            console.error("Error checking channel type:", e);
-          }
-        }
-
-        // Fallback: use the channel where the button was clicked
-        if (!parentChannelId) {
-          parentChannelId = interaction.channel_id;
-        }
-
-        // Create a private thread for this ticket
-        const ticketSuffix = Date.now().toString(36).slice(-4);
-        const threadName = `ticket-${username || userId}-${ticketSuffix}`.toLowerCase().replace(/[^a-z0-9-_]/g, "").substring(0, 100);
-
-        const createThreadRes = await fetch(`${DISCORD_API}/channels/${parentChannelId}/threads`, {
-          method: "POST",
-          headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: threadName,
-            type: 12, // GUILD_PRIVATE_THREAD
-            auto_archive_duration: 10080, // 7 days
-          }),
-        });
-
-        console.log("Thread creation status:", createThreadRes.status);
-
-        if (!createThreadRes.ok) {
-          const errText = await createThreadRes.text();
-          console.error("Failed to create ticket thread:", errText);
-          await editFollowup(interaction, botToken, "❌ Não foi possível criar o tópico do ticket. Verifique as permissões do bot.");
-          return ok();
-        }
-
-        const ticketThread = await createThreadRes.json();
-
-        // Add the ticket creator to the thread
-        await fetch(`${DISCORD_API}/channels/${ticketThread.id}/thread-members/${userId}`, {
-          method: "PUT",
-          headers: { Authorization: `Bot ${botToken}` },
-        });
-
-        // Add staff members (from configured roles) to the private thread
-        if (staffRoleIds.length > 0) {
-          try {
-            const membersRes = await fetch(`${DISCORD_API}/guilds/${guildId}/members?limit=1000`, {
-              headers: { Authorization: `Bot ${botToken}` },
-            });
+              }),
+              fetch(`${DISCORD_API}/guilds/${guildId}/roles`, {
+                headers: { Authorization: `Bot ${botToken}` },
+              }),
+            ]);
 
             if (membersRes.ok) {
               const members = await membersRes.json();
-              const staffMemberIds = Array.from(new Set(
-                (members || [])
-                  .filter((m: any) => !m?.user?.bot)
-                  .filter((m: any) => m?.user?.id && m.user.id !== userId)
-                  .filter((m: any) => Array.isArray(m.roles) && m.roles.some((roleId: string) => staffRoleIds.includes(roleId)))
-                  .map((m: any) => m.user.id)
-              ));
+
+              let effectiveStaffRoleIds = new Set(staffRoleIds);
+
+              if (rolesRes.ok) {
+                const guildRoles = await rolesRes.json();
+                const adminRoleIds = new Set(
+                  (guildRoles || [])
+                    .filter((role: any) => {
+                      try {
+                        return (BigInt(role?.permissions || "0") & BigInt(0x8)) === BigInt(0x8);
+                      } catch {
+                        return false;
+                      }
+                    })
+                    .map((role: any) => String(role.id))
+                );
+
+                effectiveStaffRoleIds = new Set([...effectiveStaffRoleIds, ...adminRoleIds]);
+              }
+
+              const roleBasedStaffIds = Array.from(
+                new Set(
+                  (members || [])
+                    .filter((m: any) => !m?.user?.bot)
+                    .filter((m: any) => m?.user?.id && m.user.id !== userId)
+                    .filter(
+                      (m: any) =>
+                        Array.isArray(m.roles) &&
+                        m.roles.some((roleId: string) => effectiveStaffRoleIds.has(roleId))
+                    )
+                    .map((m: any) => m.user.id)
+                )
+              );
+
+              const staffMemberIds = Array.from(
+                new Set([
+                  ...roleBasedStaffIds,
+                  ...panelStaffUserIds.filter((id: string) => id && id !== userId),
+                ])
+              );
 
               for (const staffUserId of staffMemberIds) {
                 const addRes = await fetch(`${DISCORD_API}/channels/${ticketThread.id}/thread-members/${staffUserId}`, {
@@ -1273,6 +1271,8 @@ serve(async (req) => {
           } catch (staffAddErr) {
             console.error("[TICKET_OPEN] error while adding staff members:", staffAddErr);
           }
+        } else {
+          console.warn("[TICKET_OPEN] no staff roles/users configured for auto-add");
         }
 
         // Insert ticket in DB
