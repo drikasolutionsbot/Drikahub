@@ -55,7 +55,15 @@ serve(async (req) => {
     // Build payload
     const payload: Record<string, any> = {};
     if (content) payload.content = content;
-    if (embeds) payload.embeds = embeds;
+    if (embeds) {
+      // Strip color if it matches Discord dark background (renders no border)
+      for (const embed of embeds) {
+        if (embed.color === 0x2B2D31 || embed.color === 2829105) {
+          delete embed.color;
+        }
+      }
+      payload.embeds = embeds;
+    }
 
     // If product_id is provided, add buy/variations buttons
     if (product_id) {

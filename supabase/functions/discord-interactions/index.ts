@@ -540,14 +540,15 @@ serve(async (req) => {
     const username = interaction.member?.user?.username || interaction.user?.username;
     console.log(`[INTERACTION] Type 3 button click: customId=${customId}, userId=${userId}`);
 
-    // Helper to get store embed color for a tenant
-    const getStoreEmbedColor = async (tid: string): Promise<number> => {
+    // Helper to get store embed color for a tenant (returns undefined for default = no border)
+    const getStoreEmbedColor = async (tid: string): Promise<number | undefined> => {
       const { data: sc } = await supabase
         .from("store_configs")
         .select("embed_color")
         .eq("tenant_id", tid)
         .single();
-      return sc?.embed_color ? parseInt(sc.embed_color.replace("#", ""), 16) : 0x2B2D31;
+      if (!sc?.embed_color || sc.embed_color === "#2B2D31") return undefined;
+      return parseInt(sc.embed_color.replace("#", ""), 16);
     };
 
     try {

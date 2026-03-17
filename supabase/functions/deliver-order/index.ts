@@ -117,8 +117,10 @@ serve(async (req) => {
       .eq("tenant_id", tenant_id)
       .single();
 
-    const embedColor = parseInt((storeConfig?.embed_color || "#2B2D31").replace("#", ""), 16);
-    const purchaseEmbedColor = parseInt((storeConfig?.purchase_embed_color || "#2B2D31").replace("#", ""), 16);
+    const rawEmbedColor = storeConfig?.embed_color && storeConfig.embed_color !== "#2B2D31" ? parseInt(storeConfig.embed_color.replace("#", ""), 16) : undefined;
+    const rawPurchaseColor = storeConfig?.purchase_embed_color && storeConfig.purchase_embed_color !== "#2B2D31" ? parseInt(storeConfig.purchase_embed_color.replace("#", ""), 16) : undefined;
+    const embedColor = rawEmbedColor;
+    const purchaseEmbedColor = rawPurchaseColor;
 
     // ═══════════════════════════════════════════════════════════
     // 5. SEND "Pedido aprovado" in the CHECKOUT THREAD
