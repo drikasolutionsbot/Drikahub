@@ -38,6 +38,7 @@ const DashboardPage = () => {
   const [guilds, setGuilds] = useState<{ id: string; name: string; icon: string | null }[]>([]);
   const [loadingGuilds, setLoadingGuilds] = useState(false);
   const [switchingGuild, setSwitchingGuild] = useState<string | null>(null);
+  const [manualGuildId, setManualGuildId] = useState("");
 
   // Members state
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
@@ -245,10 +246,16 @@ const DashboardPage = () => {
       return;
     }
 
-    const tokenSession = sessionStorage.getItem("token_session");
-    const tokenData = tokenSession ? JSON.parse(tokenSession) : null;
+    let tokenData: { token?: string } | null = null;
+    try {
+      const tokenSession = sessionStorage.getItem("token_session");
+      tokenData = tokenSession ? JSON.parse(tokenSession) : null;
+    } catch {
+      tokenData = null;
+    }
 
     setServerModalOpen(true);
+    setManualGuildId("");
     setLoadingGuilds(true);
     try {
       const { data, error } = await supabase.functions.invoke("discord-bot-guilds", {
@@ -279,6 +286,7 @@ const DashboardPage = () => {
         loadAuditLogs();
       }
       refetch();
+      setManualGuildId("");
       setServerModalOpen(false);
     } catch (err: any) {
       toast.error("Erro ao trocar servidor: " + (err.message || "Tente novamente"));
@@ -571,7 +579,34 @@ const DashboardPage = () => {
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : guilds.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Nenhum servidor encontrado.</p>
+              <div className="space-y-3 py-4">
+                <p className="text-sm text-muted-foreground text-center">Nenhum servidor encontrado automaticamente.</p>
+                <div className="space-y-2">
+                  <Input
+                    value={manualGuildId}
+                    onChange={(e) => setManualGuildId(e.target.value.replace(/\D/g, ""))}
+                    placeholder="Cole o ID do seu servidor Discord"
+                    className="font-mono"
+                  />
+                  <Button
+                    className="w-full"
+                    disabled={!manualGuildId.trim() || switchingGuild !== null}
+                    onClick={() => handleSwitchGuild(manualGuildId.trim())}
+                  >
+                    {switchingGuild === manualGuildId.trim() ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Vinculando...
+                      </>
+                    ) : (
+                      "Vincular servidor por ID"
+                    )}
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    Adicione o bot no seu servidor, copie o ID do servidor no Discord e cole acima.
+                  </p>
+                </div>
+              </div>
             ) : (
               guilds.map(guild => (
                 <button
