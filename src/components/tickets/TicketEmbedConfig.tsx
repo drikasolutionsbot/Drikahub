@@ -5,7 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Save, Palette, Type, Image, MessageSquare, Send, Undo2, Shield, ChevronDown, FolderOpen } from "lucide-react";
+import { Loader2, Save, Palette, Type, Image, MessageSquare, Send, Undo2, Shield, ChevronDown, FolderOpen, BookmarkPlus } from "lucide-react";
+import TrashIcon from "@/components/ui/trash-icon";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import ImageUploadField from "@/components/customization/ImageUploadField";
 import ChannelSelectWithCreate from "@/components/channels/ChannelSelectWithCreate";
@@ -28,7 +30,7 @@ interface TicketEmbedData {
   ticket_embed_button_style: DiscordButtonStyle;
   ticket_channel_id: string;
   ticket_logs_channel_id: string;
-  ticket_staff_role_id: string; // comma-separated role IDs
+  ticket_staff_role_id: string;
 }
 
 const defaults: TicketEmbedData = {
@@ -45,10 +47,11 @@ const defaults: TicketEmbedData = {
   ticket_staff_role_id: "",
 };
 
-interface SavedEmbed {
+interface TicketPreset {
   id: string;
   name: string;
-  embed_data: any;
+  preset_data: TicketEmbedData;
+  created_at: string;
 }
 
 const TicketEmbedConfig = () => {
@@ -61,7 +64,13 @@ const TicketEmbedConfig = () => {
   const [channels, setChannels] = useState<{ id: string; name: string; parent_id?: string | null }[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string; position: number }[]>([]);
   const { roles: discordRoles, loading: rolesLoading } = useDiscordRoles();
-  const [savedEmbeds, setSavedEmbeds] = useState<SavedEmbed[]>([]);
+
+  // Presets state
+  const [presets, setPresets] = useState<TicketPreset[]>([]);
+  const [savePresetOpen, setSavePresetOpen] = useState(false);
+  const [loadPresetOpen, setLoadPresetOpen] = useState(false);
+  const [presetName, setPresetName] = useState("");
+  const [savingPreset, setSavingPreset] = useState(false);
 
   const { draft: data, setDraft: setData, clearDraft, hasDraft, discardDraft } = useLocalDraft<TicketEmbedData>(
     "ticket-embed",
@@ -72,34 +81,49 @@ const TicketEmbedConfig = () => {
 
   const guildId = tenant?.discord_guild_id || null;
 
-  // Fetch saved embeds
-  useEffect(() => {
+  // Fetch presets
+  const fetchPresets = useCallback(async () => {
     if (!tenantId) return;
-    const fetchEmbeds = async () => {
-      const { data: embeds } = await supabase
-        .from("saved_embeds")
-        .select("id, name, embed_data")
-        .eq("tenant_id", tenantId)
-        .order("created_at", { ascending: false });
-      setSavedEmbeds((embeds as unknown as SavedEmbed[]) || []);
-    };
-    fetchEmbeds();
+    const { data: rows } = await (supabase as any)
+      .from("saved_ticket_presets")
+      .select("*")
+      .eq("tenant_id", tenantId)
+      .order("created_at", { ascending: false });
+    setPresets((rows as TicketPreset[]) || []);
   }, [tenantId]);
 
-  const applySavedEmbed = (embedId: string) => {
-    const saved = savedEmbeds.find(e => e.id === embedId);
-    if (!saved) return;
-    const ed = saved.embed_data;
-    setData(prev => ({
-      ...prev,
-      ticket_embed_title: ed.title || prev.ticket_embed_title,
-      ticket_embed_description: ed.description || prev.ticket_embed_description,
-      ticket_embed_color: ed.color || prev.ticket_embed_color,
-      ticket_embed_image_url: ed.image_url || "",
-      ticket_embed_thumbnail_url: ed.thumbnail_url || "",
-      ticket_embed_footer: ed.footer_text || "",
-    }));
-    toast.success(`Embed "${saved.name}" aplicado!`);
+  useEffect(() => { fetchPresets(); }, [fetchPresets]);
+
+  const handleSavePreset = async () => {
+    if (!tenantId || !presetName.trim()) return;
+    setSavingPreset(true);
+    try {
+      const { error } = await (supabase as any)
+        .from("saved_ticket_presets")
+        .insert([{ tenant_id: tenantId, name: presetName.trim(), preset_data: JSON.parse(JSON.stringify(data)) }]);
+      if (error) throw error;
+      toast.success(`Preset "${presetName}" salvo!`);
+      setSavePresetOpen(false);
+      setPresetName("");
+      fetchPresets();
+    } catch (err: any) {
+      toast.error("Erro ao salvar preset: " + err.message);
+    } finally {
+      setSavingPreset(false);
+    }
+  };
+
+  const loadPreset = (preset: TicketPreset) => {
+    setData(preset.preset_data);
+    setLoadPresetOpen(false);
+    toast.success(`Preset "${preset.name}" aplicado!`);
+  };
+
+  const deletePreset = async (id: string) => {
+    const { error } = await (supabase as any).from("saved_ticket_presets").delete().eq("id", id);
+    if (error) { toast.error("Erro ao excluir"); return; }
+    toast.success("Preset excluído!");
+    fetchPresets();
   };
 
   const fetchChannels = useCallback(async () => {
