@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Upload, Users, Crown, QrCode, Loader2, Copy, CheckCircle2, UserPlus, Sparkles, Zap, Shield, HelpCircle, ChevronDown, User } from "lucide-react";
+import { Upload, Users, Crown, QrCode, Loader2, Copy, CheckCircle2, UserPlus, Sparkles, Zap, Shield, HelpCircle, ChevronDown, User, Server } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,7 @@ import { toast } from "@/hooks/use-toast";
 import "@/components/wallet/wallet-card.css";
 import SettingsPlanTab from "@/components/settings/SettingsPlanTab";
 import SettingsProfileTab from "@/components/settings/SettingsProfileTab";
+import SettingsServerTab from "@/components/settings/SettingsServerTab";
 
 interface UserRole {
   id: string;
@@ -181,6 +182,9 @@ const SettingsPage = () => {
               </TabsTrigger>
               <TabsTrigger value="plan" className="gap-2 data-[state=active]:bg-card data-[state=active]:shadow-md px-3 sm:px-4 py-2 text-xs sm:text-sm">
                 <Crown className="h-4 w-4" /> Plano
+              </TabsTrigger>
+              <TabsTrigger value="server" className="gap-2 data-[state=active]:bg-card data-[state=active]:shadow-md px-3 sm:px-4 py-2 text-xs sm:text-sm">
+                <Server className="h-4 w-4" /> Servidor
               </TabsTrigger>
             </TabsList>
           </div>
@@ -421,6 +425,11 @@ const SettingsPage = () => {
         {/* Plan Tab */}
         <TabsContent value="plan">
           <SettingsPlanTab tenant={tenant} tenantId={tenantId} refetchTenant={refetchTenant} />
+        </TabsContent>
+
+        {/* Server Tab */}
+        <TabsContent value="server">
+          <SettingsServerTab tenant={tenant} tenantId={tenantId} refetchTenant={refetchTenant} />
         </TabsContent>
 
       </Tabs>
