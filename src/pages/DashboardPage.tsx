@@ -65,14 +65,19 @@ const DashboardPage = () => {
   const [guildInfo, setGuildInfo] = useState<{ member_count: number; presence_count: number; icon: string | null } | null>(null);
 
   useEffect(() => {
-    if (!tenant?.discord_guild_id) return;
+    if (!tenant?.discord_guild_id) {
+      setGuildInfo(null);
+      return;
+    }
     supabase.functions.invoke("discord-guild-info", {
       body: { guild_id: tenant.discord_guild_id },
-    }).then(({ data }) => {
-      if (data && !data.error) {
+    }).then(({ data, error }) => {
+      if (data && !data.error && !error) {
         setGuildInfo({ member_count: data.member_count, presence_count: data.presence_count, icon: data.icon });
+      } else {
+        setGuildInfo(null);
       }
-    });
+    }).catch(() => setGuildInfo(null));
   }, [tenant?.discord_guild_id]);
 
   // Fetch audit logs
