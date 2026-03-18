@@ -5,7 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Save, Palette, Type, Image, MessageSquare, Send, Undo2, Shield, ChevronDown, FolderOpen } from "lucide-react";
+import { Loader2, Save, Palette, Type, Image, MessageSquare, Send, Undo2, Shield, ChevronDown, FolderOpen, BookmarkPlus } from "lucide-react";
+import TrashIcon from "@/components/ui/trash-icon";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import ImageUploadField from "@/components/customization/ImageUploadField";
 import ChannelSelectWithCreate from "@/components/channels/ChannelSelectWithCreate";
@@ -28,7 +30,7 @@ interface TicketEmbedData {
   ticket_embed_button_style: DiscordButtonStyle;
   ticket_channel_id: string;
   ticket_logs_channel_id: string;
-  ticket_staff_role_id: string; // comma-separated role IDs
+  ticket_staff_role_id: string;
 }
 
 const defaults: TicketEmbedData = {
@@ -45,10 +47,11 @@ const defaults: TicketEmbedData = {
   ticket_staff_role_id: "",
 };
 
-interface SavedEmbed {
+interface TicketPreset {
   id: string;
   name: string;
-  embed_data: any;
+  preset_data: TicketEmbedData;
+  created_at: string;
 }
 
 const TicketEmbedConfig = () => {
@@ -61,7 +64,13 @@ const TicketEmbedConfig = () => {
   const [channels, setChannels] = useState<{ id: string; name: string; parent_id?: string | null }[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string; position: number }[]>([]);
   const { roles: discordRoles, loading: rolesLoading } = useDiscordRoles();
-  const [savedEmbeds, setSavedEmbeds] = useState<SavedEmbed[]>([]);
+
+  // Presets state
+  const [presets, setPresets] = useState<TicketPreset[]>([]);
+  const [savePresetOpen, setSavePresetOpen] = useState(false);
+  const [loadPresetOpen, setLoadPresetOpen] = useState(false);
+  const [presetName, setPresetName] = useState("");
+  const [savingPreset, setSavingPreset] = useState(false);
 
   const { draft: data, setDraft: setData, clearDraft, hasDraft, discardDraft } = useLocalDraft<TicketEmbedData>(
     "ticket-embed",
@@ -72,34 +81,49 @@ const TicketEmbedConfig = () => {
 
   const guildId = tenant?.discord_guild_id || null;
 
-  // Fetch saved embeds
-  useEffect(() => {
+  // Fetch presets
+  const fetchPresets = useCallback(async () => {
     if (!tenantId) return;
-    const fetchEmbeds = async () => {
-      const { data: embeds } = await supabase
-        .from("saved_embeds")
-        .select("id, name, embed_data")
-        .eq("tenant_id", tenantId)
-        .order("created_at", { ascending: false });
-      setSavedEmbeds((embeds as unknown as SavedEmbed[]) || []);
-    };
-    fetchEmbeds();
+    const { data: rows } = await (supabase as any)
+      .from("saved_ticket_presets")
+      .select("*")
+      .eq("tenant_id", tenantId)
+      .order("created_at", { ascending: false });
+    setPresets((rows as TicketPreset[]) || []);
   }, [tenantId]);
 
-  const applySavedEmbed = (embedId: string) => {
-    const saved = savedEmbeds.find(e => e.id === embedId);
-    if (!saved) return;
-    const ed = saved.embed_data;
-    setData(prev => ({
-      ...prev,
-      ticket_embed_title: ed.title || prev.ticket_embed_title,
-      ticket_embed_description: ed.description || prev.ticket_embed_description,
-      ticket_embed_color: ed.color || prev.ticket_embed_color,
-      ticket_embed_image_url: ed.image_url || "",
-      ticket_embed_thumbnail_url: ed.thumbnail_url || "",
-      ticket_embed_footer: ed.footer_text || "",
-    }));
-    toast.success(`Embed "${saved.name}" aplicado!`);
+  useEffect(() => { fetchPresets(); }, [fetchPresets]);
+
+  const handleSavePreset = async () => {
+    if (!tenantId || !presetName.trim()) return;
+    setSavingPreset(true);
+    try {
+      const { error } = await (supabase as any)
+        .from("saved_ticket_presets")
+        .insert([{ tenant_id: tenantId, name: presetName.trim(), preset_data: JSON.parse(JSON.stringify(data)) }]);
+      if (error) throw error;
+      toast.success(`Preset "${presetName}" salvo!`);
+      setSavePresetOpen(false);
+      setPresetName("");
+      fetchPresets();
+    } catch (err: any) {
+      toast.error("Erro ao salvar preset: " + err.message);
+    } finally {
+      setSavingPreset(false);
+    }
+  };
+
+  const loadPreset = (preset: TicketPreset) => {
+    setData(preset.preset_data);
+    setLoadPresetOpen(false);
+    toast.success(`Preset "${preset.name}" aplicado!`);
+  };
+
+  const deletePreset = async (id: string) => {
+    const { error } = await (supabase as any).from("saved_ticket_presets").delete().eq("id", id);
+    if (error) { toast.error("Erro ao excluir"); return; }
+    toast.success("Preset excluído!");
+    fetchPresets();
   };
 
   const fetchChannels = useCallback(async () => {
@@ -262,33 +286,18 @@ const TicketEmbedConfig = () => {
             </Button>
           </div>
         )}
-        {savedEmbeds.length > 0 && (
-          <Card>
-            <CardContent className="pt-4 pb-3">
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <FolderOpen className="h-3.5 w-3.5" />
-                  Aplicar Embed Salvo
-                </Label>
-                <Select onValueChange={applySavedEmbed}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um embed salvo para aplicar..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {savedEmbeds.map(embed => (
-                      <SelectItem key={embed.id} value={embed.id}>
-                        {embed.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Os embeds salvos na aba Personalização podem ser aplicados aqui
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Preset buttons */}
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setSavePresetOpen(true)}>
+            <BookmarkPlus className="h-3.5 w-3.5" /> Salvar Preset
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setLoadPresetOpen(true)}>
+            <FolderOpen className="h-3.5 w-3.5" /> Carregar Preset
+            {presets.length > 0 && (
+              <span className="ml-1 text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded-full">{presets.length}</span>
+            )}
+          </Button>
+        </div>
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
@@ -578,6 +587,75 @@ const TicketEmbedConfig = () => {
           </div>
         </div>
       </div>
+      {/* Save Preset Dialog */}
+      <Dialog open={savePresetOpen} onOpenChange={setSavePresetOpen}>
+        <DialogContent className="sm:max-w-sm bg-sidebar border-border">
+          <DialogHeader>
+            <DialogTitle>Salvar Preset de Ticket</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div className="space-y-2">
+              <Label>Nome do Preset</Label>
+              <Input
+                value={presetName}
+                onChange={e => setPresetName(e.target.value)}
+                placeholder="Ex: Suporte Padrão, Ticket VIP..."
+                className="bg-background border-border"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Salva todas as configurações atuais (textos, cores, imagens, botão) para uso futuro.
+            </p>
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={() => setSavePresetOpen(false)}>
+                Cancelar
+              </Button>
+              <Button className="flex-1" onClick={handleSavePreset} disabled={savingPreset || !presetName.trim()}>
+                {savingPreset && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                Salvar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Load Preset Dialog */}
+      <Dialog open={loadPresetOpen} onOpenChange={setLoadPresetOpen}>
+        <DialogContent className="sm:max-w-md bg-sidebar border-border">
+          <DialogHeader>
+            <DialogTitle>Presets Salvos</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 mt-2 max-h-[400px] overflow-y-auto">
+            {presets.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                Nenhum preset salvo ainda. Salve a configuração atual para criar um.
+              </p>
+            ) : (
+              presets.map(preset => (
+                <div
+                  key={preset.id}
+                  className="flex items-center justify-between p-3 rounded-lg border border-border bg-background hover:bg-accent/50 transition-colors"
+                >
+                  <button className="flex-1 text-left" onClick={() => loadPreset(preset)}>
+                    <p className="text-sm font-medium">{preset.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(preset.created_at).toLocaleDateString("pt-BR")}
+                    </p>
+                  </button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    onClick={() => deletePreset(preset.id)}
+                  >
+                    <TrashIcon className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
