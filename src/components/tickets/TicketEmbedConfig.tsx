@@ -286,33 +286,18 @@ const TicketEmbedConfig = () => {
             </Button>
           </div>
         )}
-        {savedEmbeds.length > 0 && (
-          <Card>
-            <CardContent className="pt-4 pb-3">
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <FolderOpen className="h-3.5 w-3.5" />
-                  Aplicar Embed Salvo
-                </Label>
-                <Select onValueChange={applySavedEmbed}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um embed salvo para aplicar..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {savedEmbeds.map(embed => (
-                      <SelectItem key={embed.id} value={embed.id}>
-                        {embed.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Os embeds salvos na aba Personalização podem ser aplicados aqui
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Preset buttons */}
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setSavePresetOpen(true)}>
+            <BookmarkPlus className="h-3.5 w-3.5" /> Salvar Preset
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setLoadPresetOpen(true)}>
+            <FolderOpen className="h-3.5 w-3.5" /> Carregar Preset
+            {presets.length > 0 && (
+              <span className="ml-1 text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded-full">{presets.length}</span>
+            )}
+          </Button>
+        </div>
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
