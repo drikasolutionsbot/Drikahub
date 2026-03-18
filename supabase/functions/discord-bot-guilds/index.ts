@@ -127,7 +127,17 @@ serve(async (req) => {
           .select("discord_user_id")
           .eq("id", tokenRecord.created_by)
           .maybeSingle();
+
         resolvedDiscordUserId = profile?.discord_user_id || null;
+
+        if (!resolvedDiscordUserId) {
+          const { data: authUserData } = await admin.auth.admin.getUserById(tokenRecord.created_by);
+          resolvedDiscordUserId =
+            authUserData?.user?.user_metadata?.provider_id ||
+            authUserData?.user?.user_metadata?.sub ||
+            authUserData?.user?.app_metadata?.provider_id ||
+            null;
+        }
       }
     }
 
