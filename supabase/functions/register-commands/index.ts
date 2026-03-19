@@ -6,7 +6,17 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-let DISCORD_APP_ID = Deno.env.get("DISCORD_APP_ID") || "1477916070508757092";
+// Extract application ID from bot token (first segment is base64-encoded bot user/app ID)
+function getAppIdFromToken(token: string): string {
+  try {
+    const firstSegment = token.split(".")[0];
+    // Add padding if needed
+    const padded = firstSegment + "=".repeat((4 - firstSegment.length % 4) % 4);
+    return atob(padded);
+  } catch {
+    return "";
+  }
+}
 
 interface CommandChoice {
   name: string;
@@ -86,6 +96,15 @@ Deno.serve(async (req) => {
 
       return built;
     });
+
+    // Extract app ID from the bot token
+    const DISCORD_APP_ID = getAppIdFromToken(BOT_TOKEN);
+    if (!DISCORD_APP_ID || !/^\d{17,20}$/.test(DISCORD_APP_ID)) {
+      return new Response(JSON.stringify({ error: "Não foi possível extrair o Application ID do bot token. Verifique se o token é válido." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Register globally or per-guild
     let url: string;
