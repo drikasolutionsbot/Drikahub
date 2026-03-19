@@ -51,20 +51,8 @@ serve(async (req) => {
       // body opcional
     }
 
-    // Resolve bot token: external bot (default) + tenant override (optional)
-    const externalBotToken = Deno.env.get("DISCORD_BOT_TOKEN") || null;
-    let botToken: string | null = externalBotToken;
-
-    if (tenantIdFromBody) {
-      const adminClient = createClient(supabaseUrl, serviceRoleKey);
-      const { data: tenantData } = await adminClient
-        .from("tenants")
-        .select("bot_token_encrypted")
-        .eq("id", tenantIdFromBody)
-        .single();
-
-      botToken = tenantData?.bot_token_encrypted || externalBotToken;
-    }
+    // Sempre usar o bot externo 24h (token único para todos os tenants)
+    const botToken = Deno.env.get("DISCORD_BOT_TOKEN") || null;
 
     if (!botToken && action !== "invite_url") {
       return new Response(JSON.stringify({ guilds: [], auto_linked: false }), {

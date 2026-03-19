@@ -20,16 +20,15 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    let botToken: string | null = null;
+    const botToken = Deno.env.get("DISCORD_BOT_TOKEN") || null;
 
     if (body.tenant_id) {
       const { data: tenant } = await supabase
         .from("tenants")
-        .select("discord_guild_id, bot_token_encrypted")
+        .select("discord_guild_id")
         .eq("id", body.tenant_id)
         .single();
       if (!guild_id) guild_id = tenant?.discord_guild_id;
-      botToken = tenant?.bot_token_encrypted || null;
     }
 
     if (!guild_id) {
@@ -37,10 +36,6 @@ Deno.serve(async (req) => {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-    }
-
-    if (!botToken) {
-      botToken = Deno.env.get("DISCORD_BOT_TOKEN") || null;
     }
 
     if (!botToken) {

@@ -24,10 +24,10 @@ serve(async (req) => {
     const { action, tenant_id, ...params } = await req.json();
     if (!tenant_id) throw new Error("Missing tenant_id");
 
-    // Get guild_id and bot token from tenant
+    // Get guild_id from tenant and always use external bot token
     const { data: tenant, error: tenantErr } = await supabase
       .from("tenants")
-      .select("discord_guild_id, bot_token_encrypted")
+      .select("discord_guild_id")
       .eq("id", tenant_id)
       .single();
 
@@ -35,12 +35,12 @@ serve(async (req) => {
       throw new Error("Tenant not found");
     }
 
-    const botToken = tenant.bot_token_encrypted || null;
+    const botToken = Deno.env.get("DISCORD_BOT_TOKEN") || null;
     const guildId = tenant.discord_guild_id || null;
 
     // Helper: require bot token for Discord operations
     const requireBot = () => {
-      if (!botToken) throw new Error("Bot token não configurado. Configure em Configurações → Bot Externo.");
+      if (!botToken) throw new Error("Bot externo não configurado (DISCORD_BOT_TOKEN).");
       if (!guildId) throw new Error("Nenhum servidor Discord conectado.");
       return { botToken, guildId };
     };

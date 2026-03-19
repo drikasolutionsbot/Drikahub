@@ -16,7 +16,6 @@ serve(async (req) => {
     const body = await req.json();
     let guild_id = body.guild_id;
 
-    let tenantBotToken: string | null = null;
     if (!guild_id && body.tenant_id) {
       const supabase = createClient(
         Deno.env.get("SUPABASE_URL")!,
@@ -24,7 +23,7 @@ serve(async (req) => {
       );
       const { data: tenant, error } = await supabase
         .from("tenants")
-        .select("discord_guild_id, bot_token_encrypted")
+        .select("discord_guild_id")
         .eq("id", body.tenant_id)
         .single();
 
@@ -32,13 +31,12 @@ serve(async (req) => {
         throw new Error("Could not resolve guild_id from tenant");
       }
       guild_id = tenant.discord_guild_id;
-      if (tenant.bot_token_encrypted) tenantBotToken = tenant.bot_token_encrypted;
     }
 
     if (!guild_id) throw new Error("Missing guild_id");
 
-    const botToken = tenantBotToken;
-    if (!botToken) throw new Error("Bot token not configured");
+    const botToken = Deno.env.get("DISCORD_BOT_TOKEN") || null;
+    if (!botToken) throw new Error("Bot externo não configurado (DISCORD_BOT_TOKEN)");
 
     const res = await fetch(`https://discord.com/api/v10/guilds/${guild_id}/emojis`, {
       headers: { Authorization: `Bot ${botToken}` },
