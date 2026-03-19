@@ -7,6 +7,7 @@ const {
   getStoreConfig, createTicket, getOpenTickets, closeTicket,
   getTicketById, supabase,
 } = require("../supabase");
+const { sendWithIdentity } = require("./webhookSender");
 
 // ── Check staff permission ──
 async function checkStaffPermission(tenant, interaction) {
