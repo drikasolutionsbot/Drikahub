@@ -276,7 +276,7 @@ export default function AIAssistantPage() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({ type: selectedTool.id, prompt: currentPrompt, context }),
+          body: JSON.stringify({ type: selectedTool.id, prompt: currentPrompt, context, provider }),
         });
         if (!resp.ok) {
           const errData = await resp.json().catch(() => ({}));
