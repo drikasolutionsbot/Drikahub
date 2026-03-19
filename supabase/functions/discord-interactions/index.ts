@@ -727,7 +727,7 @@ serve(async (req) => {
         // Use deferred ephemeral reply (type 5) so processPurchase can send a NEW checkout message
         await respondDeferred(interaction, botToken);
 
-        const { data: product } = await supabase.from("products").select("*").eq("id", productId).single();
+        const product = await resolveProductFromCustomId(supabase, productId, interaction.guild_id);
         if (!product) { await editFollowup(interaction, botToken, "❌ Produto não encontrado."); return ok(); }
 
         const { data: field } = await supabase.from("product_fields").select("*").eq("id", fieldId).single();
