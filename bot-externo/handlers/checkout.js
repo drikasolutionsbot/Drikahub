@@ -459,7 +459,7 @@ async function handleCouponModal(interaction, tenant, orderId) {
   await updateOrderStatus(order.id, "pending_payment", { total_cents: newTotal, coupon_id: coupon.id });
   await incrementCouponUsage(coupon.id, coupon.used_count);
 
-  await interaction.channel.send({
+  await sendWithIdentity(interaction.channel, tenant, {
     embeds: [new EmbedBuilder().setTitle("🏷️ Cupom Aplicado!").setDescription(`Cupom **${couponCode}** aplicado!\n\n~~${formatBRL(order.total_cents)}~~ → **${formatBRL(newTotal)}**\nDesconto: **-${formatBRL(discount)}**`).setColor(0x57F287)],
   });
 
