@@ -1,0 +1,1 @@
+ALTER TABLE public.tenants ADD COLUMN bot_name text, ADD COLUMN bot_avatar_url text;

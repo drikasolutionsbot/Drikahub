@@ -1901,7 +1901,9 @@ export type Database = {
         Row: {
           affiliate_active: boolean
           banner_url: string | null
+          bot_avatar_url: string | null
           bot_client_id: string | null
+          bot_name: string | null
           bot_prefix: string | null
           bot_status: string | null
           bot_status_interval: number | null
@@ -1943,7 +1945,9 @@ export type Database = {
         Insert: {
           affiliate_active?: boolean
           banner_url?: string | null
+          bot_avatar_url?: string | null
           bot_client_id?: string | null
+          bot_name?: string | null
           bot_prefix?: string | null
           bot_status?: string | null
           bot_status_interval?: number | null
@@ -1985,7 +1989,9 @@ export type Database = {
         Update: {
           affiliate_active?: boolean
           banner_url?: string | null
+          bot_avatar_url?: string | null
           bot_client_id?: string | null
+          bot_name?: string | null
           bot_prefix?: string | null
           bot_status?: string | null
           bot_status_interval?: number | null
