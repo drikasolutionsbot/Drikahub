@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Sparkles, Wand2, FileText, Image, MessageSquare, Lightbulb, Copy, Check, Loader2, Send, ChevronDown, Zap, Brain, Plus, User, Bot, Trash2, Stars, Orbit, Flame, Crown, Globe } from "lucide-react";
+import { Sparkles, Wand2, FileText, Image, MessageSquare, Lightbulb, Copy, Check, Loader2, Send, ChevronDown, Zap, Brain, Plus, User, Bot, Trash2, Stars, Orbit, Flame, Crown, Globe, Cpu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -179,6 +179,7 @@ export default function AIAssistantPage() {
   const [showContext, setShowContext] = useState(false);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [provider, setProvider] = useState<"drika" | "groq">("drika");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const activeSession = sessions.find(s => s.id === activeSessionId);
@@ -241,7 +242,7 @@ export default function AIAssistantPage() {
     try {
       if (selectedTool.id === "image") {
         const { data, error } = await supabase.functions.invoke("ai-assistant", {
-          body: { type: "image", prompt: currentPrompt, context },
+          body: { type: "image", prompt: currentPrompt, context, provider },
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
@@ -275,7 +276,7 @@ export default function AIAssistantPage() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({ type: selectedTool.id, prompt: currentPrompt, context }),
+          body: JSON.stringify({ type: selectedTool.id, prompt: currentPrompt, context, provider }),
         });
         if (!resp.ok) {
           const errData = await resp.json().catch(() => ({}));
@@ -401,22 +402,49 @@ export default function AIAssistantPage() {
             </p>
           </div>
 
-          {/* Engine info */}
+          {/* Engine info + Provider Selector */}
           <div className="hidden lg:flex flex-col items-end gap-2">
-            <div className="flex items-center gap-2.5 px-4 py-2 rounded-xl bg-card/30 border border-border/10 backdrop-blur-md">
-              <div className="relative">
-                <Zap className="h-4 w-4 text-yellow-400" />
-                <div className="absolute -inset-1 bg-yellow-400/20 rounded-full blur-sm" />
-              </div>
-              <div>
-                <span className="text-[11px] font-bold text-foreground/80 block leading-tight">Drika Engine</span>
-                <span className="text-[9px] text-muted-foreground/40">Multi-modelo • Fallback</span>
-              </div>
+            {/* Provider toggle */}
+            <div className="flex items-center gap-1 p-1 rounded-xl bg-card/30 border border-border/10 backdrop-blur-md">
+              <button
+                onClick={() => setProvider("drika")}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all duration-300",
+                  provider === "drika"
+                    ? "bg-primary/15 text-primary shadow-[0_0_12px_hsl(330_100%_50%/0.15)] border border-primary/20"
+                    : "text-muted-foreground/50 hover:text-muted-foreground/80"
+                )}
+              >
+                <Zap className="h-3.5 w-3.5" />
+                Drika Engine
+              </button>
+              <button
+                onClick={() => setProvider("groq")}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all duration-300",
+                  provider === "groq"
+                    ? "bg-[#F55036]/15 text-[#F55036] shadow-[0_0_12px_rgba(245,80,54,0.15)] border border-[#F55036]/20"
+                    : "text-muted-foreground/50 hover:text-muted-foreground/80"
+                )}
+              >
+                <Cpu className="h-3.5 w-3.5" />
+                Groq Cloud
+              </button>
             </div>
             <div className="flex items-center gap-3 text-[10px] text-muted-foreground/30">
-              <span className="flex items-center gap-1"><Globe className="h-3 w-3" /> Google Gemini</span>
-              <span>•</span>
-              <span className="flex items-center gap-1"><Stars className="h-3 w-3" /> OpenAI GPT</span>
+              {provider === "drika" ? (
+                <>
+                  <span className="flex items-center gap-1"><Globe className="h-3 w-3" /> Google Gemini</span>
+                  <span>•</span>
+                  <span className="flex items-center gap-1"><Stars className="h-3 w-3" /> OpenAI GPT</span>
+                </>
+              ) : (
+                <>
+                  <span className="flex items-center gap-1"><Cpu className="h-3 w-3" /> Llama 3.3 70B</span>
+                  <span>•</span>
+                  <span className="flex items-center gap-1"><Zap className="h-3 w-3" /> Mixtral 8x7B</span>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -748,8 +776,35 @@ export default function AIAssistantPage() {
 
           {/* ── Input Area ── */}
           <div className="relative border-t border-border/10 p-4 bg-card/40 backdrop-blur-md z-10">
-            {/* Context Toggle */}
-            <div className="mb-2">
+            {/* Provider + Context controls */}
+            <div className="mb-2 flex items-center gap-3 flex-wrap">
+              {/* Mobile provider toggle */}
+              <div className="flex items-center gap-1 p-0.5 rounded-lg bg-muted/20 border border-border/10 lg:hidden">
+                <button
+                  onClick={() => setProvider("drika")}
+                  className={cn(
+                    "px-2.5 py-1 rounded-md text-[10px] font-bold transition-all",
+                    provider === "drika" ? "bg-primary/15 text-primary" : "text-muted-foreground/50"
+                  )}
+                >
+                  Drika
+                </button>
+                <button
+                  onClick={() => setProvider("groq")}
+                  className={cn(
+                    "px-2.5 py-1 rounded-md text-[10px] font-bold transition-all",
+                    provider === "groq" ? "bg-[#F55036]/15 text-[#F55036]" : "text-muted-foreground/50"
+                  )}
+                >
+                  Groq
+                </button>
+              </div>
+
+              {/* Image warning for groq */}
+              {provider === "groq" && selectedTool.id === "image" && (
+                <span className="text-[10px] text-destructive/70 font-medium">⚠️ Imagens não suportadas no Groq</span>
+              )}
+
               <button
                 onClick={() => setShowContext(!showContext)}
                 className="flex items-center gap-1.5 text-[10px] text-muted-foreground/40 hover:text-primary/70 transition-colors font-medium"
@@ -757,15 +812,15 @@ export default function AIAssistantPage() {
                 <ChevronDown className={cn("h-3 w-3 transition-transform duration-300", showContext && "rotate-180")} />
                 Contexto (opcional)
               </button>
-              {showContext && (
-                <Textarea
-                  placeholder="Ex: Minha loja vende contas de jogos..."
-                  value={context}
-                  onChange={(e) => setContext(e.target.value)}
-                  className="mt-2 min-h-[50px] bg-muted/10 border-border/15 text-xs resize-none"
-                />
-              )}
             </div>
+            {showContext && (
+              <Textarea
+                placeholder="Ex: Minha loja vende contas de jogos..."
+                value={context}
+                onChange={(e) => setContext(e.target.value)}
+                className="mb-2 min-h-[50px] bg-muted/10 border-border/15 text-xs resize-none"
+              />
+            )}
 
             <div className="relative group/input">
               {/* Glow border on focus */}
@@ -796,7 +851,7 @@ export default function AIAssistantPage() {
               </div>
             </div>
             <p className="text-[10px] text-muted-foreground/20 mt-2 text-center tracking-wide">
-              Enter para enviar • Shift+Enter para nova linha • Powered by Drika Engine
+              Enter para enviar • Shift+Enter para nova linha • {provider === "groq" ? "Powered by Groq Cloud ⚡" : "Powered by Drika Engine"}
             </p>
           </div>
         </div>

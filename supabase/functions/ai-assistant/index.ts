@@ -5,8 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Model rotation: ordered from cheapest/fastest to most expensive
-// When one hits rate limit (429), we try the next
+// Lovable AI Gateway models
 const TEXT_MODELS = [
   "google/gemini-2.5-flash-lite",
   "google/gemini-2.5-flash",
@@ -24,31 +23,38 @@ const IMAGE_MODELS = [
   "google/gemini-3-pro-image-preview",
 ];
 
+// Groq models (ordered by speed/cost)
+const GROQ_TEXT_MODELS = [
+  "llama-3.3-70b-versatile",
+  "llama-3.1-8b-instant",
+  "mixtral-8x7b-32768",
+  "gemma2-9b-it",
+];
+
 async function tryModels(
   models: string[],
   buildBody: (model: string) => object,
   apiKey: string,
+  apiUrl: string,
+  authHeader: string,
 ): Promise<{ response: Response; model: string }> {
   for (let i = 0; i < models.length; i++) {
     const model = models[i];
     console.log(`Trying model: ${model} (attempt ${i + 1}/${models.length})`);
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch(apiUrl, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `${authHeader} ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(buildBody(model)),
     });
 
-    // If rate limited or payment required, try next model
     if (response.status === 429 || response.status === 402) {
       console.warn(`Model ${model} returned ${response.status}, trying next...`);
-      // Consume the body to free resources
       await response.text();
       if (i === models.length - 1) {
-        // Last model also failed
         return {
           response: new Response(
             JSON.stringify({
@@ -67,17 +73,36 @@ async function tryModels(
     return { response, model };
   }
 
-  // Should never reach here
   throw new Error("No models available");
 }
+
+const LOVABLE_API_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { type, prompt, context } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const { type, prompt, context, provider } = await req.json();
+    
+    // Determine provider: "groq" or "drika" (default)
+    const useGroq = provider === "groq";
+    
+    let apiKey: string;
+    let apiUrl: string;
+    let authHeader: string;
+    
+    if (useGroq) {
+      apiKey = Deno.env.get("GROQ_API_KEY") || "";
+      if (!apiKey) throw new Error("GROQ_API_KEY não está configurada. Adicione nas configurações do Supabase.");
+      apiUrl = GROQ_API_URL;
+      authHeader = "Bearer";
+    } else {
+      apiKey = Deno.env.get("LOVABLE_API_KEY") || "";
+      if (!apiKey) throw new Error("LOVABLE_API_KEY is not configured");
+      apiUrl = LOVABLE_API_URL;
+      authHeader = "Bearer";
+    }
 
     const systemPrompts: Record<string, string> = {
       copy: `Você é um copywriter profissional especializado em vendas online e Discord. 
@@ -107,8 +132,15 @@ Inclua estilo, cores, composição, iluminação e mood.`,
 
     const systemPrompt = systemPrompts[type] || systemPrompts.copy;
 
-    // Image generation with fallback
+    // Image generation — only supported on Drika engine (Lovable AI)
     if (type === "image") {
+      if (useGroq) {
+        return new Response(
+          JSON.stringify({ error: "Geração de imagens não é suportada pelo Groq. Use o Drika Engine." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
       const { response, model } = await tryModels(
         IMAGE_MODELS,
         (m) => ({
@@ -116,11 +148,12 @@ Inclua estilo, cores, composição, iluminação e mood.`,
           messages: [{ role: "user", content: prompt }],
           modalities: ["image", "text"],
         }),
-        LOVABLE_API_KEY,
+        apiKey,
+        apiUrl,
+        authHeader,
       );
 
       if (!response.ok) {
-        // Already handled by tryModels (429/402 with message)
         const body = await response.text();
         return new Response(body, {
           status: response.status,
@@ -144,10 +177,14 @@ Inclua estilo, cores, composição, iluminação e mood.`,
       { role: "user", content: prompt },
     ];
 
+    const textModels = useGroq ? GROQ_TEXT_MODELS : TEXT_MODELS;
+
     const { response, model } = await tryModels(
-      TEXT_MODELS,
+      textModels,
       (m) => ({ model: m, messages, stream: true }),
-      LOVABLE_API_KEY,
+      apiKey,
+      apiUrl,
+      authHeader,
     );
 
     if (!response.ok) {
@@ -158,12 +195,13 @@ Inclua estilo, cores, composição, iluminação e mood.`,
       });
     }
 
-    console.log(`Streaming response from model: ${model}`);
+    console.log(`Streaming response from model: ${model} (provider: ${useGroq ? "groq" : "drika"})`);
     return new Response(response.body, {
       headers: {
         ...corsHeaders,
         "Content-Type": "text/event-stream",
         "X-Model-Used": model,
+        "X-Provider": useGroq ? "groq" : "drika",
       },
     });
   } catch (e) {
