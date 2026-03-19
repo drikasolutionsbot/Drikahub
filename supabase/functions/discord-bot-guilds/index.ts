@@ -260,7 +260,7 @@ serve(async (req) => {
 
       if (currentTenant.discord_guild_id) {
         const result = mapped.filter((g: any) => g.id === currentTenant.discord_guild_id);
-        return new Response(JSON.stringify(result), {
+        return new Response(JSON.stringify({ guilds: result, auto_linked: false }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
@@ -273,25 +273,30 @@ serve(async (req) => {
       );
       const available = mapped.filter((g: any) => !claimedByOthers.has(g.id));
 
+      // For token-based sessions (bot externo), skip ownership check
+      // The client owns the bot, so adding it to a server is proof of access
       const ownerDiscordId = currentTenant.owner_discord_id || resolvedDiscordUserId;
-      if (!ownerDiscordId) {
-        return new Response(JSON.stringify([]), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+      let finalGuilds = available;
+
+      if (ownerDiscordId) {
+        // If we know the owner, filter by ownership for extra security
+        finalGuilds = await getOwnedGuilds(available, ownerDiscordId);
       }
+      // If no ownerDiscordId (token session without discord link), show all available guilds
 
-      const ownedGuilds = await getOwnedGuilds(available, ownerDiscordId);
-
-      if (ownedGuilds.length === 1) {
-        const guildToLink = ownedGuilds[0];
-        await admin
+      // Auto-link if only one guild available
+      let autoLinked = false;
+      if (finalGuilds.length === 1) {
+        const guildToLink = finalGuilds[0];
+        const { error: linkError } = await admin
           .from("tenants")
           .update({ discord_guild_id: guildToLink.id, updated_at: new Date().toISOString() })
           .eq("id", resolvedTenantId)
           .is("discord_guild_id", null);
+        if (!linkError) autoLinked = true;
       }
 
-      return new Response(JSON.stringify(ownedGuilds), {
+      return new Response(JSON.stringify({ guilds: finalGuilds, auto_linked: autoLinked }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

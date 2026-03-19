@@ -87,11 +87,18 @@ const SettingsServerTab = ({ tenant, tenantId, refetchTenant }: Props) => {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      return (data ?? []) as Guild[];
+      // Handle both old format (array) and new format ({ guilds, auto_linked })
+      const guildList = Array.isArray(data) ? data : (data?.guilds ?? []);
+      const autoLinked = !Array.isArray(data) && data?.auto_linked === true;
+      if (autoLinked) {
+        // Server was auto-linked, refresh tenant data
+        setTimeout(() => refetchTenant(), 500);
+      }
+      return guildList as Guild[];
     },
     enabled: !!tenantId && !isConnected,
-    staleTime: 1000 * 60,
-    refetchOnWindowFocus: false,
+    staleTime: 1000 * 30, // Refresh more often
+    refetchOnWindowFocus: true,
     retry: 1,
   });
 
@@ -103,8 +110,8 @@ const SettingsServerTab = ({ tenant, tenantId, refetchTenant }: Props) => {
       });
       if (error) return null;
       if (data?.error) return null;
-      const list = (data ?? []) as Guild[];
-      return list.find((g) => g.id === tenant?.discord_guild_id) || null;
+      const list = Array.isArray(data) ? data : (data?.guilds ?? []);
+      return list.find((g: Guild) => g.id === tenant?.discord_guild_id) || null;
     },
     enabled: !!tenantId && isConnected,
     staleTime: 1000 * 60,
