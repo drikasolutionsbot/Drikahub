@@ -38,6 +38,7 @@ client.tenantCache = tenantCache;
 client.resolveTenant = resolveTenant;
 
 // ── Carregar handlers ──
+const pingCommand = require("./commands/ping");
 const lojaCommand = require("./commands/loja");
 const comprarHandler = require("./commands/comprar");
 const ticketCommand = require("./commands/ticket");
