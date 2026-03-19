@@ -188,7 +188,7 @@ async function handleDeleteTicket(interaction, tenant, ticketId) {
   await closeTicket(ticketId, interaction.user.username);
   await sendTicketLog(interaction.client, ticket, interaction.user.id, interaction.user.username, "deleted", tenant);
 
-  await interaction.channel.send({ embeds: [new EmbedBuilder().setTitle("🗑️ Ticket Deletado").setDescription(`Ticket deletado por <@${interaction.user.id}>.\nO tópico será excluído em 5 segundos.`).setColor(0x2B2D31)] });
+  await sendWithIdentity(interaction.channel, tenant, { embeds: [new EmbedBuilder().setTitle("🗑️ Ticket Deletado").setDescription(`Ticket deletado por <@${interaction.user.id}>.\nO tópico será excluído em 5 segundos.`).setColor(0x2B2D31)] });
 
   setTimeout(() => { interaction.channel.delete().catch(() => {}); }, 5000);
 }
