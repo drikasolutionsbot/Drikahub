@@ -812,7 +812,7 @@ export default function AIAssistantPage() {
                 <button
                   onClick={() => setProvider("drika")}
                   className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all duration-300",
+                    "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all duration-300",
                     provider === "drika"
                       ? "bg-primary/15 text-primary border border-primary/25 shadow-sm"
                       : "text-muted-foreground/60 hover:text-foreground/80"
@@ -824,7 +824,7 @@ export default function AIAssistantPage() {
                 <button
                   onClick={() => setProvider("groq")}
                   className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all duration-300",
+                    "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all duration-300",
                     provider === "groq"
                       ? "bg-[#F55036]/15 text-[#F55036] border border-[#F55036]/25 shadow-sm"
                       : "text-muted-foreground/60 hover:text-foreground/80"
@@ -833,11 +833,23 @@ export default function AIAssistantPage() {
                   <Cpu className="h-3 w-3" />
                   Groq
                 </button>
+                <button
+                  onClick={() => setProvider("inference")}
+                  className={cn(
+                    "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all duration-300",
+                    provider === "inference"
+                      ? "bg-[#00D4AA]/15 text-[#00D4AA] border border-[#00D4AA]/25 shadow-sm"
+                      : "text-muted-foreground/60 hover:text-foreground/80"
+                  )}
+                >
+                  <Network className="h-3 w-3" />
+                  Inference
+                </button>
               </div>
 
-              {/* Image warning for groq */}
-              {provider === "groq" && selectedTool.id === "image" && (
-                <span className="text-[10px] text-destructive/70 font-medium">⚠️ Imagens não suportadas no Groq</span>
+              {/* Image warning for non-drika providers */}
+              {provider !== "drika" && selectedTool.id === "image" && (
+                <span className="text-[10px] text-destructive/70 font-medium">⚠️ Imagens só no Drika Engine</span>
               )}
 
               <button
