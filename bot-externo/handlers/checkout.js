@@ -9,6 +9,7 @@ const {
   getStoreConfig, getCoupon, incrementCouponUsage,
   getActivePaymentProvider, triggerAutomation, deliverOrder, supabase,
 } = require("../supabase");
+const { sendWithIdentity } = require("./webhookSender");
 
 const formatBRL = (cents) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
 
@@ -208,7 +209,7 @@ async function processPurchase(interaction, tenant, product, priceCents, fieldId
     new ButtonBuilder().setCustomId(`checkout_cancel:${order.id}`).setLabel("Cancelar").setEmoji("🗑️").setStyle(ButtonStyle.Danger),
   );
 
-  await checkoutThread.send({ content: `<@${userId}>`, embeds: [reviewEmbed], components: [row1, row2] });
+  await sendWithIdentity(checkoutThread, tenant, { content: `<@${userId}>`, embeds: [reviewEmbed], components: [row1, row2] });
 
   // Tell user where to go
   const threadLink = `https://discord.com/channels/${interaction.guild.id}/${checkoutThread.id}`;
@@ -244,7 +245,7 @@ async function goToPayment(interaction, tenant, orderId) {
   if (order.status !== "pending_payment") return interaction.followUp({ content: `ℹ️ Pedido não está mais pendente.`, ephemeral: true });
 
   const channel = interaction.channel;
-  await channel.send({ embeds: [new EmbedBuilder().setDescription("⏳ | Gerando QR Code...\nQuase lá, só mais um instante!").setColor(0x2B2D31)] });
+  await sendWithIdentity(channel, tenant, { embeds: [new EmbedBuilder().setDescription("⏳ | Gerando QR Code...\nQuase lá, só mais um instante!").setColor(0x2B2D31)] });
 
   const priceCents = order.total_cents;
   const amountBRL = priceCents / 100;
@@ -281,7 +282,7 @@ async function goToPayment(interaction, tenant, orderId) {
   } else {
     // Static PIX
     if (!tenant.pix_key) {
-      return channel.send({ embeds: [new EmbedBuilder().setTitle("❌ Erro").setDescription("Nenhum método de pagamento configurado.").setColor(0xED4245)] });
+      return sendWithIdentity(channel, tenant, { embeds: [new EmbedBuilder().setTitle("❌ Erro").setDescription("Nenhum método de pagamento configurado.").setColor(0xED4245)] });
     }
     brcode = generateStaticBRCode(tenant.pix_key, tenant.name || "Loja", amountBRL, `PED${order.order_number}`);
     await updateOrderStatus(order.id, "pending_payment", { payment_provider: "static_pix" });
@@ -308,7 +309,7 @@ async function goToPayment(interaction, tenant, orderId) {
           new ButtonBuilder().setCustomId(`reject_order:${order.id}`).setLabel("Recusar").setEmoji("❌").setStyle(ButtonStyle.Danger),
         );
 
-        await logsChannel.send({ embeds: [logEmbed], components: [approvalRow] });
+        await sendWithIdentity(logsChannel, tenant, { embeds: [logEmbed], components: [approvalRow] });
       } catch {}
     }
   }
@@ -340,7 +341,7 @@ async function goToPayment(interaction, tenant, orderId) {
     new ButtonBuilder().setCustomId(`checkout_cancel:${order.id}`).setLabel("Cancelar").setStyle(ButtonStyle.Danger),
   );
 
-  await channel.send({ embeds: [pixEmbed], components: [pixRow] });
+  await sendWithIdentity(channel, tenant, { embeds: [pixEmbed], components: [pixRow] });
 }
 
 // ── Approve Order ──
@@ -411,7 +412,7 @@ async function cancelOrder(interaction, tenant, orderId) {
   }
 
   const channel = interaction.channel;
-  await channel.send({ embeds: [new EmbedBuilder().setTitle("❌ Compra Cancelada").setDescription(`Pedido **#${order.order_number}** foi cancelado.\nO tópico será arquivado.`).setColor(0x2B2D31)] });
+  await sendWithIdentity(channel, tenant, { embeds: [new EmbedBuilder().setTitle("❌ Compra Cancelada").setDescription(`Pedido **#${order.order_number}** foi cancelado.\nO tópico será arquivado.`).setColor(0x2B2D31)] });
 
   setTimeout(() => {
     channel.setArchived?.(true).catch(() => {});
@@ -458,7 +459,7 @@ async function handleCouponModal(interaction, tenant, orderId) {
   await updateOrderStatus(order.id, "pending_payment", { total_cents: newTotal, coupon_id: coupon.id });
   await incrementCouponUsage(coupon.id, coupon.used_count);
 
-  await interaction.channel.send({
+  await sendWithIdentity(interaction.channel, tenant, {
     embeds: [new EmbedBuilder().setTitle("🏷️ Cupom Aplicado!").setDescription(`Cupom **${couponCode}** aplicado!\n\n~~${formatBRL(order.total_cents)}~~ → **${formatBRL(newTotal)}**\nDesconto: **-${formatBRL(discount)}**`).setColor(0x57F287)],
   });
 
@@ -494,7 +495,7 @@ async function handleQuantityModal(interaction, tenant, orderId) {
   const newTotal = unitPrice * qty;
   await updateOrderStatus(order.id, "pending_payment", { total_cents: newTotal });
 
-  await interaction.channel.send({
+  await sendWithIdentity(interaction.channel, tenant, {
     embeds: [new EmbedBuilder().setTitle("✏️ Quantidade Atualizada").setDescription(`Quantidade: **${qty}x**\nNovo total: **${formatBRL(newTotal)}**`).setColor(0x2B2D31)],
   });
 
@@ -509,7 +510,7 @@ async function markDelivered(interaction, tenant, orderId) {
 
   await updateOrderStatus(orderId, "delivered");
 
-  await interaction.channel.send({
+  await sendWithIdentity(interaction.channel, tenant, {
     embeds: [new EmbedBuilder().setTitle("✅ Entrega Confirmada").setDescription(`Pedido **#${order.order_number}** marcado como entregue por <@${interaction.user.id}>.`).setColor(0x2B2D31)],
   });
 

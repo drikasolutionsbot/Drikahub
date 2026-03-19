@@ -7,6 +7,7 @@ const {
   getStoreConfig, createTicket, getOpenTickets, closeTicket,
   getTicketById, supabase,
 } = require("../supabase");
+const { sendWithIdentity } = require("./webhookSender");
 
 // ── Check staff permission ──
 async function checkStaffPermission(tenant, interaction) {
@@ -121,7 +122,7 @@ async function openTicket(interaction, tenant, targetChannelId = null) {
     new UserSelectMenuBuilder().setCustomId(`ticket_assign_${ticket.id}`).setPlaceholder("Selecione algum membro").setMinValues(1).setMaxValues(1),
   );
 
-  const welcomeMsg = await ticketThread.send({
+  const welcomeMsg = await sendWithIdentity(ticketThread, tenant, {
     content: contentMention, allowedMentions: { users: [userId], roles: staffRoleIds },
     embeds: [welcomeEmbed], components: [row1, row2],
   });
@@ -166,7 +167,7 @@ async function handleCloseTicket(interaction, tenant, ticketId) {
   await closeTicket(ticketId, interaction.user.username);
   await sendTicketLog(interaction.client, ticket, interaction.user.id, interaction.user.username, "closed", tenant);
 
-  await interaction.channel.send({ embeds: [new EmbedBuilder().setTitle("📁 Ticket Arquivado").setDescription(`Ticket arquivado por <@${interaction.user.id}>.`).setColor(0x2B2D31)] });
+  await sendWithIdentity(interaction.channel, tenant, { embeds: [new EmbedBuilder().setTitle("📁 Ticket Arquivado").setDescription(`Ticket arquivado por <@${interaction.user.id}>.`).setColor(0x2B2D31)] });
 
   try {
     await interaction.channel.setArchived(true);
@@ -187,7 +188,7 @@ async function handleDeleteTicket(interaction, tenant, ticketId) {
   await closeTicket(ticketId, interaction.user.username);
   await sendTicketLog(interaction.client, ticket, interaction.user.id, interaction.user.username, "deleted", tenant);
 
-  await interaction.channel.send({ embeds: [new EmbedBuilder().setTitle("🗑️ Ticket Deletado").setDescription(`Ticket deletado por <@${interaction.user.id}>.\nO tópico será excluído em 5 segundos.`).setColor(0x2B2D31)] });
+  await sendWithIdentity(interaction.channel, tenant, { embeds: [new EmbedBuilder().setTitle("🗑️ Ticket Deletado").setDescription(`Ticket deletado por <@${interaction.user.id}>.\nO tópico será excluído em 5 segundos.`).setColor(0x2B2D31)] });
 
   setTimeout(() => { interaction.channel.delete().catch(() => {}); }, 5000);
 }
@@ -212,7 +213,7 @@ async function handleRemindTicket(interaction, tenant, ticketId) {
     });
   } catch {}
 
-  await interaction.channel.send({ content: `🔔 <@${ticket.discord_user_id}>, este é um lembrete sobre seu ticket!` });
+  await sendWithIdentity(interaction.channel, tenant, { content: `🔔 <@${ticket.discord_user_id}>, este é um lembrete sobre seu ticket!` });
   await interaction.editReply({ content: `✅ Lembrete enviado para <@${ticket.discord_user_id}>!` });
 }
 
