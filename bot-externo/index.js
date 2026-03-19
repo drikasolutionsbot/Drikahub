@@ -56,6 +56,7 @@ client.on(Events.ClientReady, async () => {
   // Registrar slash commands em cada guild
   const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_BOT_TOKEN);
   const commands = [
+    pingCommand.data,
     lojaCommand.data,
     comprarHandler.data,
     ticketCommand.data,
