@@ -689,7 +689,7 @@ export default function AIAssistantPage() {
                       "max-w-[80%] rounded-2xl px-4 py-3 text-sm",
                       msg.role === "user"
                         ? "bg-primary/12 border border-primary/15 text-foreground"
-                        : "bg-muted/20 border border-border/15 text-foreground/85 backdrop-blur-sm"
+                        : "bg-muted/20 border border-border/15 text-foreground/90 backdrop-blur-sm"
                     )}>
                       {msg.imageUrl && (
                         <div className="mb-3 relative rounded-xl overflow-hidden border border-border/20 shadow-xl">
