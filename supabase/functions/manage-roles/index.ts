@@ -21,8 +21,6 @@ serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    if (!botToken) throw new Error("Bot token not configured");
-
     const { action, tenant_id, ...params } = await req.json();
     if (!tenant_id) throw new Error("Missing tenant_id");
 
