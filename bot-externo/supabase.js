@@ -13,18 +13,69 @@ async function getTenantByGuild(guildId) {
 }
 
 // ── Products ──
+async function fetchProductsFromEdge(tenantId) {
+  try {
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const res = await fetch(`${process.env.SUPABASE_URL}/functions/v1/manage-products`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: supabaseKey,
+        Authorization: `Bearer ${supabaseKey}`,
+      },
+      body: JSON.stringify({ action: "list", tenant_id: tenantId }),
+    });
+
+    if (!res.ok) {
+      console.error(`[products-fallback] HTTP ${res.status}:`, await res.text());
+      return [];
+    }
+
+    const data = await res.json();
+    if (data?.error) {
+      console.error(`[products-fallback] ${data.error}`);
+      return [];
+    }
+
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    console.error(`[products-fallback] Error for tenant ${tenantId}:`, e.message);
+    return [];
+  }
+}
+
 async function getProducts(tenantId, onlyActive = true) {
   let q = supabase.from("products").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false });
   if (onlyActive) q = q.eq("active", true);
+
   const { data, error } = await q;
-  if (error) console.error(`[getProducts] Error for tenant ${tenantId}:`, error.message);
+  if (error) {
+    console.error(`[getProducts] Error for tenant ${tenantId}:`, error.message);
+  }
+
+  if ((error || !Array.isArray(data) || data.length === 0) && tenantId) {
+    const fallback = await fetchProductsFromEdge(tenantId);
+    if (fallback.length > 0) {
+      return onlyActive ? fallback.filter((p) => p.active) : fallback;
+    }
+  }
+
   return data || [];
 }
 
-async function getProductById(productId) {
-  const { data, error } = await supabase.from("products").select("*").eq("id", productId).single();
-  if (error) console.error(`[getProductById] Error for product ${productId}:`, error.message);
-  return data;
+async function getProductById(productId, tenantId = null) {
+  const { data, error } = await supabase.from("products").select("*").eq("id", productId).maybeSingle();
+  if (error) {
+    console.error(`[getProductById] Error for product ${productId}:`, error.message);
+  }
+  if (data) return data;
+
+  if (tenantId) {
+    const fallback = await fetchProductsFromEdge(tenantId);
+    return fallback.find((p) => p.id === productId) || null;
+  }
+
+  return null;
 }
 
 async function getProductFields(productId, tenantId) {
