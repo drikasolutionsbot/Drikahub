@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { ECloudCharts } from "@/components/ecloud/ECloudCharts";
 import { ECloudDataTab } from "@/components/ecloud/ECloudDataTab";
+import { ECloudHealthTab } from "@/components/ecloud/ECloudHealthTab";
 import { Loader2 } from "lucide-react";
 
 const VerificationPage = lazy(() => import("@/pages/VerificationPage"));
@@ -314,6 +315,9 @@ const ECloudPage = () => {
           <TabsTrigger value="monitor" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-5">
             Monitor
           </TabsTrigger>
+          <TabsTrigger value="saude" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-5">
+            Saúde
+          </TabsTrigger>
           <TabsTrigger value="dados" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-5">
             Dados & Backups
           </TabsTrigger>
@@ -466,6 +470,10 @@ const ECloudPage = () => {
               )}
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="saude" className="mt-6">
+          {tenantId && <ECloudHealthTab tenantId={tenantId} />}
         </TabsContent>
 
         <TabsContent value="dados" className="mt-6">
