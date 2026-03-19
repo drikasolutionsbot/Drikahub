@@ -60,7 +60,12 @@ serve(async (req) => {
       }
 
       case "list_discord": {
-        const bot = requireBot();
+        if (!botToken || !guildId) {
+          return new Response(JSON.stringify({ roles: [] }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        const bot = { botToken, guildId };
         const discordRes = await fetch(
           `https://discord.com/api/v10/guilds/${bot.guildId}/roles`,
           {
