@@ -465,14 +465,34 @@ export default function AIAssistantPage() {
                   <span className={cn("text-[8px] font-medium mt-0.5", provider === "inference" ? "text-[#00D4AA]/60" : "text-muted-foreground/30")}>Nemotron • Gemma</span>
                 </div>
               </button>
+              {/* Hugging Face */}
+              <button
+                onClick={() => setProvider("huggingface")}
+                className={cn(
+                  "relative z-10 flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-300",
+                  provider === "huggingface"
+                    ? "bg-gradient-to-r from-[#FFD21E]/20 to-[#FF9D00]/20 text-[#FFD21E] border border-[#FFD21E]/30 shadow-[0_0_16px_rgba(255,210,30,0.12)]"
+                    : "text-muted-foreground/60 hover:text-foreground/80"
+                )}
+              >
+                <div className={cn("h-6 w-6 rounded-lg flex items-center justify-center transition-all duration-300",
+                  provider === "huggingface" ? "bg-[#FFD21E]/20" : "bg-muted/20"
+                )}>
+                  <Boxes className={cn("h-3.5 w-3.5 transition-all", provider === "huggingface" ? "text-[#FFD21E] drop-shadow-[0_0_6px_rgba(255,210,30,0.6)]" : "text-muted-foreground/50")} />
+                </div>
+                <div className="flex flex-col items-start">
+                  <span className="leading-none">HuggingFace</span>
+                  <span className={cn("text-[8px] font-medium mt-0.5", provider === "huggingface" ? "text-[#FFD21E]/60" : "text-muted-foreground/30")}>Qwen • Llama</span>
+                </div>
+              </button>
             </div>
             {/* Active model info */}
             <div className="flex items-center gap-2 text-[10px] text-muted-foreground/50">
               <div className={cn("h-1.5 w-1.5 rounded-full", 
-                provider === "drika" ? "bg-primary/60" : provider === "groq" ? "bg-[#F55036]/60" : "bg-[#00D4AA]/60"
+                provider === "drika" ? "bg-primary/60" : provider === "groq" ? "bg-[#F55036]/60" : provider === "inference" ? "bg-[#00D4AA]/60" : "bg-[#FFD21E]/60"
               )} />
               <span className="font-medium">
-                {provider === "drika" ? "Multi-model fallback • 8 modelos" : provider === "groq" ? "Ultra-rápido • 4 keys ativas" : "Inference.net • Nemotron 3"}
+                {provider === "drika" ? "Multi-model fallback • 8 modelos" : provider === "groq" ? "Ultra-rápido • 4 keys ativas" : provider === "inference" ? "Inference.net • Nemotron 3" : "Hugging Face • Qwen 72B"}
               </span>
             </div>
           </div>
