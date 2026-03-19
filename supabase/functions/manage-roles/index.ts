@@ -31,14 +31,19 @@ serve(async (req) => {
       .eq("id", tenant_id)
       .single();
 
-    if (tenantErr || !tenant?.discord_guild_id) {
-      throw new Error("Tenant not found or no Discord server connected");
+    if (tenantErr || !tenant) {
+      throw new Error("Tenant not found");
     }
 
-    const botToken = tenant.bot_token_encrypted;
-    if (!botToken) throw new Error("Bot token not configured");
+    const botToken = tenant.bot_token_encrypted || null;
+    const guildId = tenant.discord_guild_id || null;
 
-    const guildId = tenant.discord_guild_id;
+    // Helper: require bot token for Discord operations
+    const requireBot = () => {
+      if (!botToken) throw new Error("Bot token não configurado. Configure em Configurações → Bot Externo.");
+      if (!guildId) throw new Error("Nenhum servidor Discord conectado.");
+      return { botToken, guildId };
+    };
 
     switch (action) {
       case "list": {
