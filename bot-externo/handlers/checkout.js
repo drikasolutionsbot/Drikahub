@@ -65,7 +65,7 @@ async function startCheckout(interaction, tenant, productId) {
   console.log(`[CHECKOUT] startCheckout productId=${productId} tenantId=${tenant.id}`);
 
   // Try direct query first (more reliable), then fallback to list
-  let product = await getProductById(productId);
+  let product = await getProductById(productId, tenant.id);
   if (!product) {
     console.log(`[CHECKOUT] Direct query failed, trying list fallback...`);
     const products = await getProducts(tenant.id, false);
