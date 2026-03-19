@@ -158,9 +158,9 @@ Inclua estilo, cores, composição, iluminação e mood.`,
 
     // Image generation — only supported on Drika engine (Lovable AI)
     if (type === "image") {
-      if (useGroq) {
+      if (selectedProvider !== "drika") {
         return new Response(
-          JSON.stringify({ error: "Geração de imagens não é suportada pelo Groq. Use o Drika Engine." }),
+          JSON.stringify({ error: "Geração de imagens só é suportada pelo Drika Engine." }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
