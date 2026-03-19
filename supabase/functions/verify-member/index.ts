@@ -99,7 +99,51 @@ Deno.serve(async (req) => {
         redirect_uri: redirectUri,
       }),
     });
-...
+
+    if (!tokenRes.ok) {
+      const errText = await tokenRes.text();
+      console.error("Token exchange failed:", tokenRes.status, errText);
+      return htmlResponse("❌ Erro", "Falha ao trocar o código OAuth2.", "#ED4245");
+    }
+
+    const tokenData = await tokenRes.json();
+    const accessToken = tokenData.access_token;
+    const refreshToken = tokenData.refresh_token || null;
+    const expiresIn = tokenData.expires_in;
+
+    if (!accessToken) {
+      return htmlResponse("❌ Erro", "Token de acesso não recebido.", "#ED4245");
+    }
+
+    // Fetch Discord user info
+    const userRes = await fetch("https://discord.com/api/v10/users/@me", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!userRes.ok) {
+      const errText = await userRes.text();
+      console.error("User fetch failed:", userRes.status, errText);
+      return htmlResponse("❌ Erro", "Falha ao obter informações do usuário.", "#ED4245");
+    }
+
+    const userData = await userRes.json();
+    const discordUserId = userData.id;
+    const discordUsername = userData.username;
+    const discordAvatar = userData.avatar
+      ? `https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}.png`
+      : null;
+
+    // Fetch tenant data
+    const { data: tenantData, error: tenantError } = await supabase
+      .from("tenants")
+      .select("discord_guild_id, verify_role_id, verify_logs_channel_id, name, logo_url")
+      .eq("id", effectiveTenantId)
+      .single();
+
+    if (tenantError || !tenantData) {
+      return htmlResponse("❌ Erro", "Tenant não encontrado.", "#ED4245");
+    }
+
     const guildId = tenantData.discord_guild_id;
     const roleId = tenantData.verify_role_id;
     if (!botToken) {
