@@ -159,6 +159,20 @@ const PlanBadge = ({ tenant }: { tenant: { plan: string; plan_expires_at: string
               </div>
             )}
           </div>
+
+          {(!isPro || isExpired) && (
+            <Button
+              size="sm"
+              className="w-full gradient-pink text-primary-foreground border-none gap-2 mt-1"
+              onClick={() => {
+                sessionStorage.setItem("open_upgrade_modal", "true");
+                window.location.href = "/settings";
+              }}
+            >
+              <Crown className="h-3.5 w-3.5" />
+              Assine o Plano Pro
+            </Button>
+          )}
         </div>
       </PopoverContent>
     </Popover>
