@@ -12,6 +12,23 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Helper: fetch with rate limit retry
+  const fetchWithRetry = async (url: string, options: RequestInit, maxRetries = 3): Promise<Response> => {
+    for (let i = 0; i <= maxRetries; i++) {
+      const res = await fetch(url, options);
+      if (res.status === 429) {
+        const body = await res.json().catch(() => ({}));
+        const retryAfter = (body?.retry_after || 1) * 1000;
+        if (i < maxRetries) {
+          await new Promise((r) => setTimeout(r, retryAfter + 100));
+          continue;
+        }
+      }
+      return res;
+    }
+    throw new Error("Max retries exceeded");
+  };
+
   try {
     const botToken = Deno.env.get("DISCORD_BOT_TOKEN");
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -38,7 +55,7 @@ serve(async (req) => {
     }
 
     if (action === "invite_url") {
-      const botUserRes = await fetch("https://discord.com/api/v10/users/@me", {
+      const botUserRes = await fetchWithRetry("https://discord.com/api/v10/users/@me", {
         headers: { Authorization: `Bot ${botToken}` },
       });
 
@@ -103,7 +120,7 @@ serve(async (req) => {
       const checks = await Promise.all(
         candidates.map(async (guild) => {
           try {
-            const guildRes = await fetch(`https://discord.com/api/v10/guilds/${guild.id}`, {
+            const guildRes = await fetchWithRetry(`https://discord.com/api/v10/guilds/${guild.id}`, {
               headers: { Authorization: `Bot ${botToken}` },
             });
             if (!guildRes.ok) return null;
@@ -222,7 +239,7 @@ serve(async (req) => {
     }
 
     // Busca guilds atuais do bot no Discord
-    const discordResponse = await fetch("https://discord.com/api/v10/users/@me/guilds", {
+    const discordResponse = await fetchWithRetry("https://discord.com/api/v10/users/@me/guilds", {
       headers: { Authorization: `Bot ${botToken}` },
     });
 
