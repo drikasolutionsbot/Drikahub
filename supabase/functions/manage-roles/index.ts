@@ -85,18 +85,18 @@ serve(async (req) => {
       }
 
       case "create": {
+        const bot = requireBot();
         const { name, color = "#99AAB5" } = params;
         if (!name) throw new Error("Missing name");
 
-        // Accept both hex string and number for color
         const colorDecimal = typeof color === "number" ? color : hexToDecimal(String(color));
 
         const discordRes = await fetch(
-          `https://discord.com/api/v10/guilds/${guildId}/roles`,
+          `https://discord.com/api/v10/guilds/${bot.guildId}/roles`,
           {
             method: "POST",
             headers: {
-              Authorization: `Bot ${botToken}`,
+              Authorization: `Bot ${bot.botToken}`,
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
