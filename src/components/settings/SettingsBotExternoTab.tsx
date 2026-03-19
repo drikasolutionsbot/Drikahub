@@ -224,7 +224,7 @@ const SettingsBotExternoTab = ({ tenant, tenantId, refetchTenant }: Props) => {
                   Servidores disponíveis onde o bot está presente ({safeGuilds.length}):
                 </p>
                 <div className="space-y-2 max-h-[280px] overflow-y-auto">
-                  {guilds.map((guild) => (
+                  {safeGuilds.map((guild) => (
                     <div
                       key={guild.id}
                       className="flex items-center gap-3 rounded-xl border border-border bg-muted/30 hover:bg-muted/60 transition-colors px-4 py-3"
