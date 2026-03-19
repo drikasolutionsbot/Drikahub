@@ -38,7 +38,7 @@ serve(async (req) => {
       });
     }
 
-    const botToken = tenantBotToken || Deno.env.get("DISCORD_BOT_TOKEN");
+    const botToken = tenantBotToken;
     if (!botToken) {
       return new Response(JSON.stringify({ error: "Bot token not configured" }), {
         status: 500,

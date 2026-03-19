@@ -11,7 +11,7 @@ async function getBotToken(supabase: any, tenant_id: string): Promise<string | n
     .select("bot_token_encrypted")
     .eq("id", tenant_id)
     .single();
-  return tenant?.bot_token_encrypted || Deno.env.get("DISCORD_BOT_TOKEN") || null;
+  return tenant?.bot_token_encrypted || null;
 }
 
 function buildGiveawayEmbed(giveaway: any, embedConfig: any) {

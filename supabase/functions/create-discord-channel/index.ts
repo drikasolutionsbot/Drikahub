@@ -1,3 +1,5 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -20,18 +22,32 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const BOT_TOKEN = Deno.env.get("DISCORD_BOT_TOKEN");
-    if (!BOT_TOKEN) {
-      return new Response(JSON.stringify({ error: "DISCORD_BOT_TOKEN não configurado" }), {
-        status: 500,
+    const { guild_id, name, type, parent_id, topic, tenant_id } = await req.json();
+
+    if (!guild_id || !name) {
+      return new Response(JSON.stringify({ error: "guild_id e name são obrigatórios" }), {
+        status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const { guild_id, name, type, parent_id, topic } = await req.json();
+    // Resolve bot token from tenant
+    let botToken: string | null = null;
+    if (tenant_id) {
+      const supabase = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      );
+      const { data: tenant } = await supabase
+        .from("tenants")
+        .select("bot_token_encrypted")
+        .eq("id", tenant_id)
+        .single();
+      botToken = tenant?.bot_token_encrypted || null;
+    }
 
-    if (!guild_id || !name) {
-      return new Response(JSON.stringify({ error: "guild_id e name são obrigatórios" }), {
+    if (!botToken) {
+      return new Response(JSON.stringify({ error: "Bot token não configurado para este tenant" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -52,7 +68,7 @@ Deno.serve(async (req) => {
       {
         method: "POST",
         headers: {
-          Authorization: `Bot ${BOT_TOKEN}`,
+          Authorization: `Bot ${botToken}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(body),

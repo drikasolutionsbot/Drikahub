@@ -15,17 +15,21 @@ Deno.serve(async (req) => {
     const body = await req.json();
     let guild_id = body.guild_id;
 
-    if (!guild_id && body.tenant_id) {
-      const supabase = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-      );
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    let botToken: string | null = null;
+
+    if (body.tenant_id) {
       const { data: tenant } = await supabase
         .from("tenants")
-        .select("discord_guild_id")
+        .select("discord_guild_id, bot_token_encrypted")
         .eq("id", body.tenant_id)
         .single();
-      guild_id = tenant?.discord_guild_id;
+      if (!guild_id) guild_id = tenant?.discord_guild_id;
+      botToken = tenant?.bot_token_encrypted || null;
     }
 
     if (!guild_id) {
@@ -35,10 +39,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const botToken = Deno.env.get("DISCORD_BOT_TOKEN");
     if (!botToken) {
-      return new Response(JSON.stringify({ error: "Bot token not configured" }), {
-        status: 500,
+      return new Response(JSON.stringify({ error: "Bot token não configurado para este tenant" }), {
+        status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

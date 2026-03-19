@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (!tenant?.discord_guild_id) throw new Error("Tenant not configured");
-    const botToken = tenant.bot_token_encrypted || Deno.env.get("DISCORD_BOT_TOKEN");
+    const botToken = tenant.bot_token_encrypted;
     if (!botToken) throw new Error("No bot token");
     const guildId = tenant.discord_guild_id;
 

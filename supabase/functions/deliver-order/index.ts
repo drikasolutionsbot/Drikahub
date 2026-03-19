@@ -43,7 +43,7 @@ serve(async (req) => {
       .eq("id", tenant_id)
       .single();
 
-    const botToken = tenant?.bot_token_encrypted || Deno.env.get("DISCORD_BOT_TOKEN");
+    const botToken = tenant?.bot_token_encrypted;
     if (!botToken) throw new Error("No bot token available");
 
     const guildId = tenant?.discord_guild_id;

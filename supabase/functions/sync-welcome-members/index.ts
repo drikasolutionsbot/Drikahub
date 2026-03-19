@@ -58,7 +58,7 @@ async function runSyncCycle(supabase: any, tenantFilter?: string) {
         continue;
       }
 
-      const botToken = tenant.bot_token_encrypted || Deno.env.get("DISCORD_BOT_TOKEN");
+      const botToken = tenant.bot_token_encrypted;
       if (!botToken) {
         (tenantResult.errors as string[]).push("no bot token");
         summary.push(tenantResult);

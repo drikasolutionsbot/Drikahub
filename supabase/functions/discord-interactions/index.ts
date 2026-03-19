@@ -205,7 +205,6 @@ serve(async (req) => {
   }
 
   const publicKey = Deno.env.get("DISCORD_PUBLIC_KEY");
-  const botToken = Deno.env.get("DISCORD_BOT_TOKEN")!;
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(supabaseUrl, serviceRoleKey);
@@ -227,6 +226,24 @@ serve(async (req) => {
   // Type 1: PING (Discord verification)
   if (interaction.type === 1) {
     return new Response(JSON.stringify({ type: 1 }), {
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  // Resolve bot token from guild_id → tenant
+  let botToken = "";
+  const interactionGuildId = interaction.guild_id;
+  if (interactionGuildId) {
+    const { data: tenantByGuild } = await supabase
+      .from("tenants")
+      .select("bot_token_encrypted")
+      .eq("discord_guild_id", interactionGuildId)
+      .maybeSingle();
+    botToken = tenantByGuild?.bot_token_encrypted || "";
+  }
+  if (!botToken) {
+    console.error("No bot token found for guild:", interactionGuildId);
+    return new Response(JSON.stringify({ type: 4, data: { content: "❌ Bot token não configurado.", flags: 64 } }), {
       headers: { "Content-Type": "application/json" },
     });
   }

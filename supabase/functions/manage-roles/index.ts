@@ -37,7 +37,7 @@ serve(async (req) => {
       throw new Error("Tenant not found or no Discord server connected");
     }
 
-    const botToken = tenant.bot_token_encrypted || Deno.env.get("DISCORD_BOT_TOKEN");
+    const botToken = tenant.bot_token_encrypted;
     if (!botToken) throw new Error("Bot token not configured");
 
     const guildId = tenant.discord_guild_id;

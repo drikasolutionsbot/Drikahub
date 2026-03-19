@@ -21,19 +21,25 @@ serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
+    // Resolve tenant bot token
+    const { data: tenantInfo } = await supabase
+      .from("tenants")
+      .select("discord_guild_id, bot_token_encrypted")
+      .eq("id", tenant_id)
+      .single();
+
+    const tenantBotToken = tenantInfo?.bot_token_encrypted || null;
+
     // Handle guild icon update (separate flow)
     if (guild_icon_base64) {
-      const { data: tenantData } = await supabase.from("tenants").select("discord_guild_id").eq("id", tenant_id).single();
-      if (!tenantData?.discord_guild_id) throw new Error("No Discord guild linked");
-      
-      const botToken = Deno.env.get("DISCORD_BOT_TOKEN");
-      if (!botToken) throw new Error("Bot token not configured");
+      if (!tenantInfo?.discord_guild_id) throw new Error("No Discord guild linked");
+      if (!tenantBotToken) throw new Error("Bot token não configurado para este tenant");
 
       const iconRes = await fetch(
-        `https://discord.com/api/v10/guilds/${tenantData.discord_guild_id}`,
+        `https://discord.com/api/v10/guilds/${tenantInfo.discord_guild_id}`,
         {
           method: "PATCH",
-          headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
+          headers: { Authorization: `Bot ${tenantBotToken}`, "Content-Type": "application/json" },
           body: JSON.stringify({ icon: guild_icon_base64 }),
         }
       );
@@ -52,7 +58,7 @@ serve(async (req) => {
       throw new Error("No updates provided");
     }
 
-    const allowedFields = ["name", "logo_url", "banner_url", "primary_color", "secondary_color", "bot_status", "bot_status_interval", "bot_prefix", "bot_name", "bot_avatar_url", "discord_guild_id", "ecloud_custom_url", "verify_enabled", "verify_redirect_url", "verify_role_id", "verify_channel_id", "verify_logs_channel_id", "verify_title", "verify_description", "verify_button_label", "verify_embed_color", "verify_image_url", "verify_button_style", "pix_key", "pix_key_type"];
+    const allowedFields = ["name", "logo_url", "banner_url", "primary_color", "secondary_color", "bot_status", "bot_status_interval", "bot_prefix", "bot_name", "bot_avatar_url", "discord_guild_id", "ecloud_custom_url", "verify_enabled", "verify_redirect_url", "verify_role_id", "verify_channel_id", "verify_logs_channel_id", "verify_title", "verify_description", "verify_button_label", "verify_embed_color", "verify_image_url", "verify_button_style", "pix_key", "pix_key_type", "bot_token_encrypted"];
     const safeUpdates: Record<string, string> = {};
     for (const key of Object.keys(updates)) {
       if (allowedFields.includes(key)) {
@@ -85,11 +91,10 @@ serve(async (req) => {
         throw new Error("Este servidor já está vinculado a outra loja.");
       }
 
-      // Verify bot is in the server
-      const botToken = Deno.env.get("DISCORD_BOT_TOKEN");
-      if (botToken) {
+      // Verify bot is in the server using tenant's bot token
+      if (tenantBotToken) {
         const guildRes = await fetch(`https://discord.com/api/v10/guilds/${guildId}`, {
-          headers: { Authorization: `Bot ${botToken}` },
+          headers: { Authorization: `Bot ${tenantBotToken}` },
         });
         if (!guildRes.ok) {
           if (guildRes.status === 404 || guildRes.status === 403) {
@@ -110,17 +115,17 @@ serve(async (req) => {
 
     // If name was updated, also rename the Discord guild
     if (safeUpdates.name && data.discord_guild_id) {
+      // Re-read bot token in case it was just updated
+      const effectiveBotToken = safeUpdates.bot_token_encrypted || data.bot_token_encrypted || tenantBotToken;
       console.log("Attempting Discord guild rename to:", safeUpdates.name, "for guild:", data.discord_guild_id);
       try {
-        const botToken = Deno.env.get("DISCORD_BOT_TOKEN");
-        console.log("Bot token available:", !!botToken);
-        if (botToken) {
+        if (effectiveBotToken) {
           const renameRes = await fetch(
             `https://discord.com/api/v10/guilds/${data.discord_guild_id}`,
             {
               method: "PATCH",
               headers: {
-                Authorization: `Bot ${botToken}`,
+                Authorization: `Bot ${effectiveBotToken}`,
                 "Content-Type": "application/json",
               },
               body: JSON.stringify({ name: safeUpdates.name }),
@@ -132,8 +137,6 @@ serve(async (req) => {
       } catch (discordErr) {
         console.error("Discord guild rename error:", discordErr);
       }
-    } else {
-      console.log("Skipping Discord rename. name in updates:", !!safeUpdates.name, "guild_id:", data.discord_guild_id);
     }
 
     return new Response(JSON.stringify(data), {

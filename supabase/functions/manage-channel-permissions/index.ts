@@ -53,7 +53,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const botToken = tenantData.bot_token_encrypted || Deno.env.get("DISCORD_BOT_TOKEN")!;
+    const botToken = tenantData.bot_token_encrypted;
+    if (!botToken) throw new Error("Bot token não configurado para este tenant");
     const guildId = tenantData.discord_guild_id;
 
     // ACTION: get - Get current permission overwrites for a channel

@@ -115,9 +115,6 @@ serve(async (req) => {
       throw new Error("Missing content or embeds");
     }
 
-    const globalBotToken = Deno.env.get("DISCORD_BOT_TOKEN");
-    if (!globalBotToken) throw new Error("DISCORD_BOT_TOKEN not configured");
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
@@ -129,8 +126,8 @@ serve(async (req) => {
       .eq("id", tenant_id)
       .single();
 
-    // Use tenant's custom bot token if available, otherwise global
-    const botToken = tenant?.bot_token_encrypted || globalBotToken;
+    const botToken = tenant?.bot_token_encrypted;
+    if (!botToken) throw new Error("Bot token não configurado para este tenant");
     const botUserId = await getBotUserId(botToken);
 
     const customBotName = tenant?.bot_name || tenant?.name || undefined;

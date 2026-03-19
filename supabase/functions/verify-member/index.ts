@@ -125,7 +125,10 @@ Deno.serve(async (req) => {
 
     const guildId = tenantData.discord_guild_id;
     const roleId = tenantData.verify_role_id;
-    const botToken = tenantData.bot_token_encrypted || Deno.env.get("DISCORD_BOT_TOKEN")!;
+    const botToken = tenantData.bot_token_encrypted;
+    if (!botToken) {
+      return htmlResponse("❌ Erro", "Bot token não configurado para este servidor.", "#ED4245");
+    }
 
     if (!guildId) {
       return htmlResponse("❌ Erro", "Servidor Discord não configurado.", "#ED4245");

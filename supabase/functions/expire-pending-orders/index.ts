@@ -69,7 +69,7 @@ serve(async (req) => {
         .select("bot_token_encrypted")
         .eq("id", order.tenant_id)
         .single();
-      const botToken = tenantData?.bot_token_encrypted || Deno.env.get("DISCORD_BOT_TOKEN");
+      const botToken = tenantData?.bot_token_encrypted;
 
       if (botToken) {
         try {

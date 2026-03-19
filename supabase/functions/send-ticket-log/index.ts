@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
       .eq("id", tenant_id)
       .single();
 
-    const botToken = tenant?.bot_token_encrypted || Deno.env.get("DISCORD_BOT_TOKEN");
+    const botToken = tenant?.bot_token_encrypted;
     if (!botToken) {
       return new Response(JSON.stringify({ error: "Bot token not found" }), {
         status: 400,

@@ -37,7 +37,7 @@ serve(async (req) => {
 
     if (!guild_id) throw new Error("Missing guild_id");
 
-    const botToken = tenantBotToken || Deno.env.get("DISCORD_BOT_TOKEN");
+    const botToken = tenantBotToken;
     if (!botToken) throw new Error("Bot token not configured");
 
     const res = await fetch(`https://discord.com/api/v10/guilds/${guild_id}/emojis`, {

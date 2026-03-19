@@ -16,13 +16,13 @@ serve(async (req) => {
     const { guild_id, query, limit = 20, tenant_id } = await req.json();
     if (!guild_id) throw new Error("Missing guild_id");
 
-    let botToken = Deno.env.get("DISCORD_BOT_TOKEN");
+    let botToken: string | null = null;
 
-    // Resolve tenant bot token if tenant_id provided
+    // Resolve tenant bot token
     if (tenant_id) {
       const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
       const { data: tenant } = await supabase.from("tenants").select("bot_token_encrypted").eq("id", tenant_id).single();
-      if (tenant?.bot_token_encrypted) botToken = tenant.bot_token_encrypted;
+      botToken = tenant?.bot_token_encrypted || null;
     }
 
     if (!botToken) throw new Error("Bot token not configured");

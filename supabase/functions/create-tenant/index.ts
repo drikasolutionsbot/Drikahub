@@ -19,7 +19,7 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const botToken = Deno.env.get("DISCORD_BOT_TOKEN");
+    // Bot verification skipped - each tenant configures their own bot token after creation
 
     const supabaseAnon = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
@@ -43,36 +43,7 @@ serve(async (req) => {
       throw new Error("ID do servidor inválido. Deve conter 17-20 dígitos.");
     }
 
-    // Verify bot is present in the guild
-    if (botToken) {
-      try {
-        const guildRes = await fetch(`https://discord.com/api/v10/guilds/${discord_guild_id}`, {
-          headers: { Authorization: `Bot ${botToken}` },
-        });
-
-        if (!guildRes.ok) {
-          if (guildRes.status === 404 || guildRes.status === 403) {
-            throw new Error("O bot não está neste servidor. Adicione o bot primeiro e tente novamente.");
-          }
-          const errText = await guildRes.text();
-          console.error("Discord guild check failed:", guildRes.status, errText);
-          throw new Error("Não foi possível verificar o servidor. Tente novamente.");
-        }
-
-        // Use the actual guild name instead of the ID
-        const guildData = await guildRes.json();
-        if (guildData.name && name === discord_guild_id) {
-          // If name was sent as the guild ID, replace with actual guild name
-          body.resolved_name = guildData.name;
-        }
-      } catch (e) {
-        if (e instanceof Error && (e.message.includes("bot não está") || e.message.includes("Não foi possível"))) {
-          throw e;
-        }
-        console.error("Discord API check error:", e);
-        // If Discord API is down, allow creation anyway
-      }
-    }
+    // Note: Bot presence verification is done after tenant configures their bot token
 
     const resolvedName = body.resolved_name || name;
 

@@ -77,7 +77,13 @@ serve(async (req) => {
       .select("bot_token_encrypted")
       .eq("id", resolvedTenantId)
       .single();
-    const botToken = tenantData?.bot_token_encrypted || Deno.env.get("DISCORD_BOT_TOKEN")!;
+    const botToken = tenantData?.bot_token_encrypted;
+    if (!botToken) {
+      return new Response(JSON.stringify({ error: "Bot token não configurado para este tenant" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Build Discord message payload
     const messageBody: Record<string, any> = {};
