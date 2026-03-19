@@ -23,20 +23,6 @@ const IMAGE_MODELS = [
   "google/gemini-3-pro-image-preview",
 ];
 
-
-// Google AI Studio models
-const GOOGLE_AI_TEXT_MODELS = [
-  "gemini-2.5-flash",
-  "gemini-2.5-pro",
-  "gemini-2.0-flash",
-  "gemini-1.5-pro",
-];
-
-const GOOGLE_AI_IMAGE_MODELS = [
-  "gemini-2.0-flash-preview-image-generation",
-  "gemini-2.0-flash",
-];
-
 async function tryModels(
   models: string[],
   buildBody: (model: string) => object,
@@ -83,39 +69,17 @@ async function tryModels(
 }
 
 const LOVABLE_API_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const GOOGLE_AI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { type, prompt, context, provider } = await req.json();
+    const { type, prompt, context } = await req.json();
     
-    // Determine provider: "google" or "drika" (default)
-    const selectedProvider = provider || "drika";
-    
-    let apiKey: string;
-    let apiUrl: string;
-    let authHeader: string;
-    
-    if (selectedProvider === "google") {
-      const googleKeys = [
-        Deno.env.get("GOOGLE_AI_API_KEY"),
-        Deno.env.get("GOOGLE_AI_API_KEY_2"),
-      ].filter((k): k is string => !!k && k.length > 0);
-
-      if (googleKeys.length === 0) throw new Error("Nenhuma GOOGLE_AI_API_KEY configurada.");
-
-      apiKey = googleKeys[Math.floor(Date.now() / 1000) % googleKeys.length];
-      console.log(`Using Google AI key pool: ${googleKeys.length} keys available`);
-      apiUrl = GOOGLE_AI_URL;
-      authHeader = "Bearer";
-    } else {
-      apiKey = Deno.env.get("LOVABLE_API_KEY") || "";
-      if (!apiKey) throw new Error("LOVABLE_API_KEY is not configured");
-      apiUrl = LOVABLE_API_URL;
-      authHeader = "Bearer";
-    }
+    const apiKey = Deno.env.get("LOVABLE_API_KEY") || "";
+    if (!apiKey) throw new Error("LOVABLE_API_KEY is not configured");
+    const apiUrl = LOVABLE_API_URL;
+    const authHeader = "Bearer";
 
     const systemPrompts: Record<string, string> = {
       copy: `Você é um copywriter profissional especializado em vendas online e Discord. 
@@ -145,36 +109,17 @@ Inclua estilo, cores, composição, iluminação e mood.`,
 
     const systemPrompt = systemPrompts[type] || systemPrompts.copy;
 
-    // Image generation — supported on Drika engine and Google AI Studio
+    // Image generation — Drika engine only (Lovable AI)
     if (type === "image") {
-      if (selectedProvider !== "drika" && selectedProvider !== "google") {
-        return new Response(
-          JSON.stringify({ error: "Geração de imagens só é suportada pelo Drika Engine e Google AI Studio." }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-
-      const imageModels = selectedProvider === "google" ? GOOGLE_AI_IMAGE_MODELS : IMAGE_MODELS;
-      const imageApiUrl = selectedProvider === "google" ? GOOGLE_AI_URL : apiUrl;
-      const imageApiKey = apiKey;
-
-      const buildImageBody = selectedProvider === "google"
-        ? (m: string) => ({
-            model: m,
-            messages: [{ role: "user", content: prompt }],
-            modalities: ["text", "image"],
-          })
-        : (m: string) => ({
-            model: m,
-            messages: [{ role: "user", content: prompt }],
-            modalities: ["image", "text"],
-          });
-
       const { response, model } = await tryModels(
-        imageModels,
-        buildImageBody,
-        imageApiKey,
-        imageApiUrl,
+        IMAGE_MODELS,
+        (m) => ({
+          model: m,
+          messages: [{ role: "user", content: prompt }],
+          modalities: ["image", "text"],
+        }),
+        apiKey,
+        apiUrl,
         authHeader,
       );
 
@@ -202,7 +147,7 @@ Inclua estilo, cores, composição, iluminação e mood.`,
       { role: "user", content: prompt },
     ];
 
-    const textModels = selectedProvider === "google" ? GOOGLE_AI_TEXT_MODELS : TEXT_MODELS;
+    const textModels = TEXT_MODELS;
 
     const { response, model } = await tryModels(
       textModels,
