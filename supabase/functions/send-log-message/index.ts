@@ -24,7 +24,6 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const botToken = Deno.env.get("DISCORD_BOT_TOKEN")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     // Resolve tenant
@@ -71,6 +70,14 @@ serve(async (req) => {
     }
 
     const discordChannelId = config.discord_channel_id;
+
+    // Resolve bot token from tenant
+    const { data: tenantData } = await supabase
+      .from("tenants")
+      .select("bot_token_encrypted")
+      .eq("id", resolvedTenantId)
+      .single();
+    const botToken = tenantData?.bot_token_encrypted || Deno.env.get("DISCORD_BOT_TOKEN")!;
 
     // Build Discord message payload
     const messageBody: Record<string, any> = {};

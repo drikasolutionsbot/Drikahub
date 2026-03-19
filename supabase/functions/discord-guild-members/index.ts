@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,21 +13,26 @@ serve(async (req) => {
   }
 
   try {
-    const { guild_id, query, limit = 20 } = await req.json();
+    const { guild_id, query, limit = 20, tenant_id } = await req.json();
     if (!guild_id) throw new Error("Missing guild_id");
 
-    const botToken = Deno.env.get("DISCORD_BOT_TOKEN");
+    let botToken = Deno.env.get("DISCORD_BOT_TOKEN");
+
+    // Resolve tenant bot token if tenant_id provided
+    if (tenant_id) {
+      const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      const { data: tenant } = await supabase.from("tenants").select("bot_token_encrypted").eq("id", tenant_id).single();
+      if (tenant?.bot_token_encrypted) botToken = tenant.bot_token_encrypted;
+    }
+
     if (!botToken) throw new Error("Bot token not configured");
 
-    // Discord Search Members endpoint (requires query param, min 1 char)
     const searchQuery = query?.trim() || "";
     
     let url: string;
     if (searchQuery.length > 0) {
-      // Use search endpoint for filtering
       url = `https://discord.com/api/v10/guilds/${guild_id}/members/search?query=${encodeURIComponent(searchQuery)}&limit=${limit}`;
     } else {
-      // List members (no filter)
       url = `https://discord.com/api/v10/guilds/${guild_id}/members?limit=${limit}`;
     }
 

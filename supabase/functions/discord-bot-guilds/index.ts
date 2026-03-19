@@ -30,10 +30,17 @@ serve(async (req) => {
   };
 
   try {
-    const botToken = Deno.env.get("DISCORD_BOT_TOKEN");
+    let botToken = Deno.env.get("DISCORD_BOT_TOKEN");
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    // Resolve tenant bot token if tenant_id provided
+    if (tenantIdFromBody) {
+      const adminClient = createClient(supabaseUrl, serviceRoleKey);
+      const { data: tenantData } = await adminClient.from("tenants").select("bot_token_encrypted").eq("id", tenantIdFromBody).single();
+      if (tenantData?.bot_token_encrypted) botToken = tenantData.bot_token_encrypted;
+    }
 
     if (!botToken) throw new Error("Bot token not configured");
 

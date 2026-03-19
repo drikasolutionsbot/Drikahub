@@ -16,27 +16,30 @@ serve(async (req) => {
     const body = await req.json();
     let guild_id = body.guild_id;
 
-    // If tenant_id provided instead of guild_id, resolve it
-    if (!guild_id && body.tenant_id) {
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const supabase = createClient(supabaseUrl, serviceRoleKey);
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
 
+    let tenantBotToken: string | null = null;
+
+    // If tenant_id provided, resolve guild_id and bot token
+    if (body.tenant_id) {
       const { data: tenant, error } = await supabase
         .from("tenants")
-        .select("discord_guild_id")
+        .select("discord_guild_id, bot_token_encrypted")
         .eq("id", body.tenant_id)
         .single();
 
       if (error || !tenant?.discord_guild_id) {
         throw new Error("Could not resolve guild_id from tenant");
       }
-      guild_id = tenant.discord_guild_id;
+      if (!guild_id) guild_id = tenant.discord_guild_id;
+      tenantBotToken = tenant.bot_token_encrypted || null;
     }
 
     if (!guild_id) throw new Error("Missing guild_id");
 
-    const botToken = Deno.env.get("DISCORD_BOT_TOKEN");
+    const botToken = tenantBotToken || Deno.env.get("DISCORD_BOT_TOKEN");
     if (!botToken) throw new Error("Bot token not configured");
 
     // Fetch guild info

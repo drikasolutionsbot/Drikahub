@@ -6,7 +6,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const DISCORD_APP_ID = Deno.env.get("DISCORD_APP_ID") || "1477916070508757092";
+let DISCORD_APP_ID = Deno.env.get("DISCORD_APP_ID") || "1477916070508757092";
 
 interface CommandChoice {
   name: string;
@@ -34,15 +34,24 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const BOT_TOKEN = Deno.env.get("DISCORD_BOT_TOKEN");
+    let BOT_TOKEN = Deno.env.get("DISCORD_BOT_TOKEN");
+
+    const { commands, guild_id, tenant_id } = await req.json();
+
+    // Resolve tenant bot token if available
+    if (tenant_id) {
+      const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      const { data: tenant } = await supabase.from("tenants").select("bot_token_encrypted, bot_client_id").eq("id", tenant_id).single();
+      if (tenant?.bot_token_encrypted) BOT_TOKEN = tenant.bot_token_encrypted;
+      if (tenant?.bot_client_id) DISCORD_APP_ID = tenant.bot_client_id;
+    }
+
     if (!BOT_TOKEN) {
       return new Response(JSON.stringify({ error: "DISCORD_BOT_TOKEN não configurado" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    const { commands, guild_id } = await req.json();
 
     if (!commands || !Array.isArray(commands) || commands.length === 0) {
       return new Response(JSON.stringify({ error: "Nenhum comando fornecido" }), {
