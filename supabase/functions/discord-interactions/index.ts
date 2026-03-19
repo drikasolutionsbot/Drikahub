@@ -648,7 +648,7 @@ serve(async (req) => {
         const { data: fields } = await supabase
           .from("product_fields")
           .select("id, name, emoji, price_cents, compare_price_cents")
-          .eq("product_id", productId)
+          .eq("product_id", product.id)
           .eq("tenant_id", tenantId)
           .order("sort_order", { ascending: true });
 
