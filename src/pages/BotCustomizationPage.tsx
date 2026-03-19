@@ -14,7 +14,7 @@ const BotCustomizationPage = () => {
   const botName = tenant.bot_name || "Drika Bot";
   const botAvatar = tenant.bot_avatar_url;
   const botBanner = tenant.banner_url;
-  const botId = tenant.discord_bot_id || tenant.id;
+  const botId = (tenant as any).discord_bot_id || tenant.id;
 
   return (
     <div className="space-y-6 animate-fade-in">
