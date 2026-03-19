@@ -4,7 +4,7 @@ const {
   TextInputStyle, StringSelectMenuBuilder,
 } = require("discord.js");
 const {
-  getProducts, getProductFields, countStock, getAvailableStock,
+  getProducts, getProductById, getProductFields, countStock, getAvailableStock,
   createOrder, getOrder, updateOrderStatus, deliverStockItems,
   getStoreConfig, getCoupon, incrementCouponUsage,
   getActivePaymentProvider, triggerAutomation, deliverOrder, supabase,
