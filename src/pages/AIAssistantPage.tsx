@@ -664,9 +664,9 @@ export default function AIAssistantPage() {
                     </div>
                   </div>
                   <div>
-                    <p className="text-base font-bold text-foreground/60 mb-1">Inicie uma conversa</p>
-                    <p className="text-xs text-muted-foreground/35 max-w-[280px] leading-relaxed">
-                      Escolha uma sugestão rápida ou escreva seu prompt para começar a gerar com a Drika IA
+                     <p className="text-base font-bold text-foreground/80 mb-1">Inicie uma conversa</p>
+                    <p className="text-xs text-muted-foreground/60 max-w-[280px] leading-relaxed">
+                       Escolha uma sugestão rápida ou escreva seu prompt para começar a gerar com a Drika IA
                     </p>
                   </div>
                   <div className="flex items-center gap-2 text-[10px] text-muted-foreground/25">
