@@ -289,18 +289,14 @@ serve(async (req) => {
           .filter(Boolean)
       );
       const available = mapped.filter((g: any) => !claimedByOthers.has(g.id));
-      console.log("[DEBUG] claimedByOthers:", [...claimedByOthers], "available:", available.length, "mapped:", mapped.length);
 
       // For token-based sessions (bot externo), skip ownership check
       const ownerDiscordId = currentTenant.owner_discord_id || resolvedDiscordUserId;
-      console.log("[DEBUG] ownerDiscordId:", ownerDiscordId, "resolvedDiscordUserId:", resolvedDiscordUserId);
       let finalGuilds = available;
 
       if (ownerDiscordId) {
         finalGuilds = await getOwnedGuilds(available, ownerDiscordId);
-        console.log("[DEBUG] After ownership filter:", finalGuilds.length);
       }
-      // If no ownerDiscordId (token session without discord link), show all available guilds
 
       // Auto-link if only one guild available
       let autoLinked = false;
