@@ -295,14 +295,20 @@ export const CommandsTab = () => {
   const toggleCommand = async (id: string) => {
     const cmd = commands.find((c) => c.id === id);
     if (!cmd) return;
+    const newEnabled = !cmd.enabled;
+    // Optimistic update
+    setCommands((prev) => prev.map((c) => (c.id === id ? { ...c, enabled: newEnabled } : c)));
     try {
-      const { error } = await supabase.functions.invoke("manage-bot-commands", {
-        body: { action: "update", tenant_id: tenantId, id, enabled: !cmd.enabled },
+      const { data, error } = await supabase.functions.invoke("manage-bot-commands", {
+        body: { action: "update", tenant_id: tenantId, id, enabled: newEnabled },
       });
       if (error) throw error;
-      const updated = commands.map((c) => (c.id === id ? { ...c, enabled: !c.enabled } : c));
+      if (data?.error) throw new Error(data.error);
+      const updated = commands.map((c) => (c.id === id ? { ...c, enabled: newEnabled } : c));
       syncToDiscord(updated, true);
     } catch (err: any) {
+      // Revert on error
+      setCommands((prev) => prev.map((c) => (c.id === id ? { ...c, enabled: cmd.enabled } : c)));
       toast({ title: "Erro ao atualizar", description: err.message, variant: "destructive" });
     }
   };
