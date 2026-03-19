@@ -312,9 +312,59 @@ async function sendTicketLog(client, ticket, closedByUserId, closedByUsername, a
   }
 }
 
+// ── Transcript View Button ──
+async function handleTranscriptView(interaction, tenant, ticketId) {
+  await interaction.deferReply({ ephemeral: true });
+
+  const ticket = await getTicketById(ticketId);
+  if (!ticket) return interaction.editReply({ content: "❌ Ticket não encontrado." });
+
+  // Try to fetch messages from the ticket channel
+  let msgs = [];
+  if (ticket.discord_channel_id) {
+    try {
+      const ch = await interaction.client.channels.fetch(ticket.discord_channel_id);
+      const fetched = await ch.messages.fetch({ limit: 100 });
+      msgs = [...fetched.values()].reverse();
+    } catch {}
+  }
+
+  if (msgs.length === 0) {
+    // Check if transcript exists in storage
+    const { data: urlData } = supabase.storage.from("tenant-assets").getPublicUrl(`transcripts/${ticket.tenant_id}/${ticket.id}.html`);
+    if (urlData?.publicUrl) {
+      return interaction.editReply({ content: `📜 Acesse o transcript: ${urlData.publicUrl}` });
+    }
+    return interaction.editReply({ content: "📜 O transcript está anexado como arquivo na mensagem acima." });
+  }
+
+  const serverName = interaction.guild?.name || "Servidor";
+  const ticketName = `ticket-${ticket.discord_username || ticket.discord_user_id}`;
+  const htmlTranscript = generateHtmlTranscript(msgs, serverName, ticketName, "Suporte · transcript");
+
+  // Upload to storage
+  let transcriptUrl = null;
+  try {
+    const fileName = `transcripts/${ticket.tenant_id}/${ticket.id}.html`;
+    await supabase.storage.from("tenant-assets").upload(fileName, htmlTranscript, { contentType: "text/html", upsert: true });
+    const { data: urlData } = supabase.storage.from("tenant-assets").getPublicUrl(fileName);
+    transcriptUrl = urlData?.publicUrl || null;
+  } catch {}
+
+  if (transcriptUrl) {
+    return interaction.editReply({ content: `📜 Acesse o transcript: ${transcriptUrl}` });
+  }
+
+  // Fallback: send as file
+  const { AttachmentBuilder } = require("discord.js");
+  const attachment = new AttachmentBuilder(Buffer.from(htmlTranscript), { name: `transcript-${ticket.id.slice(0, 8)}.html` });
+  return interaction.editReply({ content: "📜 Aqui está o transcript:", files: [attachment] });
+}
+
 module.exports = {
   openTicket, handleCloseTicket, handleDeleteTicket,
   handleRemindTicket, handleAssignTicket,
   showRenameModal, handleRenameModal,
   checkStaffPermission, sendTicketLog,
+  handleTranscriptView,
 };
