@@ -113,6 +113,7 @@ const SettingsBotExternoTab = ({ tenant, tenantId, refetchTenant }: Props) => {
           updates: {
             bot_prefix: botPrefix.trim() || "!",
             bot_status: botStatus,
+            bot_client_id: botClientId.trim() || null,
           },
         },
       });
