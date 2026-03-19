@@ -39,6 +39,14 @@ const INFERENCE_TEXT_MODELS = [
   "InferenceNet/Schematron-3B",
 ];
 
+// Hugging Face models
+const HF_TEXT_MODELS = [
+  "Qwen/Qwen2.5-72B-Instruct",
+  "meta-llama/Llama-3.3-70B-Instruct",
+  "mistralai/Mixtral-8x7B-Instruct-v0.1",
+  "microsoft/Phi-3-mini-4k-instruct",
+];
+
 async function tryModels(
   models: string[],
   buildBody: (model: string) => object,
