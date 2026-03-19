@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Upload, Users, Crown, QrCode, Loader2, Copy, CheckCircle2, UserPlus, Sparkles, Zap, Shield, HelpCircle, ChevronDown, User, Server, Bot } from "lucide-react";
+import { Upload, Users, Crown, QrCode, Loader2, Copy, CheckCircle2, UserPlus, Sparkles, Zap, Shield, HelpCircle, ChevronDown, User, Server, Bot, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +19,7 @@ import SettingsPlanTab from "@/components/settings/SettingsPlanTab";
 import SettingsProfileTab from "@/components/settings/SettingsProfileTab";
 import SettingsServerTab from "@/components/settings/SettingsServerTab";
 import SettingsBotExternoTab from "@/components/settings/SettingsBotExternoTab";
+import SettingsBotCustomizationTab from "@/components/settings/SettingsBotCustomizationTab";
 
 interface UserRole {
   id: string;
@@ -189,6 +190,9 @@ const SettingsPage = () => {
               </TabsTrigger>
               <TabsTrigger value="bot" className="gap-2 data-[state=active]:bg-card data-[state=active]:shadow-md px-3 sm:px-4 py-2 text-xs sm:text-sm">
                 <Bot className="h-4 w-4" /> Bot Externo
+              </TabsTrigger>
+              <TabsTrigger value="bot-custom" className="gap-2 data-[state=active]:bg-card data-[state=active]:shadow-md px-3 sm:px-4 py-2 text-xs sm:text-sm">
+                <Palette className="h-4 w-4" /> Personalização
               </TabsTrigger>
             </TabsList>
           </div>
@@ -439,6 +443,11 @@ const SettingsPage = () => {
         {/* Bot Externo Tab */}
         <TabsContent value="bot">
           <SettingsBotExternoTab tenant={tenant} tenantId={tenantId} refetchTenant={refetchTenant} />
+        </TabsContent>
+
+        {/* Bot Customization Tab */}
+        <TabsContent value="bot-custom">
+          <SettingsBotCustomizationTab tenant={tenant} tenantId={tenantId} refetchTenant={refetchTenant} />
         </TabsContent>
 
       </Tabs>
