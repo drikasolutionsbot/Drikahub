@@ -23,29 +23,6 @@ const IMAGE_MODELS = [
   "google/gemini-3-pro-image-preview",
 ];
 
-// Groq models (ordered by speed/cost)
-const GROQ_TEXT_MODELS = [
-  "llama-3.3-70b-versatile",
-  "llama-3.1-8b-instant",
-  "mixtral-8x7b-32768",
-  "gemma2-9b-it",
-];
-
-// Inference.net models
-const INFERENCE_TEXT_MODELS = [
-  "nvidia/Nemotron-3-Super",
-  "google/Gemma-3",
-  "InferenceNet/Schematron-8B",
-  "InferenceNet/Schematron-3B",
-];
-
-// Hugging Face models
-const HF_TEXT_MODELS = [
-  "Qwen/Qwen2.5-72B-Instruct",
-  "meta-llama/Llama-3.3-70B-Instruct",
-  "mistralai/Mixtral-8x7B-Instruct-v0.1",
-  "microsoft/Phi-3-mini-4k-instruct",
-];
 
 // Google AI Studio models
 const GOOGLE_AI_TEXT_MODELS = [
@@ -106,9 +83,6 @@ async function tryModels(
 }
 
 const LOVABLE_API_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
-const INFERENCE_API_URL = "https://api.inference.net/v1/chat/completions";
-const HF_API_URL = "https://router.huggingface.co/v1/chat/completions";
 const GOOGLE_AI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
 
 serve(async (req) => {
@@ -117,39 +91,14 @@ serve(async (req) => {
   try {
     const { type, prompt, context, provider } = await req.json();
     
-    // Determine provider: "groq", "inference" or "drika" (default)
+    // Determine provider: "google" or "drika" (default)
     const selectedProvider = provider || "drika";
     
     let apiKey: string;
     let apiUrl: string;
     let authHeader: string;
     
-    if (selectedProvider === "groq") {
-      // Rotate between multiple Groq API keys for higher rate limits
-      const groqKeys = [
-        Deno.env.get("GROQ_API_KEY"),
-        Deno.env.get("GROQ_API_KEY_2"),
-        Deno.env.get("GROQ_API_KEY_3"),
-        Deno.env.get("GROQ_API_KEY_4"),
-      ].filter((k): k is string => !!k && k.length > 0);
-
-      if (groqKeys.length === 0) throw new Error("Nenhuma GROQ_API_KEY configurada. Adicione nas configurações do Supabase.");
-
-      apiKey = groqKeys[Math.floor(Date.now() / 1000) % groqKeys.length];
-      console.log(`Using Groq key pool: ${groqKeys.length} keys available`);
-      apiUrl = GROQ_API_URL;
-      authHeader = "Bearer";
-    } else if (selectedProvider === "inference") {
-      apiKey = Deno.env.get("INFERENCE_NET_API_KEY") || "";
-      if (!apiKey) throw new Error("INFERENCE_NET_API_KEY não está configurada.");
-      apiUrl = INFERENCE_API_URL;
-      authHeader = "Bearer";
-    } else if (selectedProvider === "huggingface") {
-      apiKey = Deno.env.get("HUGGINGFACE_API_KEY") || "";
-      if (!apiKey) throw new Error("HUGGINGFACE_API_KEY não está configurada.");
-      apiUrl = HF_API_URL;
-      authHeader = "Bearer";
-    } else if (selectedProvider === "google") {
+    if (selectedProvider === "google") {
       const googleKeys = [
         Deno.env.get("GOOGLE_AI_API_KEY"),
         Deno.env.get("GOOGLE_AI_API_KEY_2"),
@@ -253,7 +202,7 @@ Inclua estilo, cores, composição, iluminação e mood.`,
       { role: "user", content: prompt },
     ];
 
-    const textModels = selectedProvider === "groq" ? GROQ_TEXT_MODELS : selectedProvider === "inference" ? INFERENCE_TEXT_MODELS : selectedProvider === "huggingface" ? HF_TEXT_MODELS : selectedProvider === "google" ? GOOGLE_AI_TEXT_MODELS : TEXT_MODELS;
+    const textModels = selectedProvider === "google" ? GOOGLE_AI_TEXT_MODELS : TEXT_MODELS;
 
     const { response, model } = await tryModels(
       textModels,

@@ -179,7 +179,7 @@ export default function AIAssistantPage() {
   const [showContext, setShowContext] = useState(false);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-  const [provider, setProvider] = useState<"drika" | "groq" | "inference" | "huggingface" | "google">("drika");
+  const [provider, setProvider] = useState<"drika" | "google">("drika");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const activeSession = sessions.find(s => s.id === activeSessionId);
@@ -241,10 +241,8 @@ export default function AIAssistantPage() {
 
     try {
       if (selectedTool.id === "image") {
-        // Auto-switch to drika if current provider doesn't support images
-        const imageProvider = (provider === "drika" || provider === "google") ? provider : "drika";
         const { data, error } = await supabase.functions.invoke("ai-assistant", {
-          body: { type: "image", prompt: currentPrompt, context, provider: imageProvider },
+          body: { type: "image", prompt: currentPrompt, context, provider },
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
@@ -427,66 +425,6 @@ export default function AIAssistantPage() {
                   <span className={cn("text-[8px] font-medium mt-0.5", provider === "drika" ? "text-primary/60" : "text-muted-foreground/30")}>Gemini • GPT</span>
                 </div>
               </button>
-              {/* Groq */}
-              <button
-                onClick={() => setProvider("groq")}
-                className={cn(
-                  "relative z-10 flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-300",
-                  provider === "groq"
-                    ? "bg-gradient-to-r from-[#F55036]/20 to-[#FF8A65]/20 text-[#F55036] border border-[#F55036]/30 shadow-[0_0_16px_rgba(245,80,54,0.12)]"
-                    : "text-muted-foreground/60 hover:text-foreground/80"
-                )}
-              >
-                <div className={cn("h-6 w-6 rounded-lg flex items-center justify-center transition-all duration-300",
-                  provider === "groq" ? "bg-[#F55036]/20" : "bg-muted/20"
-                )}>
-                  <Cpu className={cn("h-3.5 w-3.5 transition-all", provider === "groq" ? "text-[#F55036] drop-shadow-[0_0_6px_rgba(245,80,54,0.6)]" : "text-muted-foreground/50")} />
-                </div>
-                <div className="flex flex-col items-start">
-                  <span className="leading-none">Groq</span>
-                  <span className={cn("text-[8px] font-medium mt-0.5", provider === "groq" ? "text-[#F55036]/60" : "text-muted-foreground/30")}>Llama • Mixtral</span>
-                </div>
-              </button>
-              {/* Inference */}
-              <button
-                onClick={() => setProvider("inference")}
-                className={cn(
-                  "relative z-10 flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-300",
-                  provider === "inference"
-                    ? "bg-gradient-to-r from-[#00D4AA]/20 to-[#00B894]/20 text-[#00D4AA] border border-[#00D4AA]/30 shadow-[0_0_16px_rgba(0,212,170,0.12)]"
-                    : "text-muted-foreground/60 hover:text-foreground/80"
-                )}
-              >
-                <div className={cn("h-6 w-6 rounded-lg flex items-center justify-center transition-all duration-300",
-                  provider === "inference" ? "bg-[#00D4AA]/20" : "bg-muted/20"
-                )}>
-                  <Network className={cn("h-3.5 w-3.5 transition-all", provider === "inference" ? "text-[#00D4AA] drop-shadow-[0_0_6px_rgba(0,212,170,0.6)]" : "text-muted-foreground/50")} />
-                </div>
-                <div className="flex flex-col items-start">
-                  <span className="leading-none">Inference</span>
-                  <span className={cn("text-[8px] font-medium mt-0.5", provider === "inference" ? "text-[#00D4AA]/60" : "text-muted-foreground/30")}>Nemotron • Gemma</span>
-                </div>
-              </button>
-              {/* Hugging Face */}
-              <button
-                onClick={() => setProvider("huggingface")}
-                className={cn(
-                  "relative z-10 flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-300",
-                  provider === "huggingface"
-                    ? "bg-gradient-to-r from-[#FFD21E]/20 to-[#FF9D00]/20 text-[#FFD21E] border border-[#FFD21E]/30 shadow-[0_0_16px_rgba(255,210,30,0.12)]"
-                    : "text-muted-foreground/60 hover:text-foreground/80"
-                )}
-              >
-                <div className={cn("h-6 w-6 rounded-lg flex items-center justify-center transition-all duration-300",
-                  provider === "huggingface" ? "bg-[#FFD21E]/20" : "bg-muted/20"
-                )}>
-                  <Boxes className={cn("h-3.5 w-3.5 transition-all", provider === "huggingface" ? "text-[#FFD21E] drop-shadow-[0_0_6px_rgba(255,210,30,0.6)]" : "text-muted-foreground/50")} />
-                </div>
-                <div className="flex flex-col items-start">
-                  <span className="leading-none">HuggingFace</span>
-                  <span className={cn("text-[8px] font-medium mt-0.5", provider === "huggingface" ? "text-[#FFD21E]/60" : "text-muted-foreground/30")}>Qwen • Llama</span>
-                </div>
-              </button>
               {/* Google AI */}
               <button
                 onClick={() => setProvider("google")}
@@ -511,10 +449,10 @@ export default function AIAssistantPage() {
             {/* Active model info */}
             <div className="flex items-center gap-2 text-[10px] text-muted-foreground/50">
               <div className={cn("h-1.5 w-1.5 rounded-full", 
-                provider === "drika" ? "bg-primary/60" : provider === "groq" ? "bg-[#F55036]/60" : provider === "inference" ? "bg-[#00D4AA]/60" : provider === "huggingface" ? "bg-[#FFD21E]/60" : "bg-[#4285F4]/60"
+                provider === "drika" ? "bg-primary/60" : "bg-[#4285F4]/60"
               )} />
               <span className="font-medium">
-                {provider === "drika" ? "Multi-model fallback • 8 modelos" : provider === "groq" ? "Ultra-rápido • 4 keys" : provider === "inference" ? "Inference.net • Nemotron" : provider === "huggingface" ? "Hugging Face • Qwen 72B" : "Google AI Studio • Gemini"}
+                {provider === "drika" ? "Multi-model fallback • 8 modelos" : "Google AI Studio • Gemini"}
               </span>
             </div>
           </div>
@@ -531,7 +469,7 @@ export default function AIAssistantPage() {
           return (
             <button
               key={tool.id}
-              onClick={() => { setSelectedTool(tool); setActiveSessionId(null); if (tool.id === "image" && provider !== "drika" && provider !== "google") setProvider("drika"); }}
+              onClick={() => { setSelectedTool(tool); setActiveSessionId(null); }}
               className={cn(
                 "relative group flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all duration-500 text-center overflow-hidden",
                 isActive
@@ -864,42 +802,6 @@ export default function AIAssistantPage() {
                   Drika
                 </button>
                 <button
-                  onClick={() => setProvider("groq")}
-                  className={cn(
-                    "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all duration-300",
-                    provider === "groq"
-                      ? "bg-[#F55036]/15 text-[#F55036] border border-[#F55036]/25 shadow-sm"
-                      : "text-muted-foreground/60 hover:text-foreground/80"
-                  )}
-                >
-                  <Cpu className="h-3 w-3" />
-                  Groq
-                </button>
-                <button
-                  onClick={() => setProvider("inference")}
-                  className={cn(
-                    "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all duration-300",
-                    provider === "inference"
-                      ? "bg-[#00D4AA]/15 text-[#00D4AA] border border-[#00D4AA]/25 shadow-sm"
-                      : "text-muted-foreground/60 hover:text-foreground/80"
-                  )}
-                >
-                  <Network className="h-3 w-3" />
-                  Inference
-                </button>
-                <button
-                  onClick={() => setProvider("huggingface")}
-                  className={cn(
-                    "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all duration-300",
-                    provider === "huggingface"
-                      ? "bg-[#FFD21E]/15 text-[#FFD21E] border border-[#FFD21E]/25 shadow-sm"
-                      : "text-muted-foreground/60 hover:text-foreground/80"
-                  )}
-                >
-                  <Boxes className="h-3 w-3" />
-                  HF
-                </button>
-                <button
                   onClick={() => setProvider("google")}
                   className={cn(
                     "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all duration-300",
@@ -913,10 +815,6 @@ export default function AIAssistantPage() {
                 </button>
               </div>
 
-              {/* Image warning for non-supported providers */}
-              {provider !== "drika" && provider !== "google" && selectedTool.id === "image" && (
-                <span className="text-[10px] text-destructive/70 font-medium">⚠️ Imagens só no Drika Engine e Google AI</span>
-              )}
 
               <button
                 onClick={() => setShowContext(!showContext)}
@@ -964,7 +862,7 @@ export default function AIAssistantPage() {
               </div>
             </div>
             <p className="text-[10px] text-muted-foreground/40 mt-2 text-center tracking-wide">
-              Enter para enviar • Shift+Enter para nova linha • {provider === "groq" ? "Powered by Groq Cloud ⚡" : provider === "inference" ? "Powered by Inference.net 🌐" : provider === "huggingface" ? "Powered by Hugging Face 🤗" : provider === "google" ? "Powered by Google AI Studio 💎" : "Powered by Drika Engine"}
+              Enter para enviar • Shift+Enter para nova linha • {provider === "google" ? "Powered by Google AI Studio 💎" : "Powered by Drika Engine"}
             </p>
           </div>
         </div>
