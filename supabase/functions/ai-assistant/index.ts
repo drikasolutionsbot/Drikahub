@@ -223,14 +223,10 @@ Inclua estilo, cores, composição, iluminação e mood.`,
           });
 
       const { response, model } = await tryModels(
-        IMAGE_MODELS,
-        (m) => ({
-          model: m,
-          messages: [{ role: "user", content: prompt }],
-          modalities: ["image", "text"],
-        }),
-        apiKey,
-        apiUrl,
+        imageModels,
+        buildImageBody,
+        imageApiKey,
+        imageApiUrl,
         authHeader,
       );
 
