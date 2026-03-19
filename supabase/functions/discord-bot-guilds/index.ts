@@ -54,7 +54,7 @@ serve(async (req) => {
     }
 
     if (action === "invite_url") {
-      const botUserRes = await fetch("https://discord.com/api/v10/users/@me", {
+      const botUserRes = await fetchWithRetry("https://discord.com/api/v10/users/@me", {
         headers: { Authorization: `Bot ${botToken}` },
       });
 
