@@ -160,7 +160,7 @@ const PlanBadge = ({ tenant }: { tenant: { plan: string; plan_expires_at: string
             )}
           </div>
 
-          {(isFree || isExpired) && (
+          {(!isPro || isExpired) && (
             <Button
               size="sm"
               className="w-full gradient-pink text-primary-foreground border-none gap-2 mt-1"
