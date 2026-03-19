@@ -122,7 +122,7 @@ serve(async (req) => {
     // Fetch tenant customization (identidade visual) e usa token único do bot externo
     const { data: tenant } = await supabase
       .from("tenants")
-      .select("bot_name, bot_avatar_url, name")
+      .select("bot_name, bot_avatar_url, banner_url, name")
       .eq("id", tenant_id)
       .single();
 
@@ -140,6 +140,10 @@ serve(async (req) => {
       for (const embed of embeds) {
         if (embed.color === 0x2B2D31 || embed.color === 2829105) {
           delete embed.color;
+        }
+        // Apply tenant banner as embed image if not already set
+        if (tenant?.banner_url && !embed.image) {
+          embed.image = { url: tenant.banner_url };
         }
       }
       payload.embeds = embeds;
