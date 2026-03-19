@@ -63,16 +63,52 @@ async function getProducts(tenantId, onlyActive = true) {
   return data || [];
 }
 
+function extractProductIdCandidates(rawProductId) {
+  if (!rawProductId) return [];
+
+  const raw = String(rawProductId).trim();
+  const candidates = new Set();
+  if (raw) candidates.add(raw);
+
+  raw
+    .split(/[:|,;\/\s]+/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .forEach((part) => candidates.add(part));
+
+  const uuidMatches = raw.match(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi) || [];
+  uuidMatches.forEach((id) => candidates.add(id));
+
+  return [...candidates];
+}
+
 async function getProductById(productId, tenantId = null) {
-  const { data, error } = await supabase.from("products").select("*").eq("id", productId).maybeSingle();
-  if (error) {
-    console.error(`[getProductById] Error for product ${productId}:`, error.message);
+  const candidates = extractProductIdCandidates(productId);
+  if (!candidates.length) return null;
+
+  for (const candidateId of candidates) {
+    let q = supabase.from("products").select("*").eq("id", candidateId);
+    if (tenantId) q = q.eq("tenant_id", tenantId);
+
+    const { data, error } = await q.maybeSingle();
+    if (error) {
+      console.error(`[getProductById] Error for candidate ${candidateId}:`, error.message);
+      continue;
+    }
+
+    if (data) return data;
   }
-  if (data) return data;
 
   if (tenantId) {
     const fallback = await fetchProductsFromEdge(tenantId);
-    return fallback.find((p) => p.id === productId) || null;
+    const exact = fallback.find((p) => candidates.includes(p.id));
+    if (exact) return exact;
+
+    const activeFallback = fallback.filter((p) => p.active);
+    if (activeFallback.length === 1) {
+      console.warn(`[getProductById] Using single active-product fallback for tenant ${tenantId}`);
+      return activeFallback[0];
+    }
   }
 
   return null;

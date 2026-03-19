@@ -64,14 +64,32 @@ async function startCheckout(interaction, tenant, productId) {
 
   console.log(`[CHECKOUT] startCheckout productId=${productId} tenantId=${tenant.id}`);
 
+  const productIdCandidates = String(productId || "")
+    .split(/[:|,;\/\s]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
   // Try direct query first (more reliable), then fallback to list
   let product = await getProductById(productId, tenant.id);
   if (!product) {
     console.log(`[CHECKOUT] Direct query failed, trying list fallback...`);
     const products = await getProducts(tenant.id, false);
-    product = products.find((p) => p.id === productId);
+    product = products.find((p) => productIdCandidates.includes(p.id));
+
+    if (!product) {
+      const activeProducts = products.filter((p) => p.active);
+      if (activeProducts.length === 1) {
+        console.warn(`[CHECKOUT] Using single active-product fallback for tenant ${tenant.id}`);
+        product = activeProducts[0];
+      }
+    }
   }
-  if (!product) return interaction.editReply({ content: "❌ Produto não encontrado." });
+
+  if (!product) {
+    console.error(`[CHECKOUT] Product not found for rawId=${productId} tenantId=${tenant.id}`);
+    return interaction.editReply({ content: "❌ Produto não encontrado." });
+  }
+
   if (!product.active) return interaction.editReply({ content: "❌ Este produto está indisponível." });
 
   const fields = await getProductFields(product.id, tenant.id);
