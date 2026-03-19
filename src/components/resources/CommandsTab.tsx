@@ -146,6 +146,7 @@ export const CommandsTab = () => {
     try {
       const { data, error } = await supabase.functions.invoke("register-commands", {
         body: {
+          tenant_id: tenantId,
           guild_id: guildId,
           commands: enabledCommands.map((c) => ({
             name: c.name,
@@ -154,8 +155,20 @@ export const CommandsTab = () => {
           })),
         },
       });
+
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
+
+      if (data?.success === false) {
+        if (!silent) {
+          toast({
+            title: "Bot externo não configurado",
+            description: data?.message || "Configure em Configurações → Bot Externo para sincronizar comandos.",
+            variant: "destructive",
+          });
+        }
+        return;
+      }
 
       if (!silent) {
         toast({
@@ -170,7 +183,7 @@ export const CommandsTab = () => {
     } finally {
       setSyncing(false);
     }
-  }, [tenant]);
+  }, [tenant, tenantId]);
 
   const filtered = commands.filter(
     (c) =>
