@@ -135,12 +135,12 @@ client.on(Events.GuildMemberRemove, async (member) => {
   }
 });
 
-// ── Proteção anti-raid ──
+// ── Proteção ──
 client.on(Events.GuildMemberAdd, async (member) => {
   try {
     await protectionHandler.onMemberJoin(client, member);
   } catch (err) {
-    console.error("Erro na proteção:", err);
+    console.error("Erro na proteção (join):", err);
   }
 });
 
@@ -148,7 +148,43 @@ client.on(Events.MessageCreate, async (message) => {
   try {
     await protectionHandler.onMessage(client, message);
   } catch (err) {
-    console.error("Erro na proteção de mensagem:", err);
+    console.error("Erro na proteção (message):", err);
+  }
+});
+
+// Anti-Mass Ban
+client.on(Events.GuildBanAdd, async (ban) => {
+  try {
+    await protectionHandler.onGuildBanAdd(client, ban);
+  } catch (err) {
+    console.error("Erro na proteção (ban):", err);
+  }
+});
+
+// Anti-Mass Kick (via member remove + audit log)
+client.on(Events.GuildMemberRemove, async (member) => {
+  try {
+    await protectionHandler.onGuildMemberRemove(client, member);
+  } catch (err) {
+    console.error("Erro na proteção (kick):", err);
+  }
+});
+
+// Anti-Channel Delete
+client.on(Events.ChannelDelete, async (channel) => {
+  try {
+    await protectionHandler.onChannelDelete(client, channel);
+  } catch (err) {
+    console.error("Erro na proteção (channel delete):", err);
+  }
+});
+
+// Anti-Role Delete
+client.on(Events.GuildRoleDelete, async (role) => {
+  try {
+    await protectionHandler.onRoleDelete(client, role);
+  } catch (err) {
+    console.error("Erro na proteção (role delete):", err);
   }
 });
 

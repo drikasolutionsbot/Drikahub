@@ -271,6 +271,7 @@ module.exports = {
   getCoupon,
   incrementCouponUsage,
   getProtectionSettings,
+  getProtectionWhitelist,
   logProtection,
   createTicket,
   getOpenTickets,
