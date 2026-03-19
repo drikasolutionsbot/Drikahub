@@ -229,6 +229,18 @@ const SettingsPlanTab = ({ tenant, tenantId, refetchTenant }: Props) => {
             </div>
           )}
         </div>
+
+        {/* Subscribe button inside plan card */}
+        {canUpgrade && (
+          <Button
+            onClick={handleUpgrade}
+            disabled={loading}
+            className="w-full gradient-pink text-primary-foreground border-none gap-2"
+          >
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Crown className="h-4 w-4" />}
+            Assine o Plano Pro
+          </Button>
+        )}
       </div>
 
       {/* Upgrade section */}
