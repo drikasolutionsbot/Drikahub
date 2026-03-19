@@ -34,6 +34,9 @@ Deno.serve(async (req) => {
 
       if (!tenant) throw new Error("Tenant not found");
 
+      const botToken = Deno.env.get("DISCORD_BOT_TOKEN") || null;
+      if (!botToken) throw new Error("Bot externo não configurado (DISCORD_BOT_TOKEN)");
+
       // Create backup record
       const { data: backup, error: insertErr } = await supabase
         .from("ecloud_backups")
@@ -49,7 +52,6 @@ Deno.serve(async (req) => {
         let ordersCount = 0;
         let productsCount = 0;
 
-        const botToken = tenant.bot_token_encrypted;
         // 1. Fetch Discord members
         if (tenant.discord_guild_id && botToken) {
           let after = "0";

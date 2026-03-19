@@ -36,15 +36,15 @@ serve(async (req) => {
     if (orderErr || !order) throw new Error("Order not found");
     if (order.status !== "paid") throw new Error("Order is not paid");
 
-    // 2. Get tenant + bot token
+    // 2. Get tenant + external bot token
     const { data: tenant } = await supabase
       .from("tenants")
-      .select("name, logo_url, bot_token_encrypted, discord_guild_id")
+      .select("name, logo_url, discord_guild_id")
       .eq("id", tenant_id)
       .single();
 
-    const botToken = tenant?.bot_token_encrypted;
-    if (!botToken) throw new Error("No bot token available");
+    const botToken = Deno.env.get("DISCORD_BOT_TOKEN") || null;
+    if (!botToken) throw new Error("Bot externo não configurado (DISCORD_BOT_TOKEN)");
 
     const guildId = tenant?.discord_guild_id;
     if (!guildId) throw new Error("Guild ID not configured");

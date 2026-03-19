@@ -112,10 +112,10 @@ Deno.serve(async (req) => {
         .select("*")
         .eq("tenant_id", tenant_id);
 
-      // Get tenant info for bot token and log channel
+      // Get tenant info for guild and log channel
       const { data: tenantData } = await supabase
         .from("tenants")
-        .select("discord_guild_id, bot_token_encrypted")
+        .select("discord_guild_id")
         .eq("id", tenant_id)
         .single();
 
@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
       const syncedAt = new Date().toISOString();
 
       // Send sync notification to Discord log channel if configured
-      const botToken = tenantData?.bot_token_encrypted;
+      const botToken = Deno.env.get("DISCORD_BOT_TOKEN") || null;
       const logChannelId = channelConfig?.discord_channel_id;
 
       if (botToken && logChannelId) {

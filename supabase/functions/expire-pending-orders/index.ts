@@ -52,6 +52,7 @@ serve(async (req) => {
 
   const now = Date.now();
   let expiredCount = 0;
+  const botToken = Deno.env.get("DISCORD_BOT_TOKEN") || null;
 
   for (const order of pendingOrders) {
     const timeoutMinutes = timeoutMap[order.tenant_id] || 30;
@@ -63,13 +64,7 @@ serve(async (req) => {
       await supabase.from("orders").update({ status: "canceled" }).eq("id", order.id);
       expiredCount++;
 
-      // Notify buyer via DM - resolve tenant bot token
-      const { data: tenantData } = await supabase
-        .from("tenants")
-        .select("bot_token_encrypted")
-        .eq("id", order.tenant_id)
-        .single();
-      const botToken = tenantData?.bot_token_encrypted;
+      // Notify buyer via DM com bot externo único
 
       if (botToken) {
         try {

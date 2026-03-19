@@ -108,10 +108,10 @@ Deno.serve(async (req) => {
       ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
       : null;
 
-    // Get tenant config
+    // Get tenant config + use external bot token
     const { data: tenantData, error: tenantErr } = await supabase
       .from("tenants")
-      .select("verify_enabled, verify_role_id, discord_guild_id, bot_token_encrypted, name, logo_url, verify_logs_channel_id")
+      .select("verify_enabled, verify_role_id, discord_guild_id, name, logo_url, verify_logs_channel_id")
       .eq("id", effectiveTenantId)
       .single();
 
@@ -125,9 +125,9 @@ Deno.serve(async (req) => {
 
     const guildId = tenantData.discord_guild_id;
     const roleId = tenantData.verify_role_id;
-    const botToken = tenantData.bot_token_encrypted;
+    const botToken = Deno.env.get("DISCORD_BOT_TOKEN") || null;
     if (!botToken) {
-      return htmlResponse("❌ Erro", "Bot token não configurado para este servidor.", "#ED4245");
+      return htmlResponse("❌ Erro", "Bot externo não configurado (DISCORD_BOT_TOKEN).", "#ED4245");
     }
 
     if (!guildId) {

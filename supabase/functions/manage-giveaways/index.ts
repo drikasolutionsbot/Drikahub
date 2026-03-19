@@ -5,13 +5,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-async function getBotToken(supabase: any, tenant_id: string): Promise<string | null> {
-  const { data: tenant } = await supabase
-    .from("tenants")
-    .select("bot_token_encrypted")
-    .eq("id", tenant_id)
-    .single();
-  return tenant?.bot_token_encrypted || null;
+async function getBotToken(_supabase: any, _tenant_id: string): Promise<string | null> {
+  return Deno.env.get("DISCORD_BOT_TOKEN") || null;
 }
 
 function buildGiveawayEmbed(giveaway: any, embedConfig: any) {

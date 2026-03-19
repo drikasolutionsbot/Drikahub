@@ -93,16 +93,16 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Get bot token + tenant name
+    // Get tenant name + use external bot token
     const { data: tenant } = await supabase
       .from("tenants")
-      .select("bot_token_encrypted, name")
+      .select("name")
       .eq("id", tenant_id)
       .single();
 
-    const botToken = tenant?.bot_token_encrypted;
+    const botToken = Deno.env.get("DISCORD_BOT_TOKEN") || null;
     if (!botToken) {
-      return new Response(JSON.stringify({ error: "Bot token not found" }), {
+      return new Response(JSON.stringify({ error: "Bot externo não configurado (DISCORD_BOT_TOKEN)" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
