@@ -472,6 +472,10 @@ const ECloudPage = () => {
           </div>
         </TabsContent>
 
+        <TabsContent value="saude" className="mt-6">
+          {tenantId && <ECloudHealthTab tenantId={tenantId} />}
+        </TabsContent>
+
         <TabsContent value="dados" className="mt-6">
           {tenantId && <ECloudDataTab tenantId={tenantId} />}
         </TabsContent>
