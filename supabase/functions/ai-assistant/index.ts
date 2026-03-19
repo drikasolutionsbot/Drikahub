@@ -31,6 +31,14 @@ const GROQ_TEXT_MODELS = [
   "gemma2-9b-it",
 ];
 
+// Inference.net models
+const INFERENCE_TEXT_MODELS = [
+  "nvidia/Nemotron-3-Super",
+  "google/Gemma-3",
+  "InferenceNet/Schematron-8B",
+  "InferenceNet/Schematron-3B",
+];
+
 async function tryModels(
   models: string[],
   buildBody: (model: string) => object,
