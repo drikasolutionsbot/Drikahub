@@ -23,29 +23,6 @@ const IMAGE_MODELS = [
   "google/gemini-3-pro-image-preview",
 ];
 
-// Groq models (ordered by speed/cost)
-const GROQ_TEXT_MODELS = [
-  "llama-3.3-70b-versatile",
-  "llama-3.1-8b-instant",
-  "mixtral-8x7b-32768",
-  "gemma2-9b-it",
-];
-
-// Inference.net models
-const INFERENCE_TEXT_MODELS = [
-  "nvidia/Nemotron-3-Super",
-  "google/Gemma-3",
-  "InferenceNet/Schematron-8B",
-  "InferenceNet/Schematron-3B",
-];
-
-// Hugging Face models
-const HF_TEXT_MODELS = [
-  "Qwen/Qwen2.5-72B-Instruct",
-  "meta-llama/Llama-3.3-70B-Instruct",
-  "mistralai/Mixtral-8x7B-Instruct-v0.1",
-  "microsoft/Phi-3-mini-4k-instruct",
-];
 
 // Google AI Studio models
 const GOOGLE_AI_TEXT_MODELS = [
