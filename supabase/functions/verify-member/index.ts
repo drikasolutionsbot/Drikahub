@@ -14,6 +14,7 @@ Deno.serve(async (req) => {
 
   // Resolve slug to tenant_id
   if (!tenantId && slug && !code) {
+    // Try by verify_slug first
     const { data: slugTenant } = await supabase
       .from("tenants")
       .select("id")
@@ -22,7 +23,17 @@ Deno.serve(async (req) => {
     if (slugTenant) {
       tenantId = slugTenant.id;
     } else {
-      return htmlResponse("❌ Erro", "Link de verificação inválido.", "#ED4245");
+      // Fallback: try as tenant_id directly (UUID)
+      const { data: idTenant } = await supabase
+        .from("tenants")
+        .select("id")
+        .eq("id", slug)
+        .single();
+      if (idTenant) {
+        tenantId = idTenant.id;
+      } else {
+        return htmlResponse("❌ Erro", "Link de verificação inválido.", "#ED4245");
+      }
     }
   }
 
