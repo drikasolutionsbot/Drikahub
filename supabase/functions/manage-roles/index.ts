@@ -263,10 +263,10 @@ serve(async (req) => {
       }
 
       case "sync_from_discord": {
-        // Fetch all Discord roles
+        const bot = requireBot();
         const syncRes = await fetch(
-          `https://discord.com/api/v10/guilds/${guildId}/roles`,
-          { headers: { Authorization: `Bot ${botToken}` } }
+          `https://discord.com/api/v10/guilds/${bot.guildId}/roles`,
+          { headers: { Authorization: `Bot ${bot.botToken}` } }
         );
         if (!syncRes.ok) {
           const text = await syncRes.text();
