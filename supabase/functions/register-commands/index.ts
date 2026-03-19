@@ -97,6 +97,15 @@ Deno.serve(async (req) => {
       return built;
     });
 
+    // Extract app ID from the bot token
+    const DISCORD_APP_ID = getAppIdFromToken(BOT_TOKEN);
+    if (!DISCORD_APP_ID || !/^\d{17,20}$/.test(DISCORD_APP_ID)) {
+      return new Response(JSON.stringify({ error: "Não foi possível extrair o Application ID do bot token. Verifique se o token é válido." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Register globally or per-guild
     let url: string;
     if (guild_id) {
