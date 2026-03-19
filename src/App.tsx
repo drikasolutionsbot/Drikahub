@@ -32,6 +32,7 @@ import TicketsPage from "./pages/TicketsPage";
 import FinancePage from "./pages/FinancePage";
 import SettingsPage from "./pages/SettingsPage";
 import CustomizationPage from "./pages/CustomizationPage";
+import BotCustomizationPage from "./pages/BotCustomizationPage";
 import ResourcesPage from "./pages/ResourcesPage";
 import RolesPage from "./pages/RolesPage";
 import WelcomePage from "./pages/WelcomePage";
