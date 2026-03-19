@@ -341,7 +341,7 @@ async function goToPayment(interaction, tenant, orderId) {
     new ButtonBuilder().setCustomId(`checkout_cancel:${order.id}`).setLabel("Cancelar").setStyle(ButtonStyle.Danger),
   );
 
-  await channel.send({ embeds: [pixEmbed], components: [pixRow] });
+  await sendWithIdentity(channel, tenant, { embeds: [pixEmbed], components: [pixRow] });
 }
 
 // ── Approve Order ──
