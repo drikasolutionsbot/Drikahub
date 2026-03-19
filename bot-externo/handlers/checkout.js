@@ -495,7 +495,7 @@ async function handleQuantityModal(interaction, tenant, orderId) {
   const newTotal = unitPrice * qty;
   await updateOrderStatus(order.id, "pending_payment", { total_cents: newTotal });
 
-  await interaction.channel.send({
+  await sendWithIdentity(interaction.channel, tenant, {
     embeds: [new EmbedBuilder().setTitle("✏️ Quantidade Atualizada").setDescription(`Quantidade: **${qty}x**\nNovo total: **${formatBRL(newTotal)}**`).setColor(0x2B2D31)],
   });
 
