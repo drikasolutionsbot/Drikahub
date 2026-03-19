@@ -213,7 +213,7 @@ async function handleRemindTicket(interaction, tenant, ticketId) {
     });
   } catch {}
 
-  await interaction.channel.send({ content: `🔔 <@${ticket.discord_user_id}>, este é um lembrete sobre seu ticket!` });
+  await sendWithIdentity(interaction.channel, tenant, { content: `🔔 <@${ticket.discord_user_id}>, este é um lembrete sobre seu ticket!` });
   await interaction.editReply({ content: `✅ Lembrete enviado para <@${ticket.discord_user_id}>!` });
 }
 
