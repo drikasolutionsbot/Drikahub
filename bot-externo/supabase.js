@@ -190,6 +190,11 @@ async function getProtectionSettings(tenantId) {
   return data || [];
 }
 
+async function getProtectionWhitelist(tenantId) {
+  const { data } = await supabase.from("protection_whitelist").select("*").eq("tenant_id", tenantId);
+  return data || [];
+}
+
 async function logProtection(tenantId, moduleKey, action, targetUserId, targetUsername, details = {}) {
   await supabase.from("protection_logs").insert({ tenant_id: tenantId, module_key: moduleKey, action, target_user_id: targetUserId, target_username: targetUsername, details });
 }
@@ -266,6 +271,7 @@ module.exports = {
   getCoupon,
   incrementCouponUsage,
   getProtectionSettings,
+  getProtectionWhitelist,
   logProtection,
   createTicket,
   getOpenTickets,
