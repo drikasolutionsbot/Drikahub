@@ -868,7 +868,7 @@ export default function AIAssistantPage() {
                 </Button>
               </div>
             </div>
-            <p className="text-[10px] text-muted-foreground/20 mt-2 text-center tracking-wide">
+            <p className="text-[10px] text-muted-foreground/40 mt-2 text-center tracking-wide">
               Enter para enviar • Shift+Enter para nova linha • {provider === "groq" ? "Powered by Groq Cloud ⚡" : "Powered by Drika Engine"}
             </p>
           </div>
