@@ -46,9 +46,11 @@ const comprarHandler = require("./commands/comprar");
 const ticketCommand = require("./commands/ticket");
 const painelCommand = require("./commands/painel");
 const estoqueCommand = require("./commands/estoque");
+const verificarCommand = require("./commands/verificar");
 const interactionHandler = require("./events/interaction");
 const memberJoinHandler = require("./events/memberJoin");
 const protectionHandler = require("./events/protection");
+const verificationHandler = require("./handlers/verification");
 
 // ── Ready ──
 client.on(Events.ClientReady, async () => {
@@ -65,6 +67,7 @@ client.on(Events.ClientReady, async () => {
     ticketCommand.data,
     painelCommand.data,
     estoqueCommand.data,
+    verificarCommand.data,
     // Moderation commands
     new SlashCommandBuilder().setName("clear").setDescription("Limpa todas as mensagens do canal"),
     new SlashCommandBuilder().setName("ban").setDescription("Bane um usuário do servidor")
@@ -113,6 +116,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
 client.on(Events.GuildMemberAdd, async (member) => {
   try {
     await memberJoinHandler(client, member);
+    // Handle verification-specific logic
+    const tenant = await resolveTenant(member.guild.id);
+    if (tenant) await verificationHandler.onMemberJoin(client, member, tenant);
   } catch (err) {
     console.error("Erro ao processar novo membro:", err);
   }
