@@ -660,7 +660,7 @@ export default function AIAssistantPage() {
                   <div className="relative">
                     <div className="absolute -inset-4 rounded-full bg-gradient-to-r from-primary/10 to-[#C44AFF]/10 blur-2xl animate-pulse" />
                     <div className={cn("relative h-24 w-24 rounded-3xl flex items-center justify-center border border-border/15", selectedTool.bgAccent)}>
-                      <selectedTool.icon className="h-10 w-10 text-muted-foreground/20" />
+                      <selectedTool.icon className="h-10 w-10 text-muted-foreground/30" />
                     </div>
                   </div>
                   <div>
