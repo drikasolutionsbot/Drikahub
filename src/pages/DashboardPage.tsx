@@ -25,7 +25,7 @@ import { logTenantAudit, fetchTenantAuditLogs, type AuditLogEntry } from "@/lib/
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-const DISCORD_CLIENT_ID = "1477916070508757092";
+const DISCORD_CLIENT_ID_FALLBACK = "1477916070508757092";
 const BOT_PERMISSIONS = "536870920"; // Administrator + MANAGE_WEBHOOKS
 
 const DashboardPage = () => {
