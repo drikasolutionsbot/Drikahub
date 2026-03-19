@@ -102,6 +102,69 @@ async function generatePushinPayPix(apiKey: string, amountCents: number, webhook
 // ─── Format price ───────────────────────────────────────────
 const formatBRL = (cents: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
+
+function extractProductIdCandidates(rawProductId: string): string[] {
+  if (!rawProductId) return [];
+
+  const raw = String(rawProductId).trim();
+  const candidates = new Set<string>();
+  if (raw) candidates.add(raw);
+
+  raw
+    .split(/[:|,;\/\s]+/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .forEach((part) => candidates.add(part));
+
+  const uuidMatches = raw.match(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi) || [];
+  uuidMatches.forEach((id) => candidates.add(id));
+
+  return [...candidates];
+}
+
+async function resolveProductFromCustomId(supabase: any, rawProductId: string, guildId: string) {
+  const candidates = extractProductIdCandidates(rawProductId);
+  if (!candidates.length) return null;
+
+  let tenantId: string | null = null;
+  if (guildId) {
+    const { data: tenantByGuild } = await supabase
+      .from("tenants")
+      .select("id")
+      .eq("discord_guild_id", guildId)
+      .maybeSingle();
+    tenantId = tenantByGuild?.id || null;
+  }
+
+  for (const candidateId of candidates) {
+    let q = supabase.from("products").select("*").eq("id", candidateId);
+    if (tenantId) q = q.eq("tenant_id", tenantId);
+
+    const { data, error } = await q.maybeSingle();
+    if (error) {
+      console.error("[discord-interactions] Product candidate lookup failed:", candidateId, error.message);
+      continue;
+    }
+    if (data) return data;
+  }
+
+  if (tenantId) {
+    const { data: tenantProducts, error: tenantProductsError } = await supabase
+      .from("products")
+      .select("*")
+      .eq("tenant_id", tenantId)
+      .eq("active", true)
+      .order("created_at", { ascending: false });
+
+    if (!tenantProductsError && (tenantProducts?.length || 0) === 1) {
+      console.warn("[discord-interactions] Using single active-product fallback for tenant", tenantId);
+      return tenantProducts![0];
+    }
+  }
+
+  return null;
+}
+
 // ─── Check ticket staff permission ──────────────────────────
 async function checkTicketStaffPermission(
   supabase: any,
@@ -565,11 +628,7 @@ serve(async (req) => {
         // Defer with ephemeral (only the user sees it)
         await respondDeferred(interaction, botToken);
 
-        const { data: product } = await supabase
-          .from("products")
-          .select("*")
-          .eq("id", productId)
-          .single();
+        const product = await resolveProductFromCustomId(supabase, productId, interaction.guild_id);
 
         if (!product) {
           await editFollowup(interaction, botToken, "❌ Produto não encontrado.");
@@ -589,7 +648,7 @@ serve(async (req) => {
         const { data: fields } = await supabase
           .from("product_fields")
           .select("id, name, emoji, price_cents, compare_price_cents")
-          .eq("product_id", productId)
+          .eq("product_id", product.id)
           .eq("tenant_id", tenantId)
           .order("sort_order", { ascending: true });
 
@@ -668,7 +727,7 @@ serve(async (req) => {
         // Use deferred ephemeral reply (type 5) so processPurchase can send a NEW checkout message
         await respondDeferred(interaction, botToken);
 
-        const { data: product } = await supabase.from("products").select("*").eq("id", productId).single();
+        const product = await resolveProductFromCustomId(supabase, productId, interaction.guild_id);
         if (!product) { await editFollowup(interaction, botToken, "❌ Produto não encontrado."); return ok(); }
 
         const { data: field } = await supabase.from("product_fields").select("*").eq("id", fieldId).single();
