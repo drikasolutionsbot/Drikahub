@@ -31,6 +31,11 @@ async function runSyncCycle(supabase: any, tenantFilter?: string) {
   const summary: Array<Record<string, unknown>> = [];
   let totalMembersProcessed = 0;
 
+  const botToken = Deno.env.get("DISCORD_BOT_TOKEN") || null;
+  if (!botToken) {
+    throw new Error("Bot externo não configurado (DISCORD_BOT_TOKEN)");
+  }
+
   for (const config of configs) {
     const tenantId = config.tenant_id;
     const autoRoleId = config.auto_role_id;
@@ -47,20 +52,13 @@ async function runSyncCycle(supabase: any, tenantFilter?: string) {
     try {
       const { data: tenant, error: tenantError } = await supabase
         .from("tenants")
-        .select("discord_guild_id, bot_token_encrypted")
+        .select("discord_guild_id")
         .eq("id", tenantId)
         .single();
 
       if (tenantError) throw tenantError;
       if (!tenant?.discord_guild_id) {
         (tenantResult.errors as string[]).push("tenant without discord_guild_id");
-        summary.push(tenantResult);
-        continue;
-      }
-
-      const botToken = tenant.bot_token_encrypted;
-      if (!botToken) {
-        (tenantResult.errors as string[]).push("no bot token");
         summary.push(tenantResult);
         continue;
       }

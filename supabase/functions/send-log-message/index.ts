@@ -71,15 +71,10 @@ serve(async (req) => {
 
     const discordChannelId = config.discord_channel_id;
 
-    // Resolve bot token from tenant
-    const { data: tenantData } = await supabase
-      .from("tenants")
-      .select("bot_token_encrypted")
-      .eq("id", resolvedTenantId)
-      .single();
-    const botToken = tenantData?.bot_token_encrypted;
+    // Sempre usa o bot externo 24h (token único)
+    const botToken = Deno.env.get("DISCORD_BOT_TOKEN") || null;
     if (!botToken) {
-      return new Response(JSON.stringify({ error: "Bot token não configurado para este tenant" }), {
+      return new Response(JSON.stringify({ error: "Bot externo não configurado (DISCORD_BOT_TOKEN)" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

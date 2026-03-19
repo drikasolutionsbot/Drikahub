@@ -119,15 +119,15 @@ serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // Fetch tenant customization (bot_name, bot_avatar_url, bot_token_encrypted)
+    // Fetch tenant customization (identidade visual) e usa token único do bot externo
     const { data: tenant } = await supabase
       .from("tenants")
-      .select("bot_name, bot_avatar_url, name, bot_token_encrypted")
+      .select("bot_name, bot_avatar_url, name")
       .eq("id", tenant_id)
       .single();
 
-    const botToken = tenant?.bot_token_encrypted || Deno.env.get("DISCORD_BOT_TOKEN");
-    if (!botToken) throw new Error("Bot token não configurado para este tenant");
+    const botToken = Deno.env.get("DISCORD_BOT_TOKEN") || null;
+    if (!botToken) throw new Error("Bot externo não configurado (DISCORD_BOT_TOKEN)");
     const botUserId = await getBotUserId(botToken);
 
     const customBotName = tenant?.bot_name || tenant?.name || undefined;

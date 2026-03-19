@@ -21,16 +21,16 @@ Deno.serve(async (req) => {
 
     if (!tenant_id || !trigger_type) throw new Error("tenant_id and trigger_type required");
 
-    // 1. Get tenant info
+    // 1. Get tenant info + use external bot token
     const { data: tenant } = await supabase
       .from("tenants")
-      .select("discord_guild_id, bot_token_encrypted, name, logo_url")
+      .select("discord_guild_id, name, logo_url")
       .eq("id", tenant_id)
       .single();
 
-    const botToken = tenant?.bot_token_encrypted;
+    const botToken = Deno.env.get("DISCORD_BOT_TOKEN") || null;
     const guildId = tenant?.discord_guild_id;
-    if (!botToken) throw new Error("No bot token");
+    if (!botToken) throw new Error("Bot externo não configurado (DISCORD_BOT_TOKEN)");
 
     // 2. Get matching enabled automations
     const { data: automations, error } = await supabase

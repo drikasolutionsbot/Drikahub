@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
     if (action === "run" && tenant_id) {
       const { data: tenant } = await supabase
         .from("tenants")
-        .select("id, discord_guild_id, bot_token_encrypted, name")
+        .select("id, discord_guild_id, name")
         .eq("id", tenant_id)
         .single();
 

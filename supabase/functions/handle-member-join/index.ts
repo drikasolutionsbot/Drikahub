@@ -29,16 +29,16 @@ Deno.serve(async (req) => {
       ? `https://cdn.discordapp.com/avatars/${userId}/${member.user.avatar}.png?size=256`
       : null;
 
-    // Get tenant info
+    // Get tenant info + use external bot token
     const { data: tenant } = await supabase
       .from("tenants")
-      .select("discord_guild_id, bot_token_encrypted, name, logo_url")
+      .select("discord_guild_id, name, logo_url")
       .eq("id", tenant_id)
       .single();
 
     if (!tenant?.discord_guild_id) throw new Error("Tenant not configured");
-    const botToken = tenant.bot_token_encrypted;
-    if (!botToken) throw new Error("No bot token");
+    const botToken = Deno.env.get("DISCORD_BOT_TOKEN") || null;
+    if (!botToken) throw new Error("Bot externo não configurado (DISCORD_BOT_TOKEN)");
     const guildId = tenant.discord_guild_id;
 
     // Get welcome config
