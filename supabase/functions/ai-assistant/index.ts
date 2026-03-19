@@ -109,36 +109,17 @@ Inclua estilo, cores, composição, iluminação e mood.`,
 
     const systemPrompt = systemPrompts[type] || systemPrompts.copy;
 
-    // Image generation — supported on Drika engine and Google AI Studio
+    // Image generation — Drika engine only (Lovable AI)
     if (type === "image") {
-      if (selectedProvider !== "drika" && selectedProvider !== "google") {
-        return new Response(
-          JSON.stringify({ error: "Geração de imagens só é suportada pelo Drika Engine e Google AI Studio." }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-
-      const imageModels = selectedProvider === "google" ? GOOGLE_AI_IMAGE_MODELS : IMAGE_MODELS;
-      const imageApiUrl = selectedProvider === "google" ? GOOGLE_AI_URL : apiUrl;
-      const imageApiKey = apiKey;
-
-      const buildImageBody = selectedProvider === "google"
-        ? (m: string) => ({
-            model: m,
-            messages: [{ role: "user", content: prompt }],
-            modalities: ["text", "image"],
-          })
-        : (m: string) => ({
-            model: m,
-            messages: [{ role: "user", content: prompt }],
-            modalities: ["image", "text"],
-          });
-
       const { response, model } = await tryModels(
-        imageModels,
-        buildImageBody,
-        imageApiKey,
-        imageApiUrl,
+        IMAGE_MODELS,
+        (m) => ({
+          model: m,
+          messages: [{ role: "user", content: prompt }],
+          modalities: ["image", "text"],
+        }),
+        apiKey,
+        apiUrl,
         authHeader,
       );
 
