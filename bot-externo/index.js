@@ -69,6 +69,7 @@ client.on(Events.ClientReady, async () => {
     painelCommand.data,
     estoqueCommand.data,
     verificarCommand.data,
+    sorteioCommand.data,
     // Moderation commands
     new SlashCommandBuilder().setName("clear").setDescription("Limpa todas as mensagens do canal"),
     new SlashCommandBuilder().setName("ban").setDescription("Bane um usuário do servidor")
