@@ -74,8 +74,8 @@ Deno.serve(async (req) => {
       style: 5,
       label: btnLabel || "Verificar",
       url: tenant?.verify_slug
-        ? `https://drikahub.com/verify/${tenant.verify_slug}`
-        : `https://drikahub.com/verify/${tenant_id}`,
+        ? `https://www.drikahub.com/verify/${tenant.verify_slug}`
+        : `https://www.drikahub.com/verify/${tenant_id}`,
     };
 
     if (btnEmoji) {

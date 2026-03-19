@@ -258,7 +258,7 @@ Deno.serve(async (req) => {
 });
 
 function htmlResponse(title: string, message: string, color: string, logoUrl?: string | null): Response {
-  const DEFAULT_VERIFY_REDIRECT = "https://drikabotteste.lovable.app/verify/result";
+  const DEFAULT_VERIFY_REDIRECT = "https://www.drikahub.com/verify/result";
 
   const status = color === "#57F287" ? "success" : color === "#FEE75C" ? "warning" : "error";
 
