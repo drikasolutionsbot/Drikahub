@@ -4,7 +4,7 @@ const {
   TextInputStyle, StringSelectMenuBuilder,
 } = require("discord.js");
 const {
-  getProducts, getProductFields, countStock, getAvailableStock,
+  getProducts, getProductById, getProductFields, countStock, getAvailableStock,
   createOrder, getOrder, updateOrderStatus, deliverStockItems,
   getStoreConfig, getCoupon, incrementCouponUsage,
   getActivePaymentProvider, triggerAutomation, deliverOrder, supabase,
@@ -62,8 +62,15 @@ async function generatePushinPayPix(apiKey, amountCents, webhook) {
 async function startCheckout(interaction, tenant, productId) {
   await interaction.deferReply({ ephemeral: true });
 
-  const products = await getProducts(tenant.id, false);
-  const product = products.find((p) => p.id === productId);
+  console.log(`[CHECKOUT] startCheckout productId=${productId} tenantId=${tenant.id}`);
+
+  // Try direct query first (more reliable), then fallback to list
+  let product = await getProductById(productId);
+  if (!product) {
+    console.log(`[CHECKOUT] Direct query failed, trying list fallback...`);
+    const products = await getProducts(tenant.id, false);
+    product = products.find((p) => p.id === productId);
+  }
   if (!product) return interaction.editReply({ content: "❌ Produto não encontrado." });
   if (!product.active) return interaction.editReply({ content: "❌ Este produto está indisponível." });
 

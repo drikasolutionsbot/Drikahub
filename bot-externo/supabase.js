@@ -16,8 +16,15 @@ async function getTenantByGuild(guildId) {
 async function getProducts(tenantId, onlyActive = true) {
   let q = supabase.from("products").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false });
   if (onlyActive) q = q.eq("active", true);
-  const { data } = await q;
+  const { data, error } = await q;
+  if (error) console.error(`[getProducts] Error for tenant ${tenantId}:`, error.message);
   return data || [];
+}
+
+async function getProductById(productId) {
+  const { data, error } = await supabase.from("products").select("*").eq("id", productId).single();
+  if (error) console.error(`[getProductById] Error for product ${productId}:`, error.message);
+  return data;
 }
 
 async function getProductFields(productId, tenantId) {
@@ -159,6 +166,7 @@ module.exports = {
   supabase,
   getTenantByGuild,
   getProducts,
+  getProductById,
   getProductFields,
   getAvailableStock,
   countStock,
