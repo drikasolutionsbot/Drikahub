@@ -51,6 +51,28 @@ const SettingsBotCustomizationTab = ({ tenant, tenantId, refetchTenant }: Props)
     }
   };
 
+  const handleUploadBanner = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !tenantId) return;
+    setUploadingBanner(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${tenantId}/bot-banner/${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage
+        .from("tenant-assets")
+        .upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data } = supabase.storage.from("tenant-assets").getPublicUrl(path);
+      setBotBannerUrl(data.publicUrl);
+      toast({ title: "Capa enviada!" });
+    } catch (err: any) {
+      toast({ title: "Erro ao enviar", description: err.message, variant: "destructive" });
+    } finally {
+      setUploadingBanner(false);
+      if (bannerFileRef.current) bannerFileRef.current.value = "";
+    }
+  };
+
   const handleSave = async () => {
     if (!tenantId) return;
     setSaving(true);
@@ -61,6 +83,7 @@ const SettingsBotCustomizationTab = ({ tenant, tenantId, refetchTenant }: Props)
           updates: {
             bot_name: botName.trim() || null,
             bot_avatar_url: botAvatarUrl.trim() || null,
+            banner_url: botBannerUrl.trim() || null,
           },
         },
       });
