@@ -565,7 +565,7 @@ export default function AIAssistantPage() {
                         "h-6 w-6 rounded-lg flex items-center justify-center shrink-0",
                         activeSessionId === session.id ? "bg-primary/20" : "bg-muted/20"
                       )}>
-                        <MessageSquare className="h-3 w-3 text-muted-foreground/40" />
+                        <MessageSquare className="h-3 w-3 text-muted-foreground/60" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium text-foreground/80 truncate">{session.title}</p>
