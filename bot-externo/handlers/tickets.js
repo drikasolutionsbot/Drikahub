@@ -372,76 +372,120 @@ function generateHtmlTranscript(msgs, serverName, ticketName, status) {
 // ── Send Ticket Log ──
 async function sendTicketLog(client, ticket, closedByUserId, closedByUsername, action, tenant) {
   console.log(`[sendTicketLog] Starting for ticket ${ticket.id}, action: ${action}`);
-  const storeConfig = await getStoreConfig(ticket.tenant_id);
-  console.log(`[sendTicketLog] ticket_logs_channel_id: ${storeConfig?.ticket_logs_channel_id || "NOT SET"}`);
+  
+  let storeConfig;
+  try {
+    storeConfig = await getStoreConfig(ticket.tenant_id);
+  } catch (e) {
+    console.error(`[sendTicketLog] Failed to get store config: ${e.message}`);
+    return;
+  }
+  
+  const logsChannelId = storeConfig?.ticket_logs_channel_id;
+  console.log(`[sendTicketLog] ticket_logs_channel_id: ${logsChannelId || "NOT SET"}`);
+  
+  if (!logsChannelId) {
+    console.warn(`[sendTicketLog] No ticket_logs_channel_id configured, skipping`);
+    return;
+  }
 
-  // Fetch messages
+  // Fetch logs channel first to fail fast
+  let logsCh;
+  try {
+    logsCh = await client.channels.fetch(logsChannelId);
+    if (!logsCh) throw new Error("Channel returned null");
+    console.log(`[sendTicketLog] Found logs channel: ${logsCh.name || logsCh.id}`);
+  } catch (e) {
+    console.error(`[sendTicketLog] Cannot fetch logs channel ${logsChannelId}: ${e.message}`);
+    return;
+  }
+
+  // Fetch messages from ticket thread
   let msgs = [];
   if (ticket.discord_channel_id) {
     try {
       const ch = await client.channels.fetch(ticket.discord_channel_id);
-      const fetched = await ch.messages.fetch({ limit: 100 });
-      msgs = [...fetched.values()].reverse();
-      console.log(`[sendTicketLog] Fetched ${msgs.length} messages from thread`);
+      if (ch) {
+        const fetched = await ch.messages.fetch({ limit: 100 });
+        msgs = [...fetched.values()].reverse();
+        console.log(`[sendTicketLog] Fetched ${msgs.length} messages from thread`);
+      }
     } catch (fetchErr) {
       console.error(`[sendTicketLog] Failed to fetch messages: ${fetchErr.message}`);
     }
   }
 
   const statusLabel = action === "deleted" ? "Deletado" : "Fechado";
-  const htmlTranscript = msgs.length > 0 ? generateHtmlTranscript(msgs, tenant.name || "Servidor", `ticket-${ticket.discord_username}`, statusLabel) : "";
 
-  if (storeConfig?.ticket_logs_channel_id) {
-    const logEmbed = new EmbedBuilder()
-      .setTitle(`Ticket - ${statusLabel}`)
-      .setColor(action === "deleted" ? 0xED4245 : 0x2B2D31)
-      .addFields(
-        { name: "👤 Moderador", value: `<@${closedByUserId}>\n@${closedByUsername}`, inline: true },
-        { name: "🎫 Ticket", value: `${ticket.discord_username || "N/A"}\n\`${ticket.id.slice(0, 8)}\``, inline: true },
-      )
-      .setTimestamp();
+  const logEmbed = new EmbedBuilder()
+    .setTitle(`Ticket - ${statusLabel}`)
+    .setColor(action === "deleted" ? 0xED4245 : 0x2B2D31)
+    .addFields(
+      { name: "👤 Moderador", value: `<@${closedByUserId}>\n@${closedByUsername}`, inline: true },
+      { name: "🎫 Ticket", value: `${ticket.discord_username || "N/A"}\n\`${ticket.id.slice(0, 8)}\``, inline: true },
+    )
+    .setTimestamp()
+    .setFooter({ text: "Drika Hub • Ticket Log" });
 
+  // Build transcript file if messages exist
+  let files = [];
+  let components = [];
+  
+  if (msgs.length > 0) {
     try {
-      const logsCh = await client.channels.fetch(storeConfig.ticket_logs_channel_id);
-      console.log(`[sendTicketLog] Found logs channel: ${logsCh.name || logsCh.id}`);
+      const htmlTranscript = generateHtmlTranscript(msgs, tenant.name || "Servidor", `ticket-${ticket.discord_username}`, statusLabel);
 
-      // Upload transcript to Supabase Storage
-      let transcriptUrl = null;
-      if (htmlTranscript) {
+      // Try upload to storage for persistent link
+      try {
         const fileName = `transcripts/${ticket.tenant_id}/${ticket.id}.html`;
         const { error: uploadErr } = await supabase.storage.from("tenant-assets").upload(fileName, htmlTranscript, { contentType: "text/html", upsert: true });
-        if (uploadErr) {
-          console.error(`[sendTicketLog] Upload error: ${uploadErr.message}`);
-        } else {
+        if (!uploadErr) {
           const { data: urlData } = supabase.storage.from("tenant-assets").getPublicUrl(fileName);
-          transcriptUrl = urlData?.publicUrl || null;
+          if (urlData?.publicUrl) {
+            components = [new ActionRowBuilder().addComponents(
+              new ButtonBuilder().setLabel("Ver transcript").setEmoji("📜").setStyle(ButtonStyle.Link).setURL(urlData.publicUrl)
+            )];
+          }
+        } else {
+          console.error(`[sendTicketLog] Storage upload error: ${uploadErr.message}`);
         }
+      } catch (storageErr) {
+        console.error(`[sendTicketLog] Storage error: ${storageErr.message}`);
       }
 
-      const components = transcriptUrl ? [new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel("Ver transcript").setEmoji("📜").setStyle(ButtonStyle.Link).setURL(transcriptUrl))] : [];
-
-      if (htmlTranscript) {
-        const { AttachmentBuilder } = require("discord.js");
-        const attachment = new AttachmentBuilder(Buffer.from(htmlTranscript), { name: `transcript-${ticket.id.slice(0, 8)}.html` });
-        await logsCh.send({ embeds: [logEmbed], components, files: [attachment] });
-      } else {
-        await logsCh.send({ embeds: [logEmbed], components });
-      }
-      console.log(`[sendTicketLog] Log sent successfully to ${storeConfig.ticket_logs_channel_id}`);
-    } catch (e) {
-      console.error(`[sendTicketLog] Error sending to logs channel: ${e.message}`);
-      console.error(e.stack);
+      // Always attach file as backup
+      const { AttachmentBuilder } = require("discord.js");
+      files = [new AttachmentBuilder(Buffer.from(htmlTranscript), { name: `transcript-${ticket.id.slice(0, 8)}.html` })];
+    } catch (transcriptErr) {
+      console.error(`[sendTicketLog] Transcript generation error: ${transcriptErr.message}`);
     }
-  } else {
-    console.warn(`[sendTicketLog] No ticket_logs_channel_id configured for tenant ${ticket.tenant_id}`);
+  }
+
+  // Send the log - embed always, file/components only if available
+  try {
+    await logsCh.send({ embeds: [logEmbed], components, files });
+    console.log(`[sendTicketLog] ✅ Log sent successfully to ${logsChannelId}`);
+  } catch (sendErr) {
+    console.error(`[sendTicketLog] Failed to send log: ${sendErr.message}`);
+    // Fallback: try without file
+    if (files.length > 0) {
+      try {
+        await logsCh.send({ embeds: [logEmbed], components });
+        console.log(`[sendTicketLog] ✅ Log sent without file attachment`);
+      } catch (e2) {
+        console.error(`[sendTicketLog] Fallback also failed: ${e2.message}`);
+      }
+    }
   }
 
   // DM transcript to user
-  if (htmlTranscript) {
+  if (files.length > 0) {
     try {
       const user = await client.users.fetch(ticket.discord_user_id);
       const { AttachmentBuilder } = require("discord.js");
-      const attachment = new AttachmentBuilder(Buffer.from(htmlTranscript), { name: `transcript-${ticket.id.slice(0, 8)}.html` });
+      const attachment = new AttachmentBuilder(Buffer.from(
+        generateHtmlTranscript(msgs, tenant.name || "Servidor", `ticket-${ticket.discord_username}`, statusLabel)
+      ), { name: `transcript-${ticket.id.slice(0, 8)}.html` });
       await user.send({ content: "📜 Aqui está o transcript do seu ticket encerrado.", files: [attachment] });
     } catch {}
   }
