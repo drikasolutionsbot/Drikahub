@@ -178,3 +178,6 @@ verify_jwt = false
 
 [functions.run-backup]
 verify_jwt = false
+
+[functions.manage-saved-embeds]
+verify_jwt = false
