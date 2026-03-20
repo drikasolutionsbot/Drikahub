@@ -239,16 +239,6 @@ const DashboardPage = () => {
     return map[action] || action;
   };
 
-  if (tenantLoading || !tenant) {
-    return (
-      <div className="space-y-6">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-48" />
-        <Skeleton className="h-64" />
-      </div>
-    );
-  }
-
   const appendGuildToInvite = (inviteUrl: string) => {
     if (!tenant?.discord_guild_id) return inviteUrl;
     try {
@@ -378,6 +368,16 @@ const DashboardPage = () => {
     stopPolling();
     setWaitingForBot(false);
   }, [waitingForBot, tenant?.discord_guild_id, stopPolling]);
+
+  if (tenantLoading || !tenant) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-48" />
+        <Skeleton className="h-64" />
+      </div>
+    );
+  }
 
   const handleAddBot = async () => {
     try {
