@@ -107,7 +107,7 @@ serve(async (req) => {
   }
 
   try {
-    const { tenant_id, channel_id, content, embeds, product_id, components } = await req.json();
+    const { tenant_id, channel_id, content, embeds, product_id, components, buttons } = await req.json();
 
     if (!tenant_id) throw new Error("Missing tenant_id");
     if (!channel_id) throw new Error("Missing channel_id");
