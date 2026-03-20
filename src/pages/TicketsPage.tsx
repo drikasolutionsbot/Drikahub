@@ -205,8 +205,8 @@ const TicketsPage = () => {
               onClick={() => openDetail(ticket)}
               className="flex items-center justify-between rounded-xl border border-border bg-card p-4 hover:border-primary/30 transition-all duration-200 cursor-pointer group"
             >
-              <div className="flex items-center gap-4">
-                <div className={`rounded-lg p-2.5 ${sc.cls} transition-transform group-hover:scale-110`}>
+              <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+                <div className={`rounded-lg p-2 sm:p-2.5 ${sc.cls} transition-transform group-hover:scale-110 shrink-0`}>
                   <Icon className="h-4 w-4" />
                 </div>
                 <div className="min-w-0">
@@ -226,14 +226,14 @@ const TicketsPage = () => {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <Badge variant="outline" className={`${sc.badgeCls} text-xs`}>
+              <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                <Badge variant="outline" className={`${sc.badgeCls} text-[10px] sm:text-xs`}>
                   {sc.label}
                 </Badge>
                 <span className="text-xs text-muted-foreground whitespace-nowrap hidden sm:inline">
                   {formatDistanceToNow(new Date(ticket.created_at), { addSuffix: true, locale: ptBR })}
                 </span>
-                <Eye className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                <Eye className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hidden sm:block" />
               </div>
             </div>
           );
@@ -245,32 +245,34 @@ const TicketsPage = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-bold flex items-center gap-2">
-            <Ticket className="h-6 w-6 text-primary" />
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="font-display text-xl sm:text-2xl font-bold flex items-center gap-2">
+            <Ticket className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0" />
             Tickets
           </h1>
-          <p className="text-muted-foreground text-sm">Gerencie tickets de suporte e serviço</p>
+          <p className="text-muted-foreground text-xs sm:text-sm">Gerencie tickets de suporte e serviço</p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-2">
+        <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-2 shrink-0">
           <RefreshCw className="h-4 w-4" />
-          Atualizar
+          <span className="hidden sm:inline">Atualizar</span>
         </Button>
       </div>
 
       {/* Top-level Tabs: Tickets | Configuração */}
       <Tabs defaultValue="tickets">
-        <TabsList className="bg-muted">
-          <TabsTrigger value="tickets" className="gap-1.5">
-            <Ticket className="h-3.5 w-3.5" />
-            Tickets
-          </TabsTrigger>
-          <TabsTrigger value="config" className="gap-1.5">
-            <Settings className="h-3.5 w-3.5" />
-            Configuração
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto scrollbar-none -mx-4 px-4 md:mx-0 md:px-0">
+          <TabsList className="bg-muted w-max min-w-full sm:w-auto">
+            <TabsTrigger value="tickets" className="gap-1.5">
+              <Ticket className="h-3.5 w-3.5" />
+              Tickets
+            </TabsTrigger>
+            <TabsTrigger value="config" className="gap-1.5">
+              <Settings className="h-3.5 w-3.5" />
+              Configuração
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="tickets" className="space-y-6 mt-4">
           {/* Stats */}
@@ -305,13 +307,15 @@ const TicketsPage = () => {
 
           {/* Status Tabs */}
           <Tabs defaultValue="all">
-            <TabsList className="bg-muted">
-              <TabsTrigger value="all">Todos ({counts.all})</TabsTrigger>
-              <TabsTrigger value="open">Abertos ({counts.open})</TabsTrigger>
-              <TabsTrigger value="in_progress">Em Andamento ({counts.in_progress})</TabsTrigger>
-              <TabsTrigger value="delivered">Entregues ({counts.delivered})</TabsTrigger>
-              <TabsTrigger value="closed">Fechados ({counts.closed})</TabsTrigger>
-            </TabsList>
+            <div className="overflow-x-auto scrollbar-none -mx-4 px-4 md:mx-0 md:px-0">
+              <TabsList className="bg-muted w-max min-w-full sm:w-auto">
+                <TabsTrigger value="all" className="text-xs sm:text-sm">Todos ({counts.all})</TabsTrigger>
+                <TabsTrigger value="open" className="text-xs sm:text-sm">Abertos ({counts.open})</TabsTrigger>
+                <TabsTrigger value="in_progress" className="text-xs sm:text-sm">Andamento ({counts.in_progress})</TabsTrigger>
+                <TabsTrigger value="delivered" className="text-xs sm:text-sm">Entregues ({counts.delivered})</TabsTrigger>
+                <TabsTrigger value="closed" className="text-xs sm:text-sm">Fechados ({counts.closed})</TabsTrigger>
+              </TabsList>
+            </div>
 
             <TabsContent value="all">{renderTickets(filtered)}</TabsContent>
             {(["open", "in_progress", "delivered", "closed"] as const).map((status) => (

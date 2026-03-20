@@ -360,8 +360,8 @@ const DashboardPage = () => {
           </div>
           {tenant.discord_guild_id ? (
             <>
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-sm">{tenant.name[0]?.toUpperCase()}</div>
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-xs sm:text-sm shrink-0">{tenant.name[0]?.toUpperCase()}</div>
                 <div>
                   <p className="font-medium">{tenant.name}</p>
                   <p className="text-xs font-mono text-muted-foreground">({tenant.discord_guild_id})</p>
@@ -369,9 +369,9 @@ const DashboardPage = () => {
               </div>
               <div>
                 <p className="text-xs font-semibold text-muted-foreground border-l-2 border-primary pl-2 mb-2">Informações do Servidor</p>
-                <div className="flex gap-2">
-                  <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground"><Users className="h-3 w-3" /> {guildInfo?.member_count ?? 0} membros</span>
-                  <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground"><UserCheck className="h-3 w-3" /> {guildInfo?.presence_count ?? 0} online</span>
+                <div className="flex flex-wrap gap-2">
+                  <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-[10px] sm:text-xs font-medium text-muted-foreground"><Users className="h-3 w-3" /> {guildInfo?.member_count ?? 0} membros</span>
+                  <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-[10px] sm:text-xs font-medium text-muted-foreground"><UserCheck className="h-3 w-3" /> {guildInfo?.presence_count ?? 0} online</span>
                 </div>
               </div>
               <Button variant="outline" className="gap-2 text-sm" onClick={handleAddBot}>
@@ -430,7 +430,7 @@ const DashboardPage = () => {
           <p className="text-muted-foreground">Configure as permissões da Aplicação.</p>
         </div>
 
-        <div className="flex gap-6 border-b border-border">
+        <div className="flex gap-4 sm:gap-6 border-b border-border overflow-x-auto scrollbar-none">
           {(["membros", "cargos"] as const).map(tab => (
             <button
               key={tab}
@@ -739,10 +739,10 @@ function PermissionPanel({
             <p className="text-sm font-bold mb-3">Principal</p>
             <div className="space-y-1">
               {PERMISSION_LABELS.map(({ key, label, description }) => (
-                <div key={key} className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
-                  <div className="pr-4">
-                    <p className="text-sm font-semibold">{label}</p>
-                    <p className="text-xs text-muted-foreground">{description}</p>
+                <div key={key} className="flex items-center justify-between rounded-lg border border-border px-3 sm:px-4 py-2.5 sm:py-3">
+                  <div className="pr-3 sm:pr-4 min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm font-semibold">{label}</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground line-clamp-2">{description}</p>
                   </div>
                   <Switch checked={getValue(key)} onCheckedChange={() => onToggle(key)} />
                 </div>

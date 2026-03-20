@@ -575,46 +575,46 @@ const FinancePage = () => {
             <p className="text-xs mt-1">Tente ajustar os filtros ou o período</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
+          <div className="overflow-x-auto -mx-4 sm:mx-0">
+            <table className="w-full min-w-[700px]">
               <thead>
                 <tr className="border-b border-border/50">
-                  <th className="px-4 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Pedido</th>
-                  <th className="px-4 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Usuário</th>
-                  <th className="px-4 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Produto</th>
-                  <th className="px-4 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Total</th>
-                  <th className="px-4 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Gateway</th>
-                  <th className="px-4 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Status</th>
-                  <th className="px-4 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Data</th>
+                  <th className="px-3 sm:px-4 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Pedido</th>
+                  <th className="px-3 sm:px-4 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Usuário</th>
+                  <th className="px-3 sm:px-4 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em] hidden sm:table-cell">Produto</th>
+                  <th className="px-3 sm:px-4 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Total</th>
+                  <th className="px-3 sm:px-4 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em] hidden md:table-cell">Gateway</th>
+                  <th className="px-3 sm:px-4 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Status</th>
+                  <th className="px-3 sm:px-4 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em] hidden sm:table-cell">Data</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/30">
                 {filtered.map((order) => (
                   <tr key={order.id} className="group hover:bg-muted/30 transition-colors">
-                    <td className="px-4 py-3.5">
-                      <span className="text-sm font-mono font-semibold text-primary">#{order.order_number}</span>
+                    <td className="px-3 sm:px-4 py-3">
+                      <span className="text-xs sm:text-sm font-mono font-semibold text-primary">#{order.order_number}</span>
                     </td>
-                    <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-2.5">
-                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary shrink-0">
+                    <td className="px-3 sm:px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary shrink-0">
                           {(order.discord_username || "?")[0].toUpperCase()}
                         </div>
-                        <span className="text-sm truncate max-w-[120px]">{order.discord_username || "-"}</span>
+                        <span className="text-xs sm:text-sm truncate max-w-[100px] sm:max-w-[120px]">{order.discord_username || "-"}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3.5">
+                    <td className="px-3 sm:px-4 py-3 hidden sm:table-cell">
                       <span className="text-sm text-muted-foreground truncate max-w-[150px] block">{order.product_name || "-"}</span>
                     </td>
-                    <td className="px-4 py-3.5">
-                      <span className="text-sm font-semibold">{formatCurrency(order.total_cents)}</span>
+                    <td className="px-3 sm:px-4 py-3">
+                      <span className="text-xs sm:text-sm font-semibold">{formatCurrency(order.total_cents)}</span>
                     </td>
-                    <td className="px-4 py-3.5">
+                    <td className="px-3 sm:px-4 py-3 hidden md:table-cell">
                       <span className="text-xs text-muted-foreground capitalize">{order.payment_provider || "—"}</span>
                     </td>
-                    <td className="px-4 py-3.5">
+                    <td className="px-3 sm:px-4 py-3">
                       <StatusBadge status={order.status} />
                     </td>
-                    <td className="px-4 py-3.5">
+                    <td className="px-3 sm:px-4 py-3 hidden sm:table-cell">
                       <div className="text-xs text-muted-foreground">
                         <p>{format(parseISO(order.created_at), "dd/MM/yyyy")}</p>
                         <p className="text-[10px] opacity-60">{format(parseISO(order.created_at), "HH:mm")}</p>
