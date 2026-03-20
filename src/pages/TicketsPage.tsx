@@ -261,16 +261,18 @@ const TicketsPage = () => {
 
       {/* Top-level Tabs: Tickets | Configuração */}
       <Tabs defaultValue="tickets">
-        <TabsList className="bg-muted">
-          <TabsTrigger value="tickets" className="gap-1.5">
-            <Ticket className="h-3.5 w-3.5" />
-            Tickets
-          </TabsTrigger>
-          <TabsTrigger value="config" className="gap-1.5">
-            <Settings className="h-3.5 w-3.5" />
-            Configuração
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto scrollbar-none -mx-4 px-4 md:mx-0 md:px-0">
+          <TabsList className="bg-muted w-max min-w-full sm:w-auto">
+            <TabsTrigger value="tickets" className="gap-1.5">
+              <Ticket className="h-3.5 w-3.5" />
+              Tickets
+            </TabsTrigger>
+            <TabsTrigger value="config" className="gap-1.5">
+              <Settings className="h-3.5 w-3.5" />
+              Configuração
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="tickets" className="space-y-6 mt-4">
           {/* Stats */}
