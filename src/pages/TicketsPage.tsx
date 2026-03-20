@@ -307,13 +307,15 @@ const TicketsPage = () => {
 
           {/* Status Tabs */}
           <Tabs defaultValue="all">
-            <TabsList className="bg-muted">
-              <TabsTrigger value="all">Todos ({counts.all})</TabsTrigger>
-              <TabsTrigger value="open">Abertos ({counts.open})</TabsTrigger>
-              <TabsTrigger value="in_progress">Em Andamento ({counts.in_progress})</TabsTrigger>
-              <TabsTrigger value="delivered">Entregues ({counts.delivered})</TabsTrigger>
-              <TabsTrigger value="closed">Fechados ({counts.closed})</TabsTrigger>
-            </TabsList>
+            <div className="overflow-x-auto scrollbar-none -mx-4 px-4 md:mx-0 md:px-0">
+              <TabsList className="bg-muted w-max min-w-full sm:w-auto">
+                <TabsTrigger value="all" className="text-xs sm:text-sm">Todos ({counts.all})</TabsTrigger>
+                <TabsTrigger value="open" className="text-xs sm:text-sm">Abertos ({counts.open})</TabsTrigger>
+                <TabsTrigger value="in_progress" className="text-xs sm:text-sm">Andamento ({counts.in_progress})</TabsTrigger>
+                <TabsTrigger value="delivered" className="text-xs sm:text-sm">Entregues ({counts.delivered})</TabsTrigger>
+                <TabsTrigger value="closed" className="text-xs sm:text-sm">Fechados ({counts.closed})</TabsTrigger>
+              </TabsList>
+            </div>
 
             <TabsContent value="all">{renderTickets(filtered)}</TabsContent>
             {(["open", "in_progress", "delivered", "closed"] as const).map((status) => (
