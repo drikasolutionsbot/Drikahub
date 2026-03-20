@@ -430,7 +430,7 @@ const DashboardPage = () => {
           <p className="text-muted-foreground">Configure as permissões da Aplicação.</p>
         </div>
 
-        <div className="flex gap-6 border-b border-border">
+        <div className="flex gap-4 sm:gap-6 border-b border-border overflow-x-auto scrollbar-none">
           {(["membros", "cargos"] as const).map(tab => (
             <button
               key={tab}
