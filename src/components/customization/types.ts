@@ -76,6 +76,7 @@ export const embedTemplates: EmbedTemplate[] = [
       fields: [],
       buttons: [],
     },
+  },
   {
     id: "purchase",
     name: "Compra",
@@ -99,6 +100,7 @@ export const embedTemplates: EmbedTemplate[] = [
         { id: "f3", name: "📦 Status", value: "Entregue", inline: true },
       ],
       buttons: [],
+    },
   },
   {
     id: "ticket",
@@ -122,6 +124,7 @@ export const embedTemplates: EmbedTemplate[] = [
         { id: "f2", name: "📋 Categoria", value: "Geral", inline: true },
       ],
       buttons: [],
+    },
   },
   {
     id: "announcement",
@@ -142,5 +145,6 @@ export const embedTemplates: EmbedTemplate[] = [
       timestamp: true,
       fields: [],
       buttons: [],
+    },
   },
 ];
