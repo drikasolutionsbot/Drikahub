@@ -348,25 +348,95 @@ function generateHtmlTranscript(msgs, serverName, ticketName, status) {
     const ts = new Date(m.createdTimestamp).toLocaleString("pt-BR");
     const author = m.author?.username || "Desconhecido";
     const avatar = m.author?.displayAvatarURL?.({ size: 64 }) || "";
+    const isBot = m.author?.bot ? `<span style="background:#5865F2;color:#fff;font-size:10px;padding:1px 5px;border-radius:3px;margin-left:6px;vertical-align:middle;">BOT</span>` : "";
     let content = esc(m.content || "");
-    if (!content && m.embeds?.length) content = "<em>[embed]</em>";
-    if (!content && m.attachments?.size) content = [...m.attachments.values()].map((a) => `<a href="${esc(a.url)}">${esc(a.name)}</a>`).join(", ");
-    if (!content) content = "<em>[sem conteúdo]</em>";
+    
+    // Parse markdown-like formatting
+    content = content
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*(.+?)\*/g, "<em>$1</em>")
+      .replace(/__(.+?)__/g, "<u>$1</u>")
+      .replace(/~~(.+?)~~/g, "<s>$1</s>")
+      .replace(/`([^`]+)`/g, '<code style="background:#2f3136;padding:2px 6px;border-radius:3px;font-size:13px;">$1</code>')
+      .replace(/\n/g, "<br>");
 
-    rows += `<div style="display:flex;gap:12px;padding:8px 16px;border-bottom:1px solid #2f3136;">
-      <img src="${avatar}" style="width:40px;height:40px;border-radius:50%;flex-shrink:0;" />
-      <div>
-        <div><strong style="color:#fff;">${esc(author)}</strong> <span style="color:#72767d;font-size:12px;">${ts}</span></div>
-        <div style="color:#dcddde;margin-top:2px;">${content}</div>
+    // Handle embeds
+    let embedHtml = "";
+    if (m.embeds?.length) {
+      for (const emb of m.embeds) {
+        const borderColor = emb.color ? `#${emb.color.toString(16).padStart(6, "0")}` : "#5865F2";
+        embedHtml += `<div style="border-left:4px solid ${borderColor};background:#2f3136;border-radius:4px;padding:12px 16px;margin-top:8px;max-width:520px;">`;
+        if (emb.author?.name) embedHtml += `<div style="font-size:12px;color:#fff;font-weight:600;margin-bottom:4px;">${esc(emb.author.name)}</div>`;
+        if (emb.title) embedHtml += `<div style="color:#00b0f4;font-weight:700;margin-bottom:4px;">${esc(emb.title)}</div>`;
+        if (emb.description) embedHtml += `<div style="color:#dcddde;font-size:14px;line-height:1.4;">${esc(emb.description)}</div>`;
+        if (emb.fields?.length) {
+          embedHtml += `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">`;
+          for (const f of emb.fields) {
+            const width = f.inline ? "calc(33% - 8px)" : "100%";
+            embedHtml += `<div style="min-width:0;flex:0 0 ${width};"><div style="color:#b9bbbe;font-size:12px;font-weight:700;text-transform:uppercase;margin-bottom:2px;">${esc(f.name)}</div><div style="color:#dcddde;font-size:14px;">${esc(f.value)}</div></div>`;
+          }
+          embedHtml += `</div>`;
+        }
+        if (emb.image?.url) embedHtml += `<img src="${esc(emb.image.url)}" style="max-width:100%;border-radius:4px;margin-top:8px;" />`;
+        if (emb.footer?.text) embedHtml += `<div style="color:#72767d;font-size:11px;margin-top:8px;">${esc(emb.footer.text)}</div>`;
+        embedHtml += `</div>`;
+      }
+    }
+
+    // Handle attachments
+    let attachHtml = "";
+    if (m.attachments?.size) {
+      for (const a of m.attachments.values()) {
+        if (a.contentType?.startsWith("image/")) {
+          attachHtml += `<img src="${esc(a.url)}" style="max-width:400px;max-height:300px;border-radius:8px;margin-top:8px;" />`;
+        } else {
+          attachHtml += `<div style="margin-top:6px;"><a href="${esc(a.url)}" style="color:#00b0f4;text-decoration:none;" target="_blank">📎 ${esc(a.name || "arquivo")}</a> <span style="color:#72767d;font-size:12px;">(${(a.size / 1024).toFixed(1)}KB)</span></div>`;
+        }
+      }
+    }
+
+    if (!content && !embedHtml && !attachHtml) content = "<em style='color:#72767d;'>[sem conteúdo]</em>";
+
+    rows += `<div style="display:flex;gap:16px;padding:10px 20px;transition:background .1s;" onmouseenter="this.style.background='#32353b'" onmouseleave="this.style.background='transparent'">
+      <img src="${avatar}" style="width:40px;height:40px;border-radius:50%;flex-shrink:0;margin-top:2px;" onerror="this.style.display='none'" />
+      <div style="flex:1;min-width:0;">
+        <div><strong style="color:#fff;font-size:15px;">${esc(author)}</strong>${isBot} <span style="color:#72767d;font-size:12px;margin-left:8px;">${ts}</span></div>
+        <div style="color:#dcddde;margin-top:3px;line-height:1.5;word-wrap:break-word;">${content}</div>
+        ${embedHtml}${attachHtml}
       </div>
     </div>`;
   }
 
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${esc(serverName)} - ${esc(ticketName)}</title>
-<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#36393f;color:#dcddde;font-family:'Segoe UI',sans-serif;font-size:14px}.header{background:#2f3136;padding:20px;border-bottom:2px solid #202225}.header h1{color:#fff;font-size:18px}.header p{color:#72767d;font-size:12px;margin-top:4px}.footer{background:#2f3136;padding:12px 16px;text-align:center;color:#72767d;font-size:11px;border-top:2px solid #202225}</style></head><body>
-<div class="header"><h1>${esc(serverName)} — Transcript</h1><p>${esc(ticketName)} · ${esc(status)} · Gerado em ${now}</p></div>
-<div>${rows}</div>
-<div class="footer">Transcript gerado automaticamente</div></body></html>`;
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>${esc(serverName)} — ${esc(ticketName)}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#36393f;color:#dcddde;font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;font-size:15px;line-height:1.5}
+a{color:#00b0f4;text-decoration:none}a:hover{text-decoration:underline}
+.header{background:#2f3136;padding:24px 20px;border-bottom:2px solid #202225;display:flex;align-items:center;gap:16px}
+.header-icon{width:48px;height:48px;background:#5865F2;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.header h1{color:#fff;font-size:20px;font-weight:700}
+.header p{color:#72767d;font-size:13px;margin-top:2px}
+.stats{display:flex;gap:24px;margin-top:6px}
+.stats span{color:#b9bbbe;font-size:12px}
+.stats span strong{color:#fff}
+.messages{min-height:200px}
+.divider{text-align:center;padding:8px 20px;color:#72767d;font-size:12px;border-top:1px solid #42454a;margin:0}
+.footer{background:#2f3136;padding:16px 20px;text-align:center;color:#72767d;font-size:12px;border-top:2px solid #202225}
+</style></head><body>
+<div class="header">
+  <div class="header-icon">🎫</div>
+  <div>
+    <h1>${esc(serverName)}</h1>
+    <p>${esc(ticketName)} · ${esc(status)}</p>
+    <div class="stats">
+      <span><strong>${msgs.length}</strong> mensagens</span>
+      <span>Gerado em <strong>${now}</strong></span>
+    </div>
+  </div>
+</div>
+<div class="messages">${rows}</div>
+<div class="footer">Transcript gerado automaticamente · ${esc(serverName)}</div>
+</body></html>`;
 }
 
 // ── Send Ticket Log ──
