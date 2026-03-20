@@ -709,34 +709,47 @@ async function sendTicketLog(client, ticket, closedByUserId, closedByUsername, a
 
   // Build transcript and upload
   let components = [];
+  let transcriptFallbackBuffer = null;
 
   if (msgs.length > 0) {
+    let htmlTranscript;
     try {
-      const htmlTranscript = generateHtmlTranscript(msgs, tenant.name || "Servidor", `ticket-${ticket.discord_username}`, statusLabel);
+      htmlTranscript = generateHtmlTranscript(msgs, tenant.name || "Servidor", `ticket-${ticket.discord_username}`, statusLabel);
+    } catch (genErr) {
+      console.error(`[sendTicketLog] Transcript generation error: ${genErr.message}`);
+    }
+
+    if (htmlTranscript) {
       const fileName = `transcripts/${ticket.tenant_id}/${ticket.id}.html`;
       const htmlBuffer = Buffer.from(htmlTranscript, "utf-8");
-
-      const { error: uploadErr } = await supabase.storage
-        .from("tenant-assets")
-        .upload(fileName, htmlBuffer, { contentType: "text/html; charset=utf-8", upsert: true, cacheControl: "no-cache" });
-
-      if (uploadErr) {
-        console.error(`[sendTicketLog] Storage upload error: ${uploadErr.message}`);
-      }
+      transcriptFallbackBuffer = htmlBuffer;
 
       let transcriptUrl = null;
-      const { data: signedData, error: signedErr } = await supabase.storage
-        .from("tenant-assets")
-        .createSignedUrl(fileName, 60 * 60 * 24 * 7);
 
-      if (!signedErr && signedData?.signedUrl) {
-        transcriptUrl = signedData.signedUrl;
-      } else {
-        if (signedErr) {
-          console.error(`[sendTicketLog] Signed URL error: ${signedErr.message}`);
+      // Try upload
+      try {
+        // First try to remove existing file (upsert can be unreliable)
+        await supabase.storage.from("tenant-assets").remove([fileName]);
+      } catch {}
+
+      try {
+        const { error: uploadErr } = await supabase.storage
+          .from("tenant-assets")
+          .upload(fileName, htmlBuffer, { contentType: "text/html; charset=utf-8", upsert: true, cacheControl: "no-cache" });
+
+        if (uploadErr) {
+          console.error(`[sendTicketLog] Storage upload error: ${uploadErr.message}`);
+        } else {
+          console.log(`[sendTicketLog] Transcript uploaded: ${fileName}`);
+          // Use public URL since bucket is public
+          const { data: urlData } = supabase.storage.from("tenant-assets").getPublicUrl(fileName);
+          if (urlData?.publicUrl) {
+            // Add cache-busting param
+            transcriptUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+          }
         }
-        const { data: urlData } = supabase.storage.from("tenant-assets").getPublicUrl(fileName);
-        transcriptUrl = urlData?.publicUrl || null;
+      } catch (storageErr) {
+        console.error(`[sendTicketLog] Storage error: ${storageErr.message}`);
       }
 
       if (transcriptUrl) {
@@ -744,8 +757,6 @@ async function sendTicketLog(client, ticket, closedByUserId, closedByUsername, a
           new ButtonBuilder().setLabel("Ver Transcript").setEmoji("🔄").setStyle(ButtonStyle.Link).setURL(transcriptUrl)
         )];
       }
-    } catch (transcriptErr) {
-      console.error(`[sendTicketLog] Transcript generation error: ${transcriptErr.message}`);
     }
   }
 
