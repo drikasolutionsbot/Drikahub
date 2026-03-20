@@ -59,7 +59,6 @@ const EditBotProfileModal = ({ open, onOpenChange, tenant, tenantId, refetchTena
           updates: {
             bot_name: botName.trim() || null,
             bot_avatar_url: botAvatarUrl.trim() || null,
-            bot_status: botStatus.trim() || "/panel",
           },
         },
       });
