@@ -141,6 +141,6 @@ export const embedTemplates: EmbedTemplate[] = [
       footer_icon_url: "",
       timestamp: true,
       fields: [],
-    },
+      buttons: [],
   },
 ];
