@@ -760,8 +760,8 @@ async function sendTicketLog(client, ticket, closedByUserId, closedByUsername, a
   try {
     const sendPayload = { embeds: [logEmbed], components };
 
-    // If transcript upload failed but we have buffer, attach as file fallback
-    if (components.length === 0 && transcriptFallbackBuffer) {
+    // Sempre anexar o HTML quando existir, mesmo com botão ativo
+    if (transcriptFallbackBuffer) {
       const { AttachmentBuilder } = require("discord.js");
       sendPayload.files = [new AttachmentBuilder(transcriptFallbackBuffer, { name: `transcript-${ticket.id.slice(0, 8)}.html` })];
     }
