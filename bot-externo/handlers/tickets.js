@@ -347,7 +347,7 @@ function generateHtmlTranscript(msgs, serverName, ticketName, status) {
   for (const m of msgs) {
     const ts = new Date(m.createdTimestamp).toLocaleString("pt-BR");
     const author = m.author?.username || "Desconhecido";
-    const avatar = m.author?.displayAvatarURL?.({ size: 40 }) || "";
+    const avatar = m.author?.displayAvatarURL?.({ size: 64 }) || "";
     let content = esc(m.content || "");
     if (!content && m.embeds?.length) content = "<em>[embed]</em>";
     if (!content && m.attachments?.size) content = [...m.attachments.values()].map((a) => `<a href="${esc(a.url)}">${esc(a.name)}</a>`).join(", ");
