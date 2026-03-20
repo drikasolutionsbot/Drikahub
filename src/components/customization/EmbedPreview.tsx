@@ -1,9 +1,9 @@
+import { ExternalLink } from "lucide-react";
 import type { EmbedData } from "./types";
 
 /** Minimal markdown: bold, italic, underline, links */
 const renderMarkdown = (text: string) => {
   if (!text) return null;
-  // Process: bold, italic, underline, inline code
   const parts = text.split(/(\*\*.*?\*\*|__.*?__|_.*?_|\*.*?\*|`.*?`|\[.*?\]\(.*?\))/g);
   return parts.map((part, i) => {
     if (part.startsWith("**") && part.endsWith("**"))
@@ -21,10 +21,19 @@ const renderMarkdown = (text: string) => {
   });
 };
 
+const BUTTON_COLORS: Record<string, string> = {
+  primary: "#5865F2",
+  secondary: "#4f545c",
+  success: "#57F287",
+  danger: "#ED4245",
+  link: "#4f545c",
+};
+
 const EmbedPreview = ({ embed }: { embed: EmbedData }) => {
   const hasContent = embed.title || embed.description || embed.author_name || embed.fields.length > 0 || embed.image_url || embed.thumbnail_url || embed.footer_text;
+  const buttons = (embed.buttons || []).filter(b => b.enabled);
 
-  if (!hasContent) {
+  if (!hasContent && buttons.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
         Preencha os campos para visualizar o embed.
@@ -34,106 +43,114 @@ const EmbedPreview = ({ embed }: { embed: EmbedData }) => {
 
   return (
     <div className="font-[Whitney,Helvetica_Neue,Helvetica,Arial,sans-serif] text-sm">
-      {/* Discord message wrapper */}
       <div className="flex gap-4 p-4">
-        {/* Bot avatar */}
         <div className="h-10 w-10 rounded-full bg-[#5865F2] flex items-center justify-center shrink-0">
           <span className="text-white text-xs font-bold">B</span>
         </div>
         <div className="min-w-0 flex-1">
-          {/* Bot name + timestamp */}
           <div className="flex items-baseline gap-2 mb-1">
             <span className="font-medium text-white text-[0.95rem]">Drika Bot</span>
             <span className="text-[#72767d] text-[0.7rem]">Hoje às {new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
           </div>
 
-          {/* Embed */}
-          <div
-            className="rounded overflow-hidden max-w-[520px] border-l-4"
-            style={{ borderColor: embed.color, backgroundColor: "#2f3136" }}
-          >
-            <div className="p-4 flex gap-4">
-              <div className="flex-1 min-w-0 space-y-2">
-                {/* Author */}
-                {embed.author_name && (
-                  <div className="flex items-center gap-2">
-                    {embed.author_icon_url && (
-                      <img src={embed.author_icon_url} alt="" className="h-6 w-6 rounded-full" onError={e => (e.currentTarget.style.display = "none")} />
-                    )}
-                    <span className="text-xs font-medium text-white">
-                      {embed.author_url ? (
-                        <a href={embed.author_url} className="hover:underline text-white" target="_blank" rel="noreferrer">{embed.author_name}</a>
-                      ) : embed.author_name}
-                    </span>
-                  </div>
-                )}
+          {hasContent && (
+            <div
+              className="rounded overflow-hidden max-w-[520px] border-l-4"
+              style={{ borderColor: embed.color, backgroundColor: "#2f3136" }}
+            >
+              <div className="p-4 flex gap-4">
+                <div className="flex-1 min-w-0 space-y-2">
+                  {embed.author_name && (
+                    <div className="flex items-center gap-2">
+                      {embed.author_icon_url && (
+                        <img src={embed.author_icon_url} alt="" className="h-6 w-6 rounded-full" onError={e => (e.currentTarget.style.display = "none")} />
+                      )}
+                      <span className="text-xs font-medium text-white">
+                        {embed.author_url ? (
+                          <a href={embed.author_url} className="hover:underline text-white" target="_blank" rel="noreferrer">{embed.author_name}</a>
+                        ) : embed.author_name}
+                      </span>
+                    </div>
+                  )}
 
-                {/* Title */}
-                {embed.title && (
-                  <div className="font-semibold text-white">
-                    {embed.url ? (
-                      <a href={embed.url} className="text-[#00aff4] hover:underline">{embed.title}</a>
-                    ) : embed.title}
-                  </div>
-                )}
+                  {embed.title && (
+                    <div className="font-semibold text-white">
+                      {embed.url ? (
+                        <a href={embed.url} className="text-[#00aff4] hover:underline">{embed.title}</a>
+                      ) : embed.title}
+                    </div>
+                  )}
 
-                {/* Description */}
-                {embed.description && (
-                  <div className="text-[#dcddde] text-[0.875rem] leading-[1.125rem] whitespace-pre-wrap">
-                    {renderMarkdown(embed.description)}
-                  </div>
-                )}
+                  {embed.description && (
+                    <div className="text-[#dcddde] text-[0.875rem] leading-[1.125rem] whitespace-pre-wrap">
+                      {renderMarkdown(embed.description)}
+                    </div>
+                  )}
 
-                {/* Fields */}
-                {embed.fields.length > 0 && (
-                  <div className="grid gap-2 mt-2" style={{
-                    gridTemplateColumns: embed.fields.some(f => f.inline) ? "repeat(3, 1fr)" : "1fr",
-                  }}>
-                    {embed.fields.map(field => (
-                      <div key={field.id} className={field.inline ? "" : "col-span-full"}>
-                        <div className="text-xs font-semibold text-white mb-0.5">{field.name || "Campo"}</div>
-                        <div className="text-[0.875rem] text-[#dcddde]">{renderMarkdown(field.value || "Valor")}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                  {embed.fields.length > 0 && (
+                    <div className="grid gap-2 mt-2" style={{
+                      gridTemplateColumns: embed.fields.some(f => f.inline) ? "repeat(3, 1fr)" : "1fr",
+                    }}>
+                      {embed.fields.map(field => (
+                        <div key={field.id} className={field.inline ? "" : "col-span-full"}>
+                          <div className="text-xs font-semibold text-white mb-0.5">{field.name || "Campo"}</div>
+                          <div className="text-[0.875rem] text-[#dcddde]">{renderMarkdown(field.value || "Valor")}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
-                {/* Image */}
-                {embed.image_url && (
+                  {embed.image_url && (
+                    <img
+                      src={embed.image_url}
+                      alt=""
+                      className="rounded mt-2 max-w-full max-h-[300px] object-contain"
+                      onError={e => (e.currentTarget.style.display = "none")}
+                    />
+                  )}
+                </div>
+
+                {embed.thumbnail_url && (
                   <img
-                    src={embed.image_url}
+                    src={embed.thumbnail_url}
                     alt=""
-                    className="rounded mt-2 max-w-full max-h-[300px] object-contain"
+                    className="h-20 w-20 rounded object-cover shrink-0"
                     onError={e => (e.currentTarget.style.display = "none")}
                   />
                 )}
               </div>
 
-              {/* Thumbnail */}
-              {embed.thumbnail_url && (
-                <img
-                  src={embed.thumbnail_url}
-                  alt=""
-                  className="h-20 w-20 rounded object-cover shrink-0"
-                  onError={e => (e.currentTarget.style.display = "none")}
-                />
+              {(embed.footer_text || embed.timestamp) && (
+                <div className="px-4 pb-3 flex items-center gap-2 text-[0.75rem] text-[#72767d]">
+                  {embed.footer_icon_url && (
+                    <img src={embed.footer_icon_url} alt="" className="h-5 w-5 rounded-full" onError={e => (e.currentTarget.style.display = "none")} />
+                  )}
+                  <span>
+                    {embed.footer_text}
+                    {embed.footer_text && embed.timestamp && " • "}
+                    {embed.timestamp && new Date().toLocaleDateString("pt-BR")}
+                  </span>
+                </div>
               )}
             </div>
+          )}
 
-            {/* Footer */}
-            {(embed.footer_text || embed.timestamp) && (
-              <div className="px-4 pb-3 flex items-center gap-2 text-[0.75rem] text-[#72767d]">
-                {embed.footer_icon_url && (
-                  <img src={embed.footer_icon_url} alt="" className="h-5 w-5 rounded-full" onError={e => (e.currentTarget.style.display = "none")} />
-                )}
-                <span>
-                  {embed.footer_text}
-                  {embed.footer_text && embed.timestamp && " • "}
-                  {embed.timestamp && new Date().toLocaleDateString("pt-BR")}
-                </span>
-              </div>
-            )}
-          </div>
+          {/* Buttons */}
+          {buttons.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2 max-w-[520px]">
+              {buttons.map(btn => (
+                <button
+                  key={btn.id}
+                  className="flex items-center gap-1.5 px-4 py-1.5 rounded text-sm font-medium text-white transition-opacity hover:opacity-90"
+                  style={{ backgroundColor: BUTTON_COLORS[btn.style] || BUTTON_COLORS.primary }}
+                >
+                  {btn.emoji && <span>{btn.emoji}</span>}
+                  <span>{btn.label || "Botão"}</span>
+                  {btn.style === "link" && <ExternalLink className="h-3 w-3 ml-0.5 opacity-70" />}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
