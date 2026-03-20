@@ -5,6 +5,15 @@ export interface EmbedField {
   inline: boolean;
 }
 
+export interface EmbedButton {
+  id: string;
+  label: string;
+  emoji: string;
+  style: "primary" | "secondary" | "success" | "danger" | "link";
+  url: string;
+  enabled: boolean;
+}
+
 export interface EmbedData {
   color: string;
   author_name: string;
@@ -19,6 +28,7 @@ export interface EmbedData {
   footer_icon_url: string;
   timestamp: boolean;
   fields: EmbedField[];
+  buttons: EmbedButton[];
 }
 
 export const defaultEmbed: EmbedData = {
@@ -35,6 +45,7 @@ export const defaultEmbed: EmbedData = {
   footer_icon_url: "",
   timestamp: false,
   fields: [],
+  buttons: [],
 };
 
 export interface EmbedTemplate {
@@ -63,6 +74,7 @@ export const embedTemplates: EmbedTemplate[] = [
       footer_icon_url: "",
       timestamp: true,
       fields: [],
+      buttons: [],
     },
   },
   {
@@ -87,6 +99,7 @@ export const embedTemplates: EmbedTemplate[] = [
         { id: "f2", name: "💰 Valor", value: "R$ 0,00", inline: true },
         { id: "f3", name: "📦 Status", value: "Entregue", inline: true },
       ],
+      buttons: [],
     },
   },
   {
@@ -110,6 +123,7 @@ export const embedTemplates: EmbedTemplate[] = [
         { id: "f1", name: "👤 Aberto por", value: "{user}", inline: true },
         { id: "f2", name: "📋 Categoria", value: "Geral", inline: true },
       ],
+      buttons: [],
     },
   },
   {
@@ -130,6 +144,7 @@ export const embedTemplates: EmbedTemplate[] = [
       footer_icon_url: "",
       timestamp: true,
       fields: [],
+      buttons: [],
     },
   },
 ];

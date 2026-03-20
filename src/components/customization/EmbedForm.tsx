@@ -4,19 +4,30 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import ImageUploadField from "./ImageUploadField";
-import type { EmbedData, EmbedField } from "./types";
+import type { EmbedData, EmbedField, EmbedButton } from "./types";
 
 interface EmbedFormProps {
   embed: EmbedData;
   onChange: (embed: EmbedData) => void;
 }
 
+const BUTTON_STYLES = [
+  { value: "primary", label: "Azul (Primary)", color: "#5865F2" },
+  { value: "secondary", label: "Cinza (Secondary)", color: "#4f545c" },
+  { value: "success", label: "Verde (Success)", color: "#57F287" },
+  { value: "danger", label: "Vermelho (Danger)", color: "#ED4245" },
+  { value: "link", label: "Link (URL)", color: "#4f545c" },
+];
+
 const EmbedForm = ({ embed, onChange }: EmbedFormProps) => {
   const update = <K extends keyof EmbedData>(key: K, value: EmbedData[K]) => {
     onChange({ ...embed, [key]: value });
   };
+
+  const buttons = embed.buttons || [];
 
   const addField = () => {
     update("fields", [
@@ -31,6 +42,21 @@ const EmbedForm = ({ embed, onChange }: EmbedFormProps) => {
 
   const removeField = (id: string) => {
     update("fields", embed.fields.filter(f => f.id !== id));
+  };
+
+  const addButton = () => {
+    update("buttons", [
+      ...buttons,
+      { id: crypto.randomUUID(), label: "Clique aqui", emoji: "", style: "primary" as const, url: "", enabled: true },
+    ]);
+  };
+
+  const updateButton = (id: string, patch: Partial<EmbedButton>) => {
+    update("buttons", buttons.map(b => b.id === id ? { ...b, ...patch } : b));
+  };
+
+  const removeButton = (id: string) => {
+    update("buttons", buttons.filter(b => b.id !== id));
   };
 
   return (
@@ -127,6 +153,67 @@ const EmbedForm = ({ embed, onChange }: EmbedFormProps) => {
             {embed.fields.length < 25 && (
               <Button variant="outline" size="sm" className="w-full" onClick={addField}>
                 <Plus className="h-3.5 w-3.5 mr-1.5" /> Adicionar Campo
+              </Button>
+            )}
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Buttons */}
+        <AccordionItem value="buttons" className="border border-border rounded-lg px-4">
+          <AccordionTrigger className="text-sm font-medium py-3">
+            Botões ({buttons.length}/5)
+          </AccordionTrigger>
+          <AccordionContent className="space-y-3 pb-4">
+            {buttons.map((btn, idx) => (
+              <div key={btn.id} className="rounded-lg border border-border bg-background p-3 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-foreground">Botão {idx + 1}</span>
+                  <div className="flex items-center gap-2">
+                    <Switch checked={btn.enabled} onCheckedChange={v => updateButton(btn.id, { enabled: v })} />
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeButton(btn.id)}>
+                      <TrashIcon className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">Label</label>
+                    <Input value={btn.label} onChange={e => updateButton(btn.id, { label: e.target.value })} placeholder="Texto do botão" className="bg-sidebar border-border text-sm" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">Emoji</label>
+                    <Input value={btn.emoji} onChange={e => updateButton(btn.id, { emoji: e.target.value })} placeholder="😀 ou vazio" className="bg-sidebar border-border text-sm" />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">Estilo</label>
+                  <Select value={btn.style} onValueChange={v => updateButton(btn.id, { style: v as EmbedButton["style"] })}>
+                    <SelectTrigger className="bg-sidebar border-border text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {BUTTON_STYLES.map(s => (
+                        <SelectItem key={s.value} value={s.value}>
+                          <span className="flex items-center gap-2">
+                            <span className="h-3 w-3 rounded-sm shrink-0" style={{ background: s.color }} />
+                            {s.label}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {btn.style === "link" && (
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">URL</label>
+                    <Input value={btn.url} onChange={e => updateButton(btn.id, { url: e.target.value })} placeholder="https://..." className="bg-sidebar border-border text-sm" />
+                  </div>
+                )}
+              </div>
+            ))}
+            {buttons.length < 5 && (
+              <Button variant="outline" size="sm" className="w-full" onClick={addButton}>
+                <Plus className="h-3.5 w-3.5 mr-1.5" /> Adicionar Botão
               </Button>
             )}
           </AccordionContent>
