@@ -164,6 +164,22 @@ const SettingsServerTab = ({ tenant, tenantId, refetchTenant }: Props) => {
           // Auto-link directly
           setDetectedGuild(newGuilds[0]);
           await autoLinkGuild(newGuilds[0]);
+          return;
+        }
+
+        // Fallback totalmente automático: se o bot já entrou antes do snapshot,
+        // tenta auto-link no backend sem depender de "guild nova".
+        if (pollCountRef.current % 2 === 0) {
+          const { data: autoData, error: autoError } = await supabase.functions.invoke("discord-bot-guilds", {
+            body: { ...getRequestBody() },
+          });
+
+          if (!autoError && autoData && !Array.isArray(autoData) && autoData.auto_linked) {
+            stopPolling();
+            setWaitingForBot(false);
+            await refetchTenant();
+            toast({ title: "Servidor conectado automaticamente! 🎉" });
+          }
         }
       } catch {
         // silently retry next interval
@@ -238,34 +254,6 @@ const SettingsServerTab = ({ tenant, tenantId, refetchTenant }: Props) => {
     setDetectedGuild(null);
   };
 
-  const handleManualConnectById = async () => {
-    const guildId = window.prompt("Cole o ID do servidor Discord para vincular:");
-    if (!guildId) return;
-
-    const sanitizedGuildId = guildId.trim();
-    if (!/^\d{17,20}$/.test(sanitizedGuildId)) {
-      toast({
-        title: "ID inválido",
-        description: "O ID do servidor deve ter entre 17 e 20 dígitos.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const { data: verifyData, error: verifyError } = await supabase.functions.invoke("discord-bot-guilds", {
-        body: { ...getRequestBody(), action: "verify_guild", guild_id: sanitizedGuildId },
-      });
-
-      if (verifyError) throw verifyError;
-      if (verifyData?.error) throw new Error(verifyData.error);
-      if (!verifyData?.guild) throw new Error("Não foi possível validar este servidor.");
-
-      await autoLinkGuild(verifyData.guild as Guild);
-    } catch (err: any) {
-      toast({ title: "Erro ao conectar", description: err.message, variant: "destructive" });
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -353,18 +341,8 @@ const SettingsServerTab = ({ tenant, tenantId, refetchTenant }: Props) => {
                   {inviteLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bot className="h-4 w-4" />}
                   Conectar Bot ao Servidor
                 </Button>
-                <Button
-                  onClick={handleManualConnectById}
-                  variant="outline"
-                  className="w-full"
-                  size="sm"
-                  disabled={connecting}
-                >
-                  Já adicionei o bot — Conectar por ID do servidor
-                </Button>
                 <p className="text-xs text-muted-foreground">
-                  Você será redirecionado ao Discord para autorizar o bot. Se a detecção automática não funcionar,
-                  use a conexão por ID (Modo Desenvolvedor do Discord).
+                  Você será redirecionado ao Discord para autorizar o bot. Ao voltar, o servidor será vinculado automaticamente.
                 </p>
               </div>
             ) : waitingForBot ? (
@@ -378,28 +356,14 @@ const SettingsServerTab = ({ tenant, tenantId, refetchTenant }: Props) => {
                     </p>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Button
-                    variant="outline"
-                    onClick={handleCancelPolling}
-                    className="w-full"
-                    size="sm"
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={async () => {
-                      handleCancelPolling();
-                      await handleManualConnectById();
-                    }}
-                    className="w-full"
-                    size="sm"
-                    disabled={connecting}
-                  >
-                    Conectar por ID do servidor
-                  </Button>
-                </div>
+                <Button
+                  variant="outline"
+                  onClick={handleCancelPolling}
+                  className="w-full"
+                  size="sm"
+                >
+                  Cancelar
+                </Button>
               </div>
             ) : connecting ? (
               <div className="rounded-xl bg-primary/5 border border-primary/20 p-6 text-center space-y-3">
