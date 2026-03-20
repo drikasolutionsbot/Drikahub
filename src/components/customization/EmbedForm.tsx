@@ -218,12 +218,10 @@ const EmbedForm = ({ embed, onChange }: EmbedFormProps) => {
                     </SelectContent>
                   </Select>
                 </div>
-                {btn.style === "link" && (
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">URL</label>
-                    <Input value={btn.url} onChange={e => updateButton(btn.id, { url: e.target.value })} placeholder="https://..." className="bg-sidebar border-border text-sm" />
-                  </div>
-                )}
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">URL do Botão</label>
+                  <Input value={btn.url} onChange={e => updateButton(btn.id, { url: e.target.value })} placeholder="https://..." className="bg-sidebar border-border text-sm" />
+                </div>
               </div>
             ))}
             {buttons.length < 6 && (
