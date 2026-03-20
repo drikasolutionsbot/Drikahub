@@ -128,8 +128,8 @@ const SettingsServerTab = ({ tenant, tenantId, refetchTenant }: Props) => {
     pollIntervalRef.current = setInterval(async () => {
       pollCountRef.current++;
 
-      // Stop after 60 polls (2 minutes)
-      if (pollCountRef.current > 60) {
+      // Stop after 40 polls (~3.5 minutes with 5s interval)
+      if (pollCountRef.current > 40) {
         stopPolling();
         setWaitingForBot(false);
         toast({
@@ -142,6 +142,9 @@ const SettingsServerTab = ({ tenant, tenantId, refetchTenant }: Props) => {
 
       try {
         const currentGuilds = await fetchAllBotGuilds();
+        // null means API error / rate limit — skip this iteration
+        if (!currentGuilds) return;
+
         const newGuilds = currentGuilds.filter((g) => !guildsBeforeInviteRef.current.has(g.id));
 
         if (newGuilds.length > 0) {
@@ -163,9 +166,9 @@ const SettingsServerTab = ({ tenant, tenantId, refetchTenant }: Props) => {
           await autoLinkGuild(newGuilds[0]);
         }
       } catch {
-        // silently retry
+        // silently retry next interval
       }
-    }, 2000);
+    }, 5000);
   }, [fetchAllBotGuilds, stopPolling]);
 
   const autoLinkGuild = async (guild: Guild) => {
