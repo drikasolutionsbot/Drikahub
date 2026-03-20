@@ -438,7 +438,12 @@ const SettingsPage = () => {
           <SettingsServerTab tenant={tenant} tenantId={tenantId} refetchTenant={refetchTenant} />
         </TabsContent>
 
-
+        {/* Embeds Tab */}
+        <TabsContent value="embeds">
+          <div className="mt-6">
+            <EmbedBuilder />
+          </div>
+        </TabsContent>
 
       </Tabs>
       </div>
