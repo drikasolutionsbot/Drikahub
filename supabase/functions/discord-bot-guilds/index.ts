@@ -38,12 +38,14 @@ serve(async (req) => {
     let accessToken: string | null = null;
     let action: string | null = null;
     let invitePermissions = "536870920";
+    let guildIdFromBody: string | null = null;
 
     try {
       const body = await req.json();
       tenantIdFromBody = body?.tenant_id || null;
       accessToken = body?.token || null;
       action = body?.action || null;
+      guildIdFromBody = body?.guild_id || null;
       if (typeof body?.permissions === "string" && /^\d+$/.test(body.permissions)) {
         invitePermissions = body.permissions;
       }
