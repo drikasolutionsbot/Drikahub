@@ -34,12 +34,15 @@ const EmbedBuilder = () => {
   const fetchSavedEmbeds = async () => {
     if (!tenantId) return;
     setLoadingEmbeds(true);
-    const { data } = await supabase
-      .from("saved_embeds")
-      .select("*")
-      .eq("tenant_id", tenantId)
-      .order("created_at", { ascending: false });
-    setSavedEmbeds((data as unknown as SavedEmbed[]) || []);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-saved-embeds", {
+        body: { action: "list", tenant_id: tenantId },
+      });
+      if (error) throw error;
+      setSavedEmbeds((data?.embeds as SavedEmbed[]) || []);
+    } catch {
+      setSavedEmbeds([]);
+    }
     setLoadingEmbeds(false);
   };
 
@@ -103,17 +106,18 @@ const EmbedBuilder = () => {
     setSaving(true);
     try {
       if (editingId) {
-        const { error } = await supabase
-          .from("saved_embeds")
-          .update({ name: embedName.trim(), embed_data: JSON.parse(JSON.stringify(embed)), updated_at: new Date().toISOString() })
-          .eq("id", editingId);
+        const { data, error } = await supabase.functions.invoke("manage-saved-embeds", {
+          body: { action: "update", tenant_id: tenantId, id: editingId, name: embedName.trim(), embed_data: JSON.parse(JSON.stringify(embed)) },
+        });
         if (error) throw error;
+        if (data?.error) throw new Error(data.error);
         toast.success("Embed atualizado!");
       } else {
-        const { error } = await supabase
-          .from("saved_embeds")
-          .insert([{ tenant_id: tenantId, name: embedName.trim(), embed_data: JSON.parse(JSON.stringify(embed)) }]);
+        const { data, error } = await supabase.functions.invoke("manage-saved-embeds", {
+          body: { action: "save", tenant_id: tenantId, name: embedName.trim(), embed_data: JSON.parse(JSON.stringify(embed)) },
+        });
         if (error) throw error;
+        if (data?.error) throw new Error(data.error);
         toast.success("Embed salvo!");
       }
       setSaveDialogOpen(false);
@@ -135,8 +139,10 @@ const EmbedBuilder = () => {
   };
 
   const deleteEmbed = async (id: string) => {
-    const { error } = await supabase.from("saved_embeds").delete().eq("id", id);
-    if (error) {
+    const { data, error } = await supabase.functions.invoke("manage-saved-embeds", {
+      body: { action: "delete", tenant_id: tenantId, id },
+    });
+    if (error || data?.error) {
       toast.error("Erro ao excluir");
       return;
     }
@@ -226,8 +232,8 @@ const EmbedBuilder = () => {
         body.buttons = enabledButtons.map(b => ({
           label: b.label,
           emoji: b.emoji || undefined,
-          style: b.style,
-          url: b.style === "link" ? b.url : undefined,
+          style: b.url ? "link" : b.style,
+          url: b.url || undefined,
         }));
       }
       const { data, error } = await supabase.functions.invoke("send-webhook-message", {
