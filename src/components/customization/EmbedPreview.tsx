@@ -26,6 +26,7 @@ const BUTTON_COLORS: Record<string, string> = {
   secondary: "#4f545c",
   success: "#57F287",
   danger: "#ED4245",
+  glass: "rgba(255,255,255,0.08)",
   link: "#4f545c",
 };
 
