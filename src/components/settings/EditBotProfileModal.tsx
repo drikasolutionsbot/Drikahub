@@ -119,20 +119,6 @@ const EditBotProfileModal = ({ open, onOpenChange, tenant, tenantId, refetchTena
             />
           </div>
 
-          {/* Status */}
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold">Status do Bot</Label>
-            <Textarea
-              value={botStatus}
-              onChange={(e) => setBotStatus(e.target.value)}
-              rows={2}
-              className="resize-none font-mono text-sm"
-              placeholder={"/panel\nDrika Solutions"}
-            />
-            <p className="text-[11px] text-muted-foreground">
-              Texto exibido como "Jogando" no Discord. Um status por linha (alterna automaticamente).
-            </p>
-          </div>
         </div>
 
         <DialogFooter className="gap-2 sm:gap-2">
