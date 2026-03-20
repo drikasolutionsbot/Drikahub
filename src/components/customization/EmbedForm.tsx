@@ -60,6 +60,14 @@ const EmbedForm = ({ embed, onChange }: EmbedFormProps) => {
     update("buttons", buttons.filter(b => b.id !== id));
   };
 
+  const moveButton = (idx: number, dir: -1 | 1) => {
+    const arr = [...buttons];
+    const target = idx + dir;
+    if (target < 0 || target >= arr.length) return;
+    [arr[idx], arr[target]] = [arr[target], arr[idx]];
+    update("buttons", arr);
+  };
+
   return (
     <div className="space-y-1">
       <Accordion type="multiple" defaultValue={["general", "body"]} className="space-y-2">
