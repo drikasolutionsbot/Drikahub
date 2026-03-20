@@ -80,6 +80,10 @@ const BotCustomizationPage = () => {
             <span className="text-sm text-muted-foreground">Status</span>
             <span className="text-sm font-semibold text-emerald-400">Online</span>
           </div>
+          <div className="flex items-center justify-between py-3">
+            <span className="text-sm text-muted-foreground">Jogando</span>
+            <span className="text-sm font-mono text-foreground">{botStatus.split("\n")[0]}</span>
+          </div>
         </div>
       </div>
 
