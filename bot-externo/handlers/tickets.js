@@ -371,7 +371,9 @@ function generateHtmlTranscript(msgs, serverName, ticketName, status) {
 
 // ── Send Ticket Log ──
 async function sendTicketLog(client, ticket, closedByUserId, closedByUsername, action, tenant) {
+  console.log(`[sendTicketLog] Starting for ticket ${ticket.id}, action: ${action}`);
   const storeConfig = await getStoreConfig(ticket.tenant_id);
+  console.log(`[sendTicketLog] ticket_logs_channel_id: ${storeConfig?.ticket_logs_channel_id || "NOT SET"}`);
 
   // Fetch messages
   let msgs = [];
@@ -380,7 +382,10 @@ async function sendTicketLog(client, ticket, closedByUserId, closedByUsername, a
       const ch = await client.channels.fetch(ticket.discord_channel_id);
       const fetched = await ch.messages.fetch({ limit: 100 });
       msgs = [...fetched.values()].reverse();
-    } catch {}
+      console.log(`[sendTicketLog] Fetched ${msgs.length} messages from thread`);
+    } catch (fetchErr) {
+      console.error(`[sendTicketLog] Failed to fetch messages: ${fetchErr.message}`);
+    }
   }
 
   const statusLabel = action === "deleted" ? "Deletado" : "Fechado";
@@ -390,18 +395,24 @@ async function sendTicketLog(client, ticket, closedByUserId, closedByUsername, a
     const logEmbed = new EmbedBuilder()
       .setTitle(`Ticket - ${statusLabel}`)
       .setColor(action === "deleted" ? 0xED4245 : 0x2B2D31)
-      .addFields({ name: "👤 Moderador", value: `<@${closedByUserId}>\n@${closedByUsername}`, inline: false })
+      .addFields(
+        { name: "👤 Moderador", value: `<@${closedByUserId}>\n@${closedByUsername}`, inline: true },
+        { name: "🎫 Ticket", value: `${ticket.discord_username || "N/A"}\n\`${ticket.id.slice(0, 8)}\``, inline: true },
+      )
       .setTimestamp();
 
     try {
       const logsCh = await client.channels.fetch(storeConfig.ticket_logs_channel_id);
+      console.log(`[sendTicketLog] Found logs channel: ${logsCh.name || logsCh.id}`);
 
       // Upload transcript to Supabase Storage
       let transcriptUrl = null;
       if (htmlTranscript) {
         const fileName = `transcripts/${ticket.tenant_id}/${ticket.id}.html`;
         const { error: uploadErr } = await supabase.storage.from("tenant-assets").upload(fileName, htmlTranscript, { contentType: "text/html", upsert: true });
-        if (!uploadErr) {
+        if (uploadErr) {
+          console.error(`[sendTicketLog] Upload error: ${uploadErr.message}`);
+        } else {
           const { data: urlData } = supabase.storage.from("tenant-assets").getPublicUrl(fileName);
           transcriptUrl = urlData?.publicUrl || null;
         }
@@ -416,7 +427,13 @@ async function sendTicketLog(client, ticket, closedByUserId, closedByUsername, a
       } else {
         await logsCh.send({ embeds: [logEmbed], components });
       }
-    } catch (e) { console.error("Ticket log error:", e.message); }
+      console.log(`[sendTicketLog] Log sent successfully to ${storeConfig.ticket_logs_channel_id}`);
+    } catch (e) {
+      console.error(`[sendTicketLog] Error sending to logs channel: ${e.message}`);
+      console.error(e.stack);
+    }
+  } else {
+    console.warn(`[sendTicketLog] No ticket_logs_channel_id configured for tenant ${ticket.tenant_id}`);
   }
 
   // DM transcript to user
