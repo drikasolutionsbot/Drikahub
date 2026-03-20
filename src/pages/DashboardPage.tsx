@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useTenant } from "@/contexts/TenantContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -62,6 +62,10 @@ const DashboardPage = () => {
 
   // Guild info state
   const [guildInfo, setGuildInfo] = useState<{ member_count: number; presence_count: number; icon: string | null } | null>(null);
+  const [waitingForBot, setWaitingForBot] = useState(false);
+  const guildsBeforeInviteRef = useRef<Set<string>>(new Set());
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollCountRef = useRef(0);
 
   useEffect(() => {
     if (!tenant?.discord_guild_id) {
@@ -91,6 +95,14 @@ const DashboardPage = () => {
   useEffect(() => {
     loadAuditLogs();
   }, [tenant?.id]);
+
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
+  }, []);
 
   const selectedMember = permissions.find(p => p.id === selectedMemberId) ?? null;
   const selectedRole = roles.find(r => r.id === selectedRoleId) ?? null;
@@ -227,16 +239,6 @@ const DashboardPage = () => {
     return map[action] || action;
   };
 
-  if (tenantLoading || !tenant) {
-    return (
-      <div className="space-y-6">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-48" />
-        <Skeleton className="h-64" />
-      </div>
-    );
-  }
-
   const appendGuildToInvite = (inviteUrl: string) => {
     if (!tenant?.discord_guild_id) return inviteUrl;
     try {
@@ -248,20 +250,158 @@ const DashboardPage = () => {
     }
   };
 
+  const getDiscordRequestBody = useCallback(() => {
+    const body: Record<string, unknown> = { tenant_id: tenantId };
+    const tokenSession = sessionStorage.getItem("token_session");
+    if (!tokenSession) return body;
+
+    try {
+      const parsed = JSON.parse(tokenSession);
+      if (parsed?.token) body.token = parsed.token;
+    } catch {
+      // ignore parsing errors
+    }
+
+    return body;
+  }, [tenantId]);
+
+  const stopPolling = useCallback(() => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+    pollCountRef.current = 0;
+  }, []);
+
+  const fetchAllBotGuilds = useCallback(async () => {
+    const { data, error } = await supabase.functions.invoke("discord-bot-guilds", {
+      body: { ...getDiscordRequestBody(), action: "list_all" },
+    });
+
+    if (error || data?.error) return null;
+    const guilds = Array.isArray(data) ? data : (data?.guilds ?? []);
+    return Array.isArray(guilds) ? guilds : null;
+  }, [getDiscordRequestBody]);
+
+  const autoLinkGuild = useCallback(async (guild: { id: string; name: string }) => {
+    if (!tenantId) return false;
+
+    try {
+      const { data, error } = await supabase.functions.invoke("update-tenant", {
+        body: { tenant_id: tenantId, updates: { discord_guild_id: guild.id } },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      await refetch();
+      stopPolling();
+      setWaitingForBot(false);
+      toast.success(`Servidor ${guild.name} conectado! 🎉`);
+      return true;
+    } catch {
+      return false;
+    }
+  }, [tenantId, refetch, stopPolling]);
+
+  const startPollingForGuildConnection = useCallback(() => {
+    if (!tenantId) return;
+
+    stopPolling();
+    setWaitingForBot(true);
+    pollCountRef.current = 0;
+
+    pollIntervalRef.current = setInterval(async () => {
+      pollCountRef.current += 1;
+
+      if (pollCountRef.current > 40) {
+        stopPolling();
+        setWaitingForBot(false);
+        toast.error("Tempo esgotado para detectar o servidor. Tente novamente.");
+        return;
+      }
+
+      try {
+        const currentGuilds = await fetchAllBotGuilds();
+
+        if (currentGuilds) {
+          const newGuilds = currentGuilds.filter((guild: { id: string }) => !guildsBeforeInviteRef.current.has(guild.id));
+
+          if (newGuilds.length > 0) {
+            const guild = newGuilds[0];
+            const { data: verifyData } = await supabase.functions.invoke("discord-bot-guilds", {
+              body: { ...getDiscordRequestBody(), action: "verify_guild", guild_id: guild.id },
+            });
+
+            if (verifyData?.error) {
+              stopPolling();
+              setWaitingForBot(false);
+              toast.error(verifyData.error);
+              return;
+            }
+
+            const linked = await autoLinkGuild(guild);
+            if (linked) return;
+          }
+        }
+
+        if (pollCountRef.current % 2 === 0) {
+          const { data: autoData, error: autoError } = await supabase.functions.invoke("discord-bot-guilds", {
+            body: { ...getDiscordRequestBody() },
+          });
+
+          if (!autoError && autoData && !Array.isArray(autoData) && autoData.auto_linked) {
+            stopPolling();
+            setWaitingForBot(false);
+            await refetch();
+            toast.success("Servidor conectado automaticamente! 🎉");
+          }
+        }
+      } catch {
+        // keep polling
+      }
+    }, 5000);
+  }, [tenantId, stopPolling, fetchAllBotGuilds, getDiscordRequestBody, autoLinkGuild, refetch]);
+
+  useEffect(() => {
+    if (!waitingForBot || !tenant?.discord_guild_id) return;
+    stopPolling();
+    setWaitingForBot(false);
+  }, [waitingForBot, tenant?.discord_guild_id, stopPolling]);
+
+  if (tenantLoading || !tenant) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-48" />
+        <Skeleton className="h-64" />
+      </div>
+    );
+  }
+
   const handleAddBot = async () => {
     try {
       const { data, error } = await supabase.functions.invoke("discord-bot-guilds", {
-        body: { tenant_id: tenantId, action: "invite_url", permissions: BOT_PERMISSIONS },
+        body: { ...getDiscordRequestBody(), action: "invite_url", permissions: BOT_PERMISSIONS },
       });
 
       if (error || !data?.invite_url) {
         throw new Error(data?.error || error?.message || "Não foi possível gerar o convite do bot externo.");
       }
 
+      const currentGuilds = await fetchAllBotGuilds();
+      guildsBeforeInviteRef.current = new Set((currentGuilds || []).map((guild: { id: string }) => guild.id));
+
       window.open(appendGuildToInvite(data.invite_url), "_blank", "noopener,noreferrer");
+      startPollingForGuildConnection();
     } catch (err: any) {
       toast.error(err?.message || "Não foi possível abrir o convite do bot externo.");
     }
+  };
+
+  const handleCancelBotPolling = () => {
+    stopPolling();
+    setWaitingForBot(false);
   };
 
   const openServerModal = async () => {
@@ -387,9 +527,23 @@ const DashboardPage = () => {
                 <p className="text-sm font-medium text-foreground">Nenhum servidor conectado</p>
                 <p className="text-xs text-muted-foreground mt-1">Adicione o bot ao seu servidor Discord</p>
               </div>
-              <Button variant="outline" className="gap-2 text-sm" onClick={handleAddBot}>
-                <ExternalLink className="h-3.5 w-3.5" /> Adicionar Drika Bot
-              </Button>
+              {waitingForBot ? (
+                <div className="w-full max-w-sm space-y-2">
+                  <div className="rounded-lg border border-border bg-muted/30 p-3">
+                    <div className="flex items-center justify-center gap-2 text-sm text-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                      Aguardando conexão automática...
+                    </div>
+                  </div>
+                  <Button variant="outline" size="sm" className="w-full" onClick={handleCancelBotPolling}>
+                    Cancelar
+                  </Button>
+                </div>
+              ) : (
+                <Button variant="outline" className="gap-2 text-sm" onClick={handleAddBot}>
+                  <ExternalLink className="h-3.5 w-3.5" /> Adicionar Drika Bot
+                </Button>
+              )}
             </div>
           )}
         </div>
