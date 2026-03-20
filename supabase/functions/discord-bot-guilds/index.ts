@@ -296,13 +296,9 @@ serve(async (req) => {
       );
       const available = mapped.filter((g: any) => !claimedByOthers.has(g.id));
 
-      // Only show guilds owned by the current user — never expose other clients' servers
-      const ownerDiscordId = currentTenant.owner_discord_id || resolvedDiscordUserId;
-      let finalGuilds: Array<{ id: string; name: string; icon: string | null }> = [];
-
-      if (ownerDiscordId) {
-        finalGuilds = await getOwnedGuilds(available, ownerDiscordId);
-      }
+      // Privacy: servers already claimed by other tenants are excluded above.
+      // Show all unclaimed servers where the bot is present for the tenant to pick.
+      let finalGuilds = available;
 
       // Auto-link if only one guild available
       let autoLinked = false;
