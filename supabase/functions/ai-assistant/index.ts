@@ -5,22 +5,20 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Lovable AI Gateway models
+// Lovable AI Gateway models — ordered from best to cheapest
 const TEXT_MODELS = [
-  "google/gemini-2.5-flash-lite",
-  "google/gemini-2.5-flash",
   "google/gemini-3-flash-preview",
-  "openai/gpt-5-nano",
-  "openai/gpt-5-mini",
+  "google/gemini-2.5-flash",
   "google/gemini-2.5-pro",
-  "google/gemini-3.1-pro-preview",
-  "openai/gpt-5",
+  "openai/gpt-5-mini",
+  "openai/gpt-5-nano",
+  "google/gemini-2.5-flash-lite",
 ];
 
 const IMAGE_MODELS = [
-  "google/gemini-2.5-flash-image",
   "google/gemini-3.1-flash-image-preview",
   "google/gemini-3-pro-image-preview",
+  "google/gemini-2.5-flash-image",
 ];
 
 async function tryModels(
@@ -74,7 +72,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { type, prompt, context } = await req.json();
+    const { type, prompt, context, attachments } = await req.json();
     
     const apiKey = Deno.env.get("LOVABLE_API_KEY") || "";
     if (!apiKey) throw new Error("LOVABLE_API_KEY is not configured");
@@ -105,11 +103,45 @@ Sempre responda em português brasileiro. Use exemplos reais e dicas acionáveis
 O usuário vai descrever o que precisa (banner, logo, thumbnail, etc.) e você deve criar um prompt detalhado em INGLÊS para gerar a imagem.
 Retorne APENAS o prompt em inglês, sem explicações adicionais. O prompt deve ser detalhado, descritivo e otimizado para modelos de geração de imagem.
 Inclua estilo, cores, composição, iluminação e mood.`,
+
+      analyze: `Você é um assistente de IA avançado e analista visual. Quando o usuário envia uma imagem ou documento, analise detalhadamente o conteúdo.
+Para imagens: descreva o que vê, identifique elementos, cores, textos, logos, pessoas, objetos.
+Para documentos/textos: resuma, extraia informações-chave, organize os dados.
+Sempre responda em português brasileiro de forma clara e estruturada com markdown.
+Se o usuário fizer uma pergunta sobre o conteúdo, responda de forma precisa e completa.`,
     };
 
-    const systemPrompt = systemPrompts[type] || systemPrompts.copy;
+    // Build user message content (multimodal if attachments present)
+    const buildUserContent = (userPrompt: string, userAttachments?: any[]) => {
+      if (!userAttachments || userAttachments.length === 0) {
+        return userPrompt;
+      }
+      
+      const parts: any[] = [];
+      
+      // Add text prompt
+      if (userPrompt.trim()) {
+        parts.push({ type: "text", text: userPrompt });
+      }
+      
+      // Add image attachments
+      for (const att of userAttachments) {
+        if (att.type === "image" && att.data) {
+          parts.push({
+            type: "image_url",
+            image_url: { url: att.data },
+          });
+        }
+      }
+      
+      return parts.length === 1 && typeof parts[0] === "string" ? parts[0] : parts;
+    };
 
-    // Image generation — Drika engine only (Lovable AI)
+    // Determine type — if attachments present and no explicit type, use "analyze"
+    const effectiveType = (attachments && attachments.length > 0 && type !== "image") ? "analyze" : type;
+    const systemPrompt = systemPrompts[effectiveType] || systemPrompts.copy;
+
+    // Image generation
     if (type === "image") {
       const { response, model } = await tryModels(
         IMAGE_MODELS,
@@ -141,16 +173,16 @@ Inclua estilo, cores, composição, iluminação e mood.`,
     }
 
     // Text generation with streaming + fallback
+    const userContent = buildUserContent(prompt, attachments);
+    
     const messages = [
       { role: "system", content: systemPrompt },
       ...(context ? [{ role: "user", content: `Contexto: ${context}` }] : []),
-      { role: "user", content: prompt },
+      { role: "user", content: userContent },
     ];
 
-    const textModels = TEXT_MODELS;
-
     const { response, model } = await tryModels(
-      textModels,
+      TEXT_MODELS,
       (m) => ({ model: m, messages, stream: true }),
       apiKey,
       apiUrl,
@@ -165,13 +197,12 @@ Inclua estilo, cores, composição, iluminação e mood.`,
       });
     }
 
-    console.log(`Streaming response from model: ${model} (provider: ${selectedProvider})`);
+    console.log(`Streaming response from model: ${model}`);
     return new Response(response.body, {
       headers: {
         ...corsHeaders,
         "Content-Type": "text/event-stream",
         "X-Model-Used": model,
-        "X-Provider": selectedProvider,
       },
     });
   } catch (e) {
