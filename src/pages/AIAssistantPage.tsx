@@ -1,5 +1,9 @@
 import { useState, useRef, useEffect } from "react";
-import { Sparkles, Wand2, FileText, Image, MessageSquare, Lightbulb, Copy, Check, Loader2, Send, ChevronDown, Zap, Brain, Plus, User, Bot, Trash2, Stars, Orbit, Flame, Crown, Globe, Cpu, Network, Boxes, Gem, Paperclip, X } from "lucide-react";
+import {
+  Sparkles, Wand2, FileText, Image, MessageSquare, Lightbulb, Copy, Check,
+  Loader2, Send, ChevronDown, Zap, Brain, Plus, User, Bot, Trash2, Orbit,
+  Paperclip, X, RefreshCw, Stars, RotateCcw
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -53,7 +57,7 @@ const AI_TOOLS = [
     description: "Banners, logos e thumbnails",
     emoji: "🎨",
     prompts: [
-      "Banner para loja de produtos digitais no Discord, estilo gaming neon",
+      "Banner para loja de produtos digitais, estilo gaming neon",
       "Logo minimalista para servidor de vendas Discord",
       "Thumbnail promocional com desconto de 50%",
       "Banner de boas-vindas para servidor Discord premium",
@@ -93,12 +97,29 @@ const AI_TOOLS = [
       "Dicas para melhorar o engajamento do servidor",
     ],
   },
+  {
+    id: "prompt_enhancer",
+    label: "Prompt Enhancer",
+    icon: Stars,
+    gradient: "from-[#EC4899] via-[#8B5CF6] to-[#EC4899]",
+    glow: "shadow-[0_0_60px_rgba(139,92,246,0.4)]",
+    bgAccent: "bg-gradient-to-br from-[#EC4899]/10 to-[#8B5CF6]/10",
+    ring: "ring-[#8B5CF6]/30",
+    description: "Transforme ideias simples em prompts profissionais",
+    emoji: "🚀",
+    prompts: [
+      "banner para barbearia premium",
+      "logo para loja de games",
+      "descrição para venda de nitro discord",
+      "anúncio de promoção black friday",
+    ],
+  },
 ];
 
 interface Attachment {
   id: string;
   type: "image";
-  data: string; // base64 data URL
+  data: string;
   name: string;
   preview: string;
 }
@@ -108,6 +129,7 @@ interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   imageUrl?: string;
+  enhancedPrompt?: string;
   attachments?: Attachment[];
   toolId: string;
   timestamp: Date;
@@ -123,7 +145,6 @@ interface ChatSession {
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`;
 
-/* ───── Animated background particles (pure CSS) ───── */
 const ParticleField = () => (
   <div className="absolute inset-0 overflow-hidden pointer-events-none">
     {Array.from({ length: 30 }).map((_, i) => (
@@ -144,7 +165,6 @@ const ParticleField = () => (
   </div>
 );
 
-/* ───── Neural network lines SVG ───── */
 const NeuralLines = () => (
   <svg className="absolute inset-0 w-full h-full opacity-[0.04] pointer-events-none" xmlns="http://www.w3.org/2000/svg">
     <defs>
@@ -155,42 +175,26 @@ const NeuralLines = () => (
       </linearGradient>
     </defs>
     {Array.from({ length: 12 }).map((_, i) => (
-      <line
-        key={i}
-        x1={`${(i * 9) % 100}%`}
-        y1={`${(i * 13 + 5) % 100}%`}
-        x2={`${(i * 11 + 30) % 100}%`}
-        y2={`${(i * 7 + 40) % 100}%`}
-        stroke="url(#neural-grad)"
-        strokeWidth="1"
-        opacity="0.5"
-      />
+      <line key={i} x1={`${(i * 9) % 100}%`} y1={`${(i * 13 + 5) % 100}%`} x2={`${(i * 11 + 30) % 100}%`} y2={`${(i * 7 + 40) % 100}%`} stroke="url(#neural-grad)" strokeWidth="1" opacity="0.5" />
     ))}
     {Array.from({ length: 8 }).map((_, i) => (
-      <circle
-        key={`c-${i}`}
-        cx={`${(i * 14 + 10) % 100}%`}
-        cy={`${(i * 17 + 8) % 100}%`}
-        r="2"
-        fill="url(#neural-grad)"
-        opacity="0.6"
-      />
+      <circle key={`c-${i}`} cx={`${(i * 14 + 10) % 100}%`} cy={`${(i * 17 + 8) % 100}%`} r="2" fill="url(#neural-grad)" opacity="0.6" />
     ))}
   </svg>
 );
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 export default function AIAssistantPage() {
   const [selectedTool, setSelectedTool] = useState(AI_TOOLS[0]);
   const [prompt, setPrompt] = useState("");
   const [context, setContext] = useState("");
   const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [showContext, setShowContext] = useState(false);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-  const [provider] = useState<"drika">("drika");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -227,32 +231,22 @@ export default function AIAssistantPage() {
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
-
     for (const file of Array.from(files)) {
       if (file.size > MAX_FILE_SIZE) {
         toast({ title: "Arquivo muito grande", description: `${file.name} excede 10MB.`, variant: "destructive" });
         continue;
       }
-
       if (!file.type.startsWith("image/")) {
         toast({ title: "Formato não suportado", description: "Envie apenas imagens (PNG, JPG, GIF, WebP).", variant: "destructive" });
         continue;
       }
-
       const reader = new FileReader();
       reader.onload = () => {
         const base64 = reader.result as string;
-        setAttachments(prev => [...prev, {
-          id: crypto.randomUUID(),
-          type: "image",
-          data: base64,
-          name: file.name,
-          preview: base64,
-        }]);
+        setAttachments(prev => [...prev, { id: crypto.randomUUID(), type: "image", data: base64, name: file.name, preview: base64 }]);
       };
       reader.readAsDataURL(file);
     }
-
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -260,6 +254,68 @@ export default function AIAssistantPage() {
     setAttachments(prev => prev.filter(a => a.id !== id));
   };
 
+  // ═══ IMPROVE PROMPT ═══
+  const handleImprovePrompt = async () => {
+    if (!prompt.trim()) {
+      toast({ title: "Digite algo", description: "Escreva uma ideia para melhorar.", variant: "destructive" });
+      return;
+    }
+    setActionLoading("improve");
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-assistant", {
+        body: { action: "improve_prompt", prompt, context },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setPrompt(data.improved_prompt || prompt);
+      toast({ title: "✨ Prompt melhorado!", description: "Seu prompt foi otimizado pela IA." });
+    } catch (e: any) {
+      toast({ title: "Erro", description: e.message || "Erro ao melhorar prompt", variant: "destructive" });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // ═══ GENERATE VARIATIONS ═══
+  const handleGenerateVariations = async (originalContent: string, sessionId: string) => {
+    setActionLoading("variations");
+    const variationMsgId = crypto.randomUUID();
+    const userMsg: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: "🔄 Gerar variações do conteúdo acima",
+      toolId: selectedTool.id,
+      timestamp: new Date(),
+    };
+    setSessions(prev => prev.map(s =>
+      s.id === sessionId ? { ...s, messages: [...s.messages, userMsg] } : s
+    ));
+
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-assistant", {
+        body: { action: "generate_variations", originalContent, context },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const assistantMsg: ChatMessage = {
+        id: variationMsgId,
+        role: "assistant",
+        content: data.variations || "Não foi possível gerar variações.",
+        toolId: selectedTool.id,
+        timestamp: new Date(),
+      };
+      setSessions(prev => prev.map(s =>
+        s.id === sessionId ? { ...s, messages: [...s.messages, assistantMsg] } : s
+      ));
+    } catch (e: any) {
+      toast({ title: "Erro", description: e.message || "Erro ao gerar variações", variant: "destructive" });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // ═══ MAIN GENERATE ═══
   const handleGenerate = async () => {
     if (!prompt.trim() && attachments.length === 0) {
       toast({ title: "Digite algo", description: "Escreva o que deseja gerar ou envie uma imagem.", variant: "destructive" });
@@ -295,7 +351,7 @@ export default function AIAssistantPage() {
     try {
       if (selectedTool.id === "image" && currentAttachments.length === 0) {
         const { data, error } = await supabase.functions.invoke("ai-assistant", {
-          body: { type: "image", prompt: currentPrompt, context, provider },
+          body: { type: "image", prompt: currentPrompt, context },
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
@@ -305,6 +361,7 @@ export default function AIAssistantPage() {
           role: "assistant",
           content: data?.text || "",
           imageUrl: data?.image_url || undefined,
+          enhancedPrompt: data?.enhanced_prompt || undefined,
           toolId: selectedTool.id,
           timestamp: new Date(),
         };
@@ -323,11 +380,7 @@ export default function AIAssistantPage() {
           s.id === sessionId ? { ...s, messages: [...s.messages, emptyAssistant] } : s
         ));
 
-        // Build attachments payload for API
-        const apiAttachments = currentAttachments.map(a => ({
-          type: a.type,
-          data: a.data,
-        }));
+        const apiAttachments = currentAttachments.map(a => ({ type: a.type, data: a.data }));
 
         const resp = await fetch(CHAT_URL, {
           method: "POST",
@@ -339,7 +392,6 @@ export default function AIAssistantPage() {
             type: selectedTool.id,
             prompt: currentPrompt,
             context,
-            provider,
             attachments: apiAttachments.length > 0 ? apiAttachments : undefined,
           }),
         });
@@ -403,43 +455,38 @@ export default function AIAssistantPage() {
 
   const filteredSessions = sessions.filter(s => s.toolId === selectedTool.id);
 
+  // Find last assistant text message for variations
+  const lastAssistantContent = messages.filter(m => m.role === "assistant" && m.content && !m.imageUrl).pop()?.content;
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
-      {/* ═══════════════ HERO — Surreal Cosmic Header ═══════════════ */}
+      {/* ═══════════════ HERO ═══════════════ */}
       <div className="relative overflow-hidden rounded-3xl border border-primary/10 min-h-[180px]">
-        {/* Deep cosmic background layers */}
         <div className="absolute inset-0 bg-gradient-to-br from-[#0a0015] via-[#1a0025] to-[#050020]" />
         <div className="absolute inset-0" style={{
           backgroundImage: `
             radial-gradient(ellipse 80% 50% at 20% 40%, rgba(196,74,255,0.15) 0%, transparent 70%),
             radial-gradient(ellipse 60% 40% at 75% 20%, rgba(255,105,180,0.12) 0%, transparent 60%),
-            radial-gradient(ellipse 50% 60% at 50% 90%, rgba(59,130,246,0.1) 0%, transparent 50%),
-            radial-gradient(circle at 90% 80%, rgba(16,185,129,0.08) 0%, transparent 40%)
+            radial-gradient(ellipse 50% 60% at 50% 90%, rgba(59,130,246,0.1) 0%, transparent 50%)
           `
         }} />
         <ParticleField />
         <NeuralLines />
-
-        {/* Holographic scanline effect */}
         <div className="absolute inset-0 opacity-[0.03]" style={{
           backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.1) 2px, rgba(255,255,255,0.1) 4px)`
         }} />
-
-        {/* Aurora glow top */}
         <div className="absolute top-0 left-0 right-0 h-[2px]">
           <div className="h-full bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
           <div className="h-8 bg-gradient-to-b from-primary/10 to-transparent" />
         </div>
 
         <div className="relative z-10 p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center gap-6">
-          {/* AI Core orb */}
           <div className="relative group">
             <div className="absolute -inset-3 rounded-full bg-gradient-to-r from-primary/20 via-[#C44AFF]/20 to-primary/20 blur-xl animate-pulse opacity-60" />
             <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-primary/30 to-[#C44AFF]/30 animate-spin" style={{ animationDuration: "8s" }} />
             <div className="relative h-18 w-18 sm:h-20 sm:w-20 rounded-2xl bg-gradient-to-br from-[#1a0a20] to-[#0a0520] border border-primary/20 flex items-center justify-center backdrop-blur-sm overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent" />
               <Brain className="h-9 w-9 sm:h-10 sm:w-10 text-primary drop-shadow-[0_0_15px_rgba(255,105,180,0.6)] relative z-10" />
-              <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-primary/10 to-transparent" />
             </div>
             <div className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 border-2 border-background flex items-center justify-center">
               <div className="h-2 w-2 rounded-full bg-white animate-pulse" />
@@ -449,7 +496,7 @@ export default function AIAssistantPage() {
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-3 mb-2">
               <h1 className="text-2xl sm:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white via-primary/90 to-[#C44AFF] tracking-tight">
-                DRIKA HUB IA
+                Gerador IA
               </h1>
               <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 backdrop-blur-sm">
                 <div className="relative h-2 w-2">
@@ -459,15 +506,14 @@ export default function AIAssistantPage() {
                 <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-emerald-400">Neural Ativa</span>
               </div>
               <span className="px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] rounded-full bg-gradient-to-r from-primary/15 to-[#C44AFF]/15 text-primary border border-primary/20 backdrop-blur-sm">
-                v3.0 Quantum
+                v4.0 Orchestrator
               </span>
             </div>
             <p className="text-sm text-muted-foreground max-w-lg leading-relaxed">
-              Motor de inteligência artificial da Drika — gere textos, imagens, descrições e estratégias com precisão sobrenatural. Agora com análise de imagens!
+              Escreva pouco, receba muito — textos, imagens, descrições e estratégias de nível premium com orquestração inteligente de IA.
             </p>
           </div>
 
-          {/* Engine info — Desktop */}
           <div className="hidden lg:flex flex-col items-end gap-3">
             <div className="relative flex items-center gap-0 p-1.5 rounded-2xl bg-card/50 border border-border/20 backdrop-blur-xl shadow-lg">
               <div className="relative z-10 flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-primary/20 to-[#C44AFF]/20 text-primary border border-primary/30 shadow-[0_0_16px_hsl(330_100%_50%/0.12)]">
@@ -476,23 +522,21 @@ export default function AIAssistantPage() {
                 </div>
                 <div className="flex flex-col items-start">
                   <span className="leading-none">Drika Engine</span>
-                  <span className="text-[8px] font-medium mt-0.5 text-primary/60">Gemini • GPT</span>
+                  <span className="text-[8px] font-medium mt-0.5 text-primary/60">Orquestrador Multi-IA</span>
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-2 text-[10px] text-muted-foreground/50">
               <div className="h-1.5 w-1.5 rounded-full bg-primary/60" />
-              <span className="font-medium">Multi-model fallback • Visão + Texto</span>
+              <span className="font-medium">Prompt Enhancer • Variações • Visão</span>
             </div>
           </div>
         </div>
-
-        {/* Bottom edge glow */}
         <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
       </div>
 
-      {/* ═══════════════ TOOL SELECTOR — Holographic Cards ═══════════════ */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      {/* ═══════════════ TOOL SELECTOR ═══════════════ */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {AI_TOOLS.map((tool) => {
           const isActive = selectedTool.id === tool.id;
           return (
@@ -506,19 +550,12 @@ export default function AIAssistantPage() {
                   : "bg-card/30 border-border/20 hover:border-primary/15 hover:bg-card/50 hover:scale-[1.01]"
               )}
             >
-              {/* Active glow overlay */}
               {isActive && (
                 <>
-                  <div className="absolute inset-0 opacity-[0.06]" style={{
-                    backgroundImage: `radial-gradient(circle at 50% 0%, white 0%, transparent 60%)`
-                  }} />
-                  <div className="absolute -inset-px rounded-2xl opacity-20" style={{
-                    backgroundImage: `conic-gradient(from 0deg, transparent, rgba(196,74,255,0.3), transparent, rgba(255,105,180,0.3), transparent)`
-                  }} />
+                  <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: `radial-gradient(circle at 50% 0%, white 0%, transparent 60%)` }} />
+                  <div className="absolute -inset-px rounded-2xl opacity-20" style={{ backgroundImage: `conic-gradient(from 0deg, transparent, rgba(196,74,255,0.3), transparent, rgba(255,105,180,0.3), transparent)` }} />
                 </>
               )}
-
-              {/* Tool icon */}
               <div className={cn(
                 "relative h-12 w-12 rounded-xl flex items-center justify-center transition-all duration-500",
                 isActive ? `bg-gradient-to-br ${tool.gradient} shadow-lg` : `${tool.bgAccent} group-hover:scale-105`
@@ -526,16 +563,9 @@ export default function AIAssistantPage() {
                 <tool.icon className={cn("h-5 w-5 transition-all duration-300", isActive ? "text-white" : "text-muted-foreground")} />
                 {isActive && <div className="absolute inset-0 rounded-xl bg-white/10 animate-pulse" />}
               </div>
-
-              {/* Emoji badge */}
               <span className="text-lg leading-none">{tool.emoji}</span>
-              
-              <span className={cn("text-xs font-bold tracking-wide", isActive ? "text-foreground" : "text-muted-foreground")}>
-                {tool.label}
-              </span>
-               <span className="text-[10px] text-muted-foreground/50 leading-tight">{tool.description}</span>
-
-              {/* Active indicator bar */}
+              <span className={cn("text-xs font-bold tracking-wide", isActive ? "text-foreground" : "text-muted-foreground")}>{tool.label}</span>
+              <span className="text-[10px] text-muted-foreground/50 leading-tight">{tool.description}</span>
               {isActive && (
                 <div className={cn("absolute -bottom-px left-1/2 -translate-x-1/2 w-12 h-[2px] rounded-full bg-gradient-to-r", tool.gradient)} />
               )}
@@ -548,18 +578,11 @@ export default function AIAssistantPage() {
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-5">
         {/* ── Sidebar ── */}
         <div className="space-y-3">
-          <Button
-            onClick={handleNewChat}
-            className={cn(
-              "w-full gap-2 rounded-xl text-white font-bold shadow-lg hover:scale-[1.02] transition-all duration-300 h-11",
-              "bg-gradient-to-r", selectedTool.gradient
-            )}
-          >
+          <Button onClick={handleNewChat} className={cn("w-full gap-2 rounded-xl text-white font-bold shadow-lg hover:scale-[1.02] transition-all duration-300 h-11", "bg-gradient-to-r", selectedTool.gradient)}>
             <Plus className="h-4 w-4" />
             Novo Chat
           </Button>
 
-          {/* History */}
           <div className="rounded-2xl border border-border/20 bg-card/30 backdrop-blur-sm overflow-hidden">
             <div className="px-4 py-3 border-b border-border/10 flex items-center gap-2">
               <div className="h-1.5 w-1.5 rounded-full bg-primary/60" />
@@ -571,8 +594,8 @@ export default function AIAssistantPage() {
                   <div className="h-12 w-12 rounded-2xl bg-muted/20 flex items-center justify-center mb-3">
                     <MessageSquare className="h-5 w-5 text-muted-foreground/15" />
                   </div>
-                   <p className="text-xs text-muted-foreground/50">Nenhum chat ainda</p>
-                   <p className="text-[10px] text-muted-foreground/40 mt-1">Comece uma conversa!</p>
+                  <p className="text-xs text-muted-foreground/50">Nenhum chat ainda</p>
+                  <p className="text-[10px] text-muted-foreground/40 mt-1">Comece uma conversa!</p>
                 </div>
               ) : (
                 <div className="p-2 space-y-1">
@@ -581,16 +604,11 @@ export default function AIAssistantPage() {
                       key={session.id}
                       className={cn(
                         "group flex items-center gap-2 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200",
-                        activeSessionId === session.id
-                          ? "bg-primary/10 border border-primary/20 shadow-sm"
-                          : "hover:bg-muted/30 border border-transparent"
+                        activeSessionId === session.id ? "bg-primary/10 border border-primary/20 shadow-sm" : "hover:bg-muted/30 border border-transparent"
                       )}
                       onClick={() => setActiveSessionId(session.id)}
                     >
-                      <div className={cn(
-                        "h-6 w-6 rounded-lg flex items-center justify-center shrink-0",
-                        activeSessionId === session.id ? "bg-primary/20" : "bg-muted/20"
-                      )}>
+                      <div className={cn("h-6 w-6 rounded-lg flex items-center justify-center shrink-0", activeSessionId === session.id ? "bg-primary/20" : "bg-muted/20")}>
                         <MessageSquare className="h-3 w-3 text-muted-foreground/60" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -599,10 +617,7 @@ export default function AIAssistantPage() {
                           {session.messages.length} msg • {session.createdAt.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
                         </p>
                       </div>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleDeleteSession(session.id); }}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-destructive/10"
-                      >
+                      <button onClick={(e) => { e.stopPropagation(); handleDeleteSession(session.id); }} className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-destructive/10">
                         <Trash2 className="h-3 w-3 text-destructive/50" />
                       </button>
                     </div>
@@ -612,7 +627,6 @@ export default function AIAssistantPage() {
             </ScrollArea>
           </div>
 
-          {/* Quick Prompts */}
           {!activeSessionId && (
             <div className="rounded-2xl border border-primary/10 p-4 bg-gradient-to-b from-card/50 to-card/30 backdrop-blur-sm">
               <div className="flex items-center gap-2 mb-3">
@@ -621,11 +635,7 @@ export default function AIAssistantPage() {
               </div>
               <div className="space-y-1.5">
                 {selectedTool.prompts.map((p, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setPrompt(p)}
-                    className="w-full text-left text-[11px] px-3 py-2.5 rounded-xl border border-border/15 text-muted-foreground/70 hover:bg-primary/5 hover:border-primary/20 hover:text-foreground/90 transition-all duration-300 group"
-                  >
+                  <button key={i} onClick={() => setPrompt(p)} className="w-full text-left text-[11px] px-3 py-2.5 rounded-xl border border-border/15 text-muted-foreground/70 hover:bg-primary/5 hover:border-primary/20 hover:text-foreground/90 transition-all duration-300 group">
                     <span className="flex items-center gap-2">
                       <span className="h-1.5 w-1.5 rounded-full bg-primary/30 shrink-0 group-hover:bg-primary/60 transition-colors" />
                       {p}
@@ -639,10 +649,8 @@ export default function AIAssistantPage() {
 
         {/* ── Chat Area ── */}
         <div className="relative flex flex-col rounded-2xl border border-primary/10 bg-gradient-to-b from-card/80 to-card/50 overflow-hidden min-h-[520px] backdrop-blur-sm">
-          {/* Subtle grid pattern */}
           <div className="absolute inset-0 opacity-[0.015] pointer-events-none" style={{
-            backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
-                              linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
+            backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
             backgroundSize: "40px 40px"
           }} />
 
@@ -651,11 +659,9 @@ export default function AIAssistantPage() {
             <div className="flex items-center gap-3">
               <div className={cn(
                 "h-2.5 w-2.5 rounded-full transition-all duration-700",
-                loading
+                loading || actionLoading
                   ? "bg-yellow-400 animate-pulse shadow-[0_0_12px_rgba(250,204,21,0.6)]"
-                  : messages.length > 0
-                  ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]"
-                  : "bg-muted-foreground/20"
+                  : messages.length > 0 ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]" : "bg-muted-foreground/20"
               )} />
               <div>
                 <p className="text-xs font-bold text-foreground/80 uppercase tracking-wider">
@@ -665,13 +671,15 @@ export default function AIAssistantPage() {
                   <p className="text-[10px] text-muted-foreground/55">{messages.length} mensagens</p>
                 )}
               </div>
-              {loading && (
+              {(loading || actionLoading) && (
                 <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/8 border border-primary/15 animate-fade-in ml-2">
                   <div className="relative h-3.5 w-3.5">
                     <div className="absolute inset-0 rounded-full border-2 border-primary/15" />
                     <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-primary animate-spin" />
                   </div>
-                  <span className="text-[10px] font-semibold text-primary/80 tracking-wide">Processando...</span>
+                  <span className="text-[10px] font-semibold text-primary/80 tracking-wide">
+                    {actionLoading === "improve" ? "Melhorando..." : actionLoading === "variations" ? "Gerando variações..." : "Processando..."}
+                  </span>
                 </div>
               )}
             </div>
@@ -682,7 +690,6 @@ export default function AIAssistantPage() {
             <div className="p-5 space-y-5">
               {messages.length === 0 && !loading ? (
                 <div className="flex flex-col items-center justify-center py-16 gap-5 text-center">
-                  {/* Floating orb */}
                   <div className="relative">
                     <div className="absolute -inset-4 rounded-full bg-gradient-to-r from-primary/10 to-[#C44AFF]/10 blur-2xl animate-pulse" />
                     <div className={cn("relative h-24 w-24 rounded-3xl flex items-center justify-center border border-border/15", selectedTool.bgAccent)}>
@@ -690,14 +697,25 @@ export default function AIAssistantPage() {
                     </div>
                   </div>
                   <div>
-                     <p className="text-base font-bold text-foreground/80 mb-1">Inicie uma conversa</p>
-                    <p className="text-xs text-muted-foreground/60 max-w-[280px] leading-relaxed">
-                       Escolha uma sugestão rápida, escreva seu prompt ou envie uma imagem para a Drika IA analisar
+                    <p className="text-base font-bold text-foreground/80 mb-1">Escreva pouco, receba muito</p>
+                    <p className="text-xs text-muted-foreground/60 max-w-[320px] leading-relaxed">
+                      Digite uma ideia simples como "banner para barbearia premium" e o Gerador IA entrega resultados profissionais automaticamente
                     </p>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-center gap-2 text-[10px] text-muted-foreground/45">
+                    <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted/10 border border-border/10">
+                      <Wand2 className="h-3 w-3" /> Melhorar prompt
+                    </span>
+                    <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted/10 border border-border/10">
+                      <RefreshCw className="h-3 w-3" /> Gerar variações
+                    </span>
+                    <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted/10 border border-border/10">
+                      <Paperclip className="h-3 w-3" /> Analisar imagens
+                    </span>
                   </div>
                   <div className="flex items-center gap-2 text-[10px] text-muted-foreground/45">
                     <Orbit className="h-3 w-3" />
-                    <span>Powered by Drika Engine v3.0</span>
+                    <span>Powered by Drika Engine v4.0 Orchestrator</span>
                   </div>
                 </div>
               ) : (
@@ -717,7 +735,6 @@ export default function AIAssistantPage() {
                         ? "bg-primary/12 border border-primary/15 text-foreground"
                         : "bg-muted/20 border border-border/15 text-foreground/90 backdrop-blur-sm"
                     )}>
-                      {/* User attachments preview */}
                       {msg.role === "user" && msg.attachments && msg.attachments.length > 0 && (
                         <div className="mb-2 flex flex-wrap gap-2">
                           {msg.attachments.map(att => (
@@ -727,6 +744,25 @@ export default function AIAssistantPage() {
                           ))}
                         </div>
                       )}
+
+                      {/* Enhanced prompt badge */}
+                      {msg.enhancedPrompt && (
+                        <div className="mb-3 p-3 rounded-xl bg-primary/5 border border-primary/15">
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <Stars className="h-3 w-3 text-primary" />
+                            <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Prompt Otimizado</span>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground leading-relaxed">{msg.enhancedPrompt}</p>
+                          <button
+                            onClick={() => handleCopy(msg.enhancedPrompt!, msg.id + "-prompt")}
+                            className="mt-1.5 flex items-center gap-1 text-[9px] text-primary/60 hover:text-primary transition-colors"
+                          >
+                            {copied === msg.id + "-prompt" ? <Check className="h-2.5 w-2.5" /> : <Copy className="h-2.5 w-2.5" />}
+                            {copied === msg.id + "-prompt" ? "Copiado" : "Copiar prompt"}
+                          </button>
+                        </div>
+                      )}
+
                       {msg.imageUrl && (
                         <div className="mb-3 relative rounded-xl overflow-hidden border border-border/20 shadow-xl">
                           <img src={msg.imageUrl} alt="IA" className="w-full" />
@@ -735,17 +771,8 @@ export default function AIAssistantPage() {
                       )}
                       {msg.imageUrl && (
                         <div className="mb-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-[11px] h-7 border-border/20 hover:bg-primary/10 hover:text-primary"
-                            onClick={() => {
-                              const a = document.createElement("a");
-                              a.href = msg.imageUrl!;
-                              a.download = "ai-generated.png";
-                              a.click();
-                            }}
-                          >
+                          <Button variant="outline" size="sm" className="text-[11px] h-7 border-border/20 hover:bg-primary/10 hover:text-primary"
+                            onClick={() => { const a = document.createElement("a"); a.href = msg.imageUrl!; a.download = "ai-generated.png"; a.click(); }}>
                             Baixar Imagem
                           </Button>
                         </div>
@@ -753,16 +780,27 @@ export default function AIAssistantPage() {
                       {msg.content && (
                         <div className="whitespace-pre-wrap leading-relaxed">{msg.content}</div>
                       )}
-                      {msg.role === "assistant" && msg.content && !loading && (
-                        <button
-                          onClick={() => handleCopy(msg.content, msg.id)}
-                          className="mt-2.5 flex items-center gap-1.5 text-[10px] text-muted-foreground/60 hover:text-primary transition-colors"
-                        >
-                          {copied === msg.id ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                          {copied === msg.id ? "Copiado" : "Copiar"}
-                        </button>
+
+                      {/* Action buttons for assistant messages */}
+                      {msg.role === "assistant" && msg.content && !loading && !actionLoading && (
+                        <div className="mt-3 flex flex-wrap items-center gap-2 pt-2 border-t border-border/10">
+                          <button onClick={() => handleCopy(msg.content, msg.id)} className="flex items-center gap-1.5 text-[10px] text-muted-foreground/60 hover:text-primary transition-colors px-2 py-1 rounded-lg hover:bg-primary/5">
+                            {copied === msg.id ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                            {copied === msg.id ? "Copiado" : "Copiar"}
+                          </button>
+                          {!msg.imageUrl && activeSessionId && (
+                            <button
+                              onClick={() => handleGenerateVariations(msg.content, activeSessionId!)}
+                              className="flex items-center gap-1.5 text-[10px] text-muted-foreground/60 hover:text-[#8B5CF6] transition-colors px-2 py-1 rounded-lg hover:bg-[#8B5CF6]/5"
+                            >
+                              <RefreshCw className="h-3 w-3" />
+                              Gerar variações
+                            </button>
+                          )}
+                        </div>
                       )}
-                      {/* Loading animation — surreal thinking */}
+
+                      {/* Loading animation */}
                       {msg.role === "assistant" && !msg.content && !msg.imageUrl && loading && (
                         <div className="flex flex-col gap-4 py-3 min-w-[220px]">
                           <div className="flex items-center gap-3">
@@ -773,37 +811,18 @@ export default function AIAssistantPage() {
                               </div>
                             </div>
                             <div className="flex flex-col gap-1">
-                              <span className="text-[11px] font-bold text-foreground/60">Processamento neural</span>
+                              <span className="text-[11px] font-bold text-foreground/60">Orquestrando IA</span>
                               <div className="flex gap-1.5">
                                 {[0, 1, 2, 3, 4].map(i => (
-                                  <div
-                                    key={i}
-                                    className="h-1 w-4 rounded-full bg-gradient-to-r from-primary/50 to-[#C44AFF]/50"
-                                    style={{
-                                      animation: `pulse 1.5s ease-in-out infinite`,
-                                      animationDelay: `${i * 200}ms`,
-                                      opacity: 0.3,
-                                    }}
-                                  />
+                                  <div key={i} className="h-1 w-4 rounded-full bg-gradient-to-r from-primary/50 to-[#C44AFF]/50" style={{ animation: `pulse 1.5s ease-in-out infinite`, animationDelay: `${i * 200}ms`, opacity: 0.3 }} />
                                 ))}
                               </div>
                             </div>
                           </div>
-                          {/* Shimmer blocks */}
                           <div className="space-y-2.5">
                             {[85, 65, 45].map((w, i) => (
-                              <div
-                                key={i}
-                                className="h-2 rounded-full overflow-hidden"
-                                style={{ width: `${w}%` }}
-                              >
-                                <div
-                                  className="h-full w-[200%] bg-gradient-to-r from-muted/30 via-muted/10 to-muted/30"
-                                  style={{
-                                    animation: `shimmer 2s linear infinite`,
-                                    animationDelay: `${i * 300}ms`,
-                                  }}
-                                />
+                              <div key={i} className="h-2 rounded-full overflow-hidden" style={{ width: `${w}%` }}>
+                                <div className="h-full w-[200%] bg-gradient-to-r from-muted/30 via-muted/10 to-muted/30" style={{ animation: `shimmer 2s linear infinite`, animationDelay: `${i * 300}ms` }} />
                               </div>
                             ))}
                           </div>
@@ -824,20 +843,14 @@ export default function AIAssistantPage() {
 
           {/* ── Input Area ── */}
           <div className="relative border-t border-border/10 p-4 bg-card/40 backdrop-blur-md z-10">
-            {/* Provider + Context controls */}
             <div className="mb-2 flex items-center gap-3 flex-wrap">
-              {/* Mobile provider toggle */}
               <div className="flex items-center gap-0 p-1 rounded-xl bg-card/40 border border-border/20 backdrop-blur-md lg:hidden">
                 <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold bg-primary/15 text-primary border border-primary/25 shadow-sm">
                   <Zap className="h-3 w-3" />
                   Drika Engine
                 </div>
               </div>
-
-              <button
-                onClick={() => setShowContext(!showContext)}
-                className="flex items-center gap-1.5 text-[10px] text-muted-foreground/60 hover:text-primary/80 transition-colors font-medium"
-              >
+              <button onClick={() => setShowContext(!showContext)} className="flex items-center gap-1.5 text-[10px] text-muted-foreground/60 hover:text-primary/80 transition-colors font-medium">
                 <ChevronDown className={cn("h-3 w-3 transition-transform duration-300", showContext && "rotate-180")} />
                 Contexto (opcional)
               </button>
@@ -851,88 +864,67 @@ export default function AIAssistantPage() {
               />
             )}
 
-            {/* Attachment previews */}
             {attachments.length > 0 && (
               <div className="mb-2 flex flex-wrap gap-2">
                 {attachments.map(att => (
                   <div key={att.id} className="relative group/att rounded-xl overflow-hidden border border-primary/20 shadow-md">
                     <img src={att.preview} alt={att.name} className="h-16 w-16 object-cover" />
-                    <button
-                      onClick={() => removeAttachment(att.id)}
-                      className="absolute top-0.5 right-0.5 h-5 w-5 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover/att:opacity-100 transition-opacity"
-                    >
+                    <button onClick={() => removeAttachment(att.id)} className="absolute top-0.5 right-0.5 h-5 w-5 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover/att:opacity-100 transition-opacity">
                       <X className="h-3 w-3 text-white" />
                     </button>
-                    <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-[8px] text-white text-center py-0.5 truncate px-1">
-                      {att.name}
-                    </div>
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-[8px] text-white text-center py-0.5 truncate px-1">{att.name}</div>
                   </div>
                 ))}
               </div>
             )}
 
             <div className="relative group/input">
-              {/* Glow border on focus */}
-              <div className={cn(
-                "absolute -inset-px rounded-xl transition-opacity duration-500 opacity-0 group-focus-within/input:opacity-100",
-                `bg-gradient-to-r ${selectedTool.gradient} blur-sm`
-              )} />
+              <div className={cn("absolute -inset-px rounded-xl transition-opacity duration-500 opacity-0 group-focus-within/input:opacity-100", `bg-gradient-to-r ${selectedTool.gradient} blur-sm`)} />
               <div className="relative flex items-end gap-2 rounded-xl border border-primary/10 bg-card/80 p-2 backdrop-blur-sm">
-                {/* File upload button */}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={loading}
-                  className="h-10 w-10 shrink-0 rounded-xl text-muted-foreground/60 hover:text-primary hover:bg-primary/10 transition-all"
-                  title="Enviar imagem"
-                >
+                <Button variant="ghost" size="icon" type="button" onClick={() => fileInputRef.current?.click()} disabled={loading || !!actionLoading} className="h-10 w-10 shrink-0 rounded-xl text-muted-foreground/60 hover:text-primary hover:bg-primary/10 transition-all" title="Enviar imagem">
                   <Paperclip className="h-4 w-4" />
                 </Button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  onChange={handleFileSelect}
-                />
+                <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileSelect} />
+
                 <Textarea
                   placeholder={
-                    attachments.length > 0
-                      ? "Descreva o que deseja saber sobre a imagem..."
-                      : selectedTool.id === "image"
-                      ? "Descreva a imagem que deseja gerar..."
-                      : "Escreva seu prompt para a Drika IA..."
+                    attachments.length > 0 ? "Descreva o que deseja saber sobre a imagem..."
+                      : selectedTool.id === "image" ? "Descreva a imagem que deseja gerar..."
+                      : selectedTool.id === "prompt_enhancer" ? "Digite uma ideia simples para transformar em prompt profissional..."
+                      : "Escreva seu prompt para o Gerador IA..."
                   }
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleGenerate(); } }}
                   className="min-h-[44px] max-h-[120px] bg-transparent border-0 text-sm resize-none focus-visible:ring-0 focus-visible:ring-offset-0 py-2.5 placeholder:text-muted-foreground/40"
                 />
+
+                {/* Improve prompt button */}
                 <Button
+                  variant="ghost"
                   size="icon"
-                  onClick={handleGenerate}
-                  disabled={loading || (!prompt.trim() && attachments.length === 0)}
-                  className={cn(
-                    "h-10 w-10 rounded-xl shrink-0 shadow-lg transition-all duration-300",
-                    "bg-gradient-to-r", selectedTool.gradient,
-                    "hover:scale-110 hover:shadow-xl disabled:opacity-30 disabled:hover:scale-100"
-                  )}
+                  type="button"
+                  onClick={handleImprovePrompt}
+                  disabled={loading || !!actionLoading || !prompt.trim()}
+                  className="h-10 w-10 shrink-0 rounded-xl text-muted-foreground/60 hover:text-[#8B5CF6] hover:bg-[#8B5CF6]/10 transition-all"
+                  title="Melhorar prompt com IA"
                 >
+                  {actionLoading === "improve" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+                </Button>
+
+                <Button size="icon" onClick={handleGenerate} disabled={loading || !!actionLoading || (!prompt.trim() && attachments.length === 0)}
+                  className={cn("h-10 w-10 rounded-xl shrink-0 shadow-lg transition-all duration-300", "bg-gradient-to-r", selectedTool.gradient, "hover:scale-110 hover:shadow-xl disabled:opacity-30 disabled:hover:scale-100")}>
                   {loading ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <Send className="h-4 w-4 text-white" />}
                 </Button>
               </div>
             </div>
             <p className="text-[10px] text-muted-foreground/40 mt-2 text-center tracking-wide">
-              📎 Envie imagens para análise • Enter para enviar • Shift+Enter para nova linha
+              ✨ Melhorar prompt (varinha) • 📎 Enviar imagens • 🔄 Gerar variações • Enter para enviar
             </p>
           </div>
         </div>
       </div>
 
-      {/* Keyframe animations */}
       <style>{`
         @keyframes float {
           0%, 100% { transform: translateY(0px) translateX(0px); }
