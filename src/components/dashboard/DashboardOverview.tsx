@@ -365,10 +365,10 @@ export const DashboardOverview = () => {
               </div>
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-primary" /> Receita
+                  <span className="h-2 w-2 rounded-full bg-primary" /> {t.dashboardOverview.revenue}
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-secondary" /> Pedidos
+                  <span className="h-2 w-2 rounded-full bg-secondary" /> {t.dashboardOverview.orders}
                 </span>
               </div>
             </div>
