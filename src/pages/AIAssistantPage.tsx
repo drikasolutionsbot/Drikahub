@@ -281,6 +281,7 @@ export default function AIAssistantPage() {
   const [prompt, setPrompt] = useState("");
   const [context, setContext] = useState("");
   const [loading, setLoading] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [showContext, setShowContext] = useState(false);
