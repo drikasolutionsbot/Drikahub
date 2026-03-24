@@ -961,10 +961,10 @@ function PermissionPanel({
 
           {hasChanges && (
             <div className="sticky bottom-0 -mx-5 -mb-5 px-5 py-3 border-t border-border bg-card/95 backdrop-blur flex items-center justify-end gap-3 rounded-b-xl">
-              <span className="text-xs text-muted-foreground mr-auto">Alterações não salvas</span>
-              <Button variant="ghost" size="sm" onClick={onDiscard} disabled={saving}>Limpar</Button>
+              <span className="text-xs text-muted-foreground mr-auto">{t.dashboard.unsavedChanges}</span>
+              <Button variant="ghost" size="sm" onClick={onDiscard} disabled={saving}>{t.dashboard.discardChanges}</Button>
               <Button size="sm" onClick={onSave} disabled={saving}>
-                {saving ? "Salvando..." : "Salvar"}
+                {saving ? t.dashboard.saving : t.common.save}
               </Button>
             </div>
           )}
