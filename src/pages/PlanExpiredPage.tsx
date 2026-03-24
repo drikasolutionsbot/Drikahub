@@ -5,9 +5,11 @@ import { useTenant } from "@/contexts/TenantContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import drikaLogo from "@/assets/DRIKA_HUB_SEM_FUNDO.png";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 const PlanExpiredPage = () => {
   const { tenant, refetch } = useTenant();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [pixData, setPixData] = useState<{ brcode: string; amount_cents: number } | null>(null);
 
@@ -18,10 +20,10 @@ const PlanExpiredPage = () => {
       const { data, error } = await supabase.functions.invoke("generate-subscription-pix", {
         body: { tenant_id: tenant.id },
       });
-      if (error || data?.error) throw new Error(data?.error || "Erro ao gerar pagamento");
+      if (error || data?.error) throw new Error(data?.error || "Error");
       setPixData({ brcode: data.brcode, amount_cents: data.amount_cents });
     } catch (err: any) {
-      toast.error(err.message || "Erro ao gerar pagamento. Contacte o suporte.");
+      toast.error(err.message || t.login.error);
     } finally {
       setLoading(false);
     }
@@ -30,11 +32,11 @@ const PlanExpiredPage = () => {
   const handleCopyPix = () => {
     if (pixData?.brcode) {
       navigator.clipboard.writeText(pixData.brcode);
-      toast.success("Código PIX copiado!");
+      toast.success(t.common.copied);
     }
   };
 
-  const planLabel = tenant?.plan === "pro" ? "Pro" : "Teste Grátis (4 dias)";
+  const planLabel = tenant?.plan === "pro" ? t.plan.pro : t.plan.free;
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center relative overflow-hidden login-pattern-bg">
@@ -50,17 +52,16 @@ const PlanExpiredPage = () => {
           </div>
 
           <h1 className="text-2xl font-bold text-white mb-2">
-            {tenant?.plan === "pro" ? "Assinatura Expirada" : "Período de Teste Encerrado"}
+            {tenant?.plan === "pro" ? t.plan.planExpired : t.plan.trialEnded}
           </h1>
           <p className="text-white/60 text-sm mb-6">
-            Seu plano <span className="text-primary font-semibold">{planLabel}</span> expirou. 
-            O acesso ao painel foi bloqueado até a renovação.
+            <span className="text-primary font-semibold">{planLabel}</span> {t.plan.planExpiredDesc}
           </p>
 
           {pixData ? (
             <div className="space-y-4 mb-6">
               <div className="rounded-xl bg-white/5 border border-white/10 p-4">
-                <p className="text-white/80 text-xs mb-2">Copie o código PIX abaixo e pague para renovar:</p>
+                <p className="text-white/80 text-xs mb-2">{t.plan.copyPixDesc}</p>
                 <div className="bg-black/30 rounded-lg p-3 break-all text-xs text-white/90 font-mono max-h-24 overflow-y-auto">
                   {pixData.brcode}
                 </div>
@@ -70,10 +71,10 @@ const PlanExpiredPage = () => {
               </div>
               <Button onClick={handleCopyPix} className="w-full rounded-full" variant="outline">
                 <QrCode className="h-4 w-4 mr-2" />
-                Copiar código PIX
+                {t.plan.copyPix}
               </Button>
               <Button onClick={() => refetch()} variant="ghost" className="w-full text-white/60 text-xs">
-                Já paguei — verificar status
+                {t.plan.alreadyPaid}
               </Button>
             </div>
           ) : (
@@ -84,12 +85,12 @@ const PlanExpiredPage = () => {
                 className="w-full h-11 rounded-full bg-primary hover:bg-primary/90 text-white font-medium"
               >
                 {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                Renovar Plano Pro via PIX
+                {t.plan.renewPro}
               </Button>
 
               <div className="rounded-xl bg-white/5 border border-white/10 p-4">
                 <p className="text-white/80 text-sm">
-                  Ou entre em contato com o suporte para renovar manualmente.
+                  {t.plan.contactSupport}
                 </p>
               </div>
             </div>
@@ -101,7 +102,7 @@ const PlanExpiredPage = () => {
             rel="noopener noreferrer"
             className="w-full h-11 flex items-center justify-center gap-2 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-base tracking-wide cursor-pointer border-none transition-colors"
           >
-            Falar com Suporte via WhatsApp
+            {t.plan.whatsappSupport}
           </a>
         </div>
       </div>

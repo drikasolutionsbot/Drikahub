@@ -35,19 +35,20 @@ const providerLabels: Record<string, string> = {
   mistic_pay: "Mistic Pay",
 };
 
-function timeAgo(dateStr: string): string {
+function timeAgo(dateStr: string, t: any): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "agora";
-  if (mins < 60) return `${mins} min atrás`;
+  if (mins < 1) return t.topbar.now;
+  if (mins < 60) return `${mins} ${t.topbar.minAgo}`;
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h atrás`;
-  return `${Math.floor(hours / 24)}d atrás`;
+  if (hours < 24) return `${hours}${t.topbar.hAgo}`;
+  return `${Math.floor(hours / 24)}${t.topbar.dAgo}`;
 }
 
 const PlanBadge = ({ tenant }: { tenant: { plan: string; plan_expires_at: string | null; plan_started_at: string | null } }) => {
+  const { t } = useLanguage();
   const isPro = tenant.plan === "pro";
-  const planLabel = isPro ? "Pro" : "Free (Teste)";
+  const planLabel = isPro ? t.plan.pro : t.plan.free;
   
   let timeLeft = "";
   let expiresLabel = "";
@@ -63,7 +64,7 @@ const PlanBadge = ({ tenant }: { tenant: { plan: string; plan_expires_at: string
     expiresLabel = expires.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
     
     if (diffMs <= 0) {
-      timeLeft = "Expirado";
+      timeLeft = t.plan.expired;
       isExpiring = true;
       isExpired = true;
     } else {
@@ -72,11 +73,11 @@ const PlanBadge = ({ tenant }: { tenant: { plan: string; plan_expires_at: string
       const mins = differenceInMinutes(expires, now) % 60;
       
       if (days > 0) {
-        timeLeft = `${days}d ${hours}h restantes`;
+        timeLeft = `${days}d ${hours}h ${t.plan.remaining}`;
       } else if (hours > 0) {
-        timeLeft = `${hours}h ${mins}m restantes`;
+        timeLeft = `${hours}h ${mins}m ${t.plan.remaining}`;
       } else {
-        timeLeft = `${mins}m restantes`;
+        timeLeft = `${mins}m ${t.plan.remaining}`;
       }
       isExpiring = days < 2;
     }
@@ -111,26 +112,26 @@ const PlanBadge = ({ tenant }: { tenant: { plan: string; plan_expires_at: string
         <div className="p-4 space-y-3">
           <div className="flex items-center gap-2">
             <Crown className={`h-5 w-5 ${isPro ? "text-primary" : "text-muted-foreground"}`} />
-            <h4 className="text-sm font-bold">Plano {planLabel}</h4>
+            <h4 className="text-sm font-bold">{t.plan.plan} {planLabel}</h4>
           </div>
           
           {tenant.plan_started_at && (
             <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">Início</span>
-              <span className="font-medium">{new Date(tenant.plan_started_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })}</span>
+              <span className="text-muted-foreground">{t.plan.start}</span>
+              <span className="font-medium">{new Date(tenant.plan_started_at).toLocaleDateString(undefined, { day: "2-digit", month: "2-digit", year: "numeric" })}</span>
             </div>
           )}
           
           {expiresLabel && (
             <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">Expira em</span>
+              <span className="text-muted-foreground">{t.plan.expiresAt}</span>
               <span className={`font-semibold ${isExpired ? "text-destructive" : isExpiring ? "text-destructive" : ""}`}>{expiresLabel}</span>
             </div>
           )}
 
           {timeLeft && (
             <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">Tempo restante</span>
+              <span className="text-muted-foreground">{t.plan.timeLeft}</span>
               <span className={`font-semibold ${isExpired || isExpiring ? "text-destructive" : "text-primary"}`}>{timeLeft}</span>
             </div>
           )}
@@ -140,22 +141,22 @@ const PlanBadge = ({ tenant }: { tenant: { plan: string; plan_expires_at: string
               <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3">
                 <p className="text-xs text-destructive font-medium flex items-center gap-1.5">
                   <AlertCircle className="h-3.5 w-3.5" />
-                  Acesso bloqueado
+                  {t.plan.accessBlocked}
                 </p>
                 <p className="text-xs text-destructive/70 mt-1">
-                  Todos os recursos estão suspensos. Assine o plano Pro para liberar o acesso novamente.
+                  {t.plan.allSuspended}
                 </p>
               </div>
             ) : isExpiring ? (
               <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3">
                 <p className="text-xs text-destructive/80">
-                  ⚠️ Seu plano está prestes a expirar. Após o vencimento, o painel será <strong>bloqueado automaticamente</strong> até a renovação.
+                  ⚠️ {t.plan.aboutToExpire}
                 </p>
               </div>
             ) : (
               <div className="rounded-lg bg-primary/5 border border-primary/10 p-3">
                 <p className="text-xs text-muted-foreground">
-                  ✅ Seu plano está ativo. Ao expirar, o acesso será bloqueado até que o plano Pro seja renovado.
+                  ✅ {t.plan.planActive}
                 </p>
               </div>
             )}
@@ -171,7 +172,7 @@ const PlanBadge = ({ tenant }: { tenant: { plan: string; plan_expires_at: string
               }}
             >
               <Crown className="h-3.5 w-3.5" />
-              Assine o Plano Pro
+              {t.plan.subscribePro}
             </Button>
           )}
         </div>
@@ -215,18 +216,18 @@ export const TopBar = ({ onToggleSidebar }: TopBarProps) => {
       const notifs: Notification[] = data.map((log: any) => ({
         id: log.id,
         title: log.status === "processed"
-          ? "Pagamento confirmado"
+          ? t.topbar.paymentConfirmed
           : log.status === "ignored"
-            ? "Webhook ignorado"
-            : "Webhook recebido",
+            ? t.topbar.webhookIgnored
+            : t.topbar.webhookReceived,
         desc: `${providerLabels[log.provider_key] || log.provider_key} — ${log.event_type || "evento"}`,
-        time: timeAgo(log.created_at),
+        time: timeAgo(log.created_at, t),
         read: readIds.has(log.id),
         type: log.status === "processed" ? "payment" : "info",
       }));
       setNotifications(notifs);
     }
-  }, [tenantId, readIds]);
+  }, [tenantId, readIds, t]);
 
   useEffect(() => {
     fetchNotifications();
@@ -250,9 +251,9 @@ export const TopBar = ({ onToggleSidebar }: TopBarProps) => {
           const log = payload.new;
           const newNotif: Notification = {
             id: log.id,
-            title: log.status === "processed" ? "Pagamento confirmado" : "Webhook recebido",
+            title: log.status === "processed" ? t.topbar.paymentConfirmed : t.topbar.webhookReceived,
             desc: `${providerLabels[log.provider_key] || log.provider_key} — ${log.event_type || "evento"}`,
-            time: "agora",
+            time: t.topbar.now,
             read: false,
             type: log.status === "processed" ? "payment" : "info",
           };

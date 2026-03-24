@@ -19,9 +19,10 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   BarChart, Bar,
 } from "recharts";
-import { format, parseISO, subDays, startOfDay, eachDayOfInterval, isWithinInterval, isSameDay } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { format, parseISO, subDays, startOfDay, eachDayOfInterval } from "date-fns";
+import { ptBR as ptBRLocale } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 interface Order {
   id: string;
@@ -47,26 +48,11 @@ const statusColors: Record<string, string> = {
   refunded: "bg-muted text-muted-foreground border-border",
 };
 
-const statusLabels: Record<string, string> = {
-  paid: "Pago",
-  delivered: "Entregue",
-  delivering: "Entregando",
-  pending_payment: "Pendente",
-  canceled: "Cancelado",
-  refunded: "Reembolsado",
-};
-
 const PAID_STATUSES = ["paid", "delivered", "delivering"];
-
-const periodButtons: { key: PeriodKey; label: string }[] = [
-  { key: "today", label: "Hoje" },
-  { key: "7d", label: "7 dias" },
-  { key: "30d", label: "30 dias" },
-  { key: "custom", label: "Personalizado" },
-];
 
 export const DashboardOverview = () => {
   const { tenantId } = useTenant();
+  const { t } = useLanguage();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<PeriodKey>("30d");
@@ -181,7 +167,7 @@ export const DashboardOverview = () => {
         return format(parseISO(o.created_at), "yyyy-MM-dd") === dayStr;
       });
       return {
-        date: format(day, days.length > 14 ? "dd/MM" : "dd/MM", { locale: ptBR }),
+        date: format(day, days.length > 14 ? "dd/MM" : "dd/MM", { locale: ptBRLocale }),
         revenue: dayOrders.reduce((s, o) => s + o.total_cents, 0) / 100,
         orders: dayOrders.length,
       };
@@ -211,12 +197,12 @@ export const DashboardOverview = () => {
 
   const periodLabel = useMemo(() => {
     switch (period) {
-      case "today": return "Hoje";
-      case "7d": return "7 dias";
-      case "30d": return "30 dias";
+      case "today": return t.dashboardOverview.today;
+      case "7d": return t.dashboardOverview.days7;
+      case "30d": return t.dashboardOverview.days30;
       case "custom": return `${format(customRange.from, "dd/MM")} — ${format(customRange.to, "dd/MM")}`;
     }
-  }, [period, customRange]);
+  }, [period, customRange, t]);
 
   if (loading) {
     return (
@@ -232,14 +218,30 @@ export const DashboardOverview = () => {
     );
   }
 
+  const statusLabels: Record<string, string> = {
+    paid: t.dashboardOverview.statusPaid,
+    delivered: t.dashboardOverview.statusDelivered,
+    delivering: t.dashboardOverview.statusDelivering,
+    pending_payment: t.dashboardOverview.statusPending,
+    canceled: t.dashboardOverview.statusCanceled,
+    refunded: t.dashboardOverview.statusRefunded,
+  };
+
+  const periodButtons: { key: PeriodKey; label: string }[] = [
+    { key: "today", label: t.dashboardOverview.today },
+    { key: "7d", label: t.dashboardOverview.days7 },
+    { key: "30d", label: t.dashboardOverview.days30 },
+    { key: "custom", label: t.dashboardOverview.custom },
+  ];
+
   const chartConfig = {
-    revenue: { label: "Receita", color: "hsl(var(--primary))" },
-    orders: { label: "Pedidos", color: "hsl(var(--secondary))" },
+    revenue: { label: t.dashboardOverview.revenue, color: "hsl(var(--primary))" },
+    orders: { label: t.dashboardOverview.orders, color: "hsl(var(--secondary))" },
   };
 
   const statCards = [
     {
-      title: `Receita (${periodLabel})`,
+      title: `${t.dashboardOverview.revenue} (${periodLabel})`,
       value: formatCurrency(stats.revenue),
       change: stats.revenueChange,
       icon: DollarSign,
@@ -247,7 +249,7 @@ export const DashboardOverview = () => {
       iconBg: "bg-primary/15 text-primary",
     },
     {
-      title: `Pedidos (${periodLabel})`,
+      title: `${t.dashboardOverview.orders} (${periodLabel})`,
       value: stats.ordersCount.toString(),
       change: stats.ordersChange,
       icon: ShoppingCart,
@@ -255,7 +257,7 @@ export const DashboardOverview = () => {
       iconBg: "bg-secondary/15 text-secondary",
     },
     {
-      title: "Ticket Médio",
+      title: t.dashboardOverview.avgTicket,
       value: formatCurrency(stats.avgTicket),
       change: stats.avgChange,
       icon: TrendingUp,
@@ -301,7 +303,7 @@ export const DashboardOverview = () => {
                   numberOfMonths={1}
                   disabled={(date) => date > new Date()}
                   className={cn("p-3 pointer-events-auto")}
-                  locale={ptBR}
+                  locale={ptBRLocale}
                 />
               </PopoverContent>
             </Popover>
@@ -336,7 +338,7 @@ export const DashboardOverview = () => {
                 {card.change !== 0 && (
                   <div className={`inline-flex items-center gap-1 text-xs font-semibold ${card.change > 0 ? "text-emerald-400" : "text-destructive"}`}>
                     {card.change > 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                    {card.change > 0 ? "+" : ""}{card.change.toFixed(1)}% vs período anterior
+                    {card.change > 0 ? "+" : ""}{card.change.toFixed(1)}% {t.dashboardOverview.vsPrevPeriod}
                   </div>
                 )}
               </div>
@@ -357,16 +359,16 @@ export const DashboardOverview = () => {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-base font-semibold">
-                  Receita — {period === "today" ? "Por hora" : periodLabel}
+                  {t.dashboardOverview.revenue} — {period === "today" ? t.dashboardOverview.perHour : periodLabel}
                 </CardTitle>
-                <p className="text-xs text-muted-foreground mt-0.5">Valores em R$</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{t.dashboardOverview.valuesInCurrency}</p>
               </div>
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-primary" /> Receita
+                  <span className="h-2 w-2 rounded-full bg-primary" /> {t.dashboardOverview.revenue}
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-secondary" /> Pedidos
+                  <span className="h-2 w-2 rounded-full bg-secondary" /> {t.dashboardOverview.orders}
                 </span>
               </div>
             </div>
@@ -394,14 +396,14 @@ export const DashboardOverview = () => {
         <Card className="border-border bg-card">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base font-semibold">Top Clientes</CardTitle>
+              <CardTitle className="text-base font-semibold">{t.dashboardOverview.topClients}</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </div>
-            <p className="text-xs text-muted-foreground">No período selecionado</p>
+            <p className="text-xs text-muted-foreground">{t.dashboardOverview.inSelectedPeriod}</p>
           </CardHeader>
           <CardContent className="space-y-3">
             {topClients.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Nenhum dado neste período</p>
+              <p className="text-sm text-muted-foreground text-center py-8">{t.dashboardOverview.noDataPeriod}</p>
             ) : (
               topClients.map((client, i) => (
                 <div key={i} className="flex items-center gap-3">
@@ -421,7 +423,7 @@ export const DashboardOverview = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{client.username}</p>
-                    <p className="text-xs text-muted-foreground">{client.count} pedido{client.count > 1 ? "s" : ""}</p>
+                    <p className="text-xs text-muted-foreground">{client.count} {client.count > 1 ? t.dashboardOverview.orders_plural : t.dashboardOverview.order}</p>
                   </div>
                   <span className="text-sm font-bold tabular-nums">{formatCurrency(client.total)}</span>
                 </div>
@@ -437,13 +439,13 @@ export const DashboardOverview = () => {
         <Card className="border-border bg-card">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base font-semibold">Vendas Recentes</CardTitle>
+              <CardTitle className="text-base font-semibold">{t.dashboardOverview.recentSales}</CardTitle>
               <Clock className="h-4 w-4 text-muted-foreground" />
             </div>
           </CardHeader>
           <CardContent className="space-y-2">
             {recentSales.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Nenhuma venda neste período</p>
+              <p className="text-sm text-muted-foreground text-center py-8">{t.dashboardOverview.noSalesPeriod}</p>
             ) : (
               recentSales.map(sale => (
                 <div key={sale.id} className="flex items-center gap-3 rounded-lg border border-border/50 bg-muted/30 px-3 py-2.5 transition-colors hover:bg-muted/60">
@@ -472,9 +474,9 @@ export const DashboardOverview = () => {
         <Card className="border-border bg-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-semibold">
-              Volume de Pedidos — {period === "today" ? "Por hora" : periodLabel}
+              {t.dashboardOverview.orderVolume} — {period === "today" ? t.dashboardOverview.perHour : periodLabel}
             </CardTitle>
-            <p className="text-xs text-muted-foreground">Quantidade de pedidos {period === "today" ? "por hora" : "por dia"}</p>
+            <p className="text-xs text-muted-foreground">{t.dashboardOverview.orderQty} {period === "today" ? t.dashboardOverview.perHour.toLowerCase() : t.dashboardOverview.perDay}</p>
           </CardHeader>
           <CardContent className="pt-0 pb-2">
             <ChartContainer config={chartConfig} className="h-[240px] w-full">

@@ -23,12 +23,14 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { logTenantAudit, fetchTenantAuditLogs, type AuditLogEntry } from "@/lib/tenantAuditLog";
 import { formatDistanceToNow } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { ptBR as ptBRLocale } from "date-fns/locale";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 const BOT_PERMISSIONS = "536870920"; // Administrator + MANAGE_WEBHOOKS
 
 const DashboardPage = () => {
   const { tenant, tenantId, loading: tenantLoading, refetch } = useTenant();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<"membros" | "cargos">("membros");
   const [memberSearchOpen, setMemberSearchOpen] = useState(false);
 
@@ -141,13 +143,13 @@ const DashboardPage = () => {
     setSavingMember(false);
     if (result) {
       setMemberDraft({});
-      toast.success("Permissões salvas!");
+      toast.success(t.dashboard.permissionsSaved);
       if (tenantId) {
         await logTenantAudit(tenantId, "save_permissions", "membro", selectedMember.discord_display_name || selectedMember.discord_username, selectedMember.id, memberDraft);
         loadAuditLogs();
       }
     }
-    else toast.error("Erro ao salvar.");
+    else toast.error(t.dashboard.errorSaving);
   };
 
   // --- Role permission helpers ---
@@ -177,8 +179,8 @@ const DashboardPage = () => {
     setSavingRole(true);
     const result = await updateRole(selectedRole.id, roleDraft);
     setSavingRole(false);
-    if (result) { setRoleDraft({}); toast.success("Permissões do cargo salvas!"); }
-    else toast.error("Erro ao salvar.");
+    if (result) { setRoleDraft({}); toast.success(t.dashboard.rolePermsSaved); }
+    else toast.error(t.dashboard.errorSaving);
   };
 
   const handleCreateRole = async () => {
@@ -234,12 +236,12 @@ const DashboardPage = () => {
 
   const getAuditActionLabel = (action: string) => {
     const map: Record<string, string> = {
-      create: "criou", update: "atualizou", delete: "removeu",
-      activate: "ativou", deactivate: "desativou",
-      switch_server: "trocou o servidor para", save_permissions: "editou permissões de",
-      add_member: "adicionou", remove_member: "removeu",
-      create_role: "criou o cargo", delete_role: "removeu o cargo",
-      add_stock: "adicionou estoque em", deliver_order: "entregou pedido de",
+      create: t.dashboard.auditCreate, update: t.dashboard.auditUpdate, delete: t.dashboard.auditDelete,
+      activate: t.dashboard.auditActivate, deactivate: t.dashboard.auditDeactivate,
+      switch_server: t.dashboard.auditSwitchServer, save_permissions: t.dashboard.auditSavePermissions,
+      add_member: t.dashboard.auditAddMember, remove_member: t.dashboard.auditRemoveMember,
+      create_role: t.dashboard.auditCreateRole, delete_role: t.dashboard.auditDeleteRole,
+      add_stock: t.dashboard.auditAddStock, deliver_order: t.dashboard.auditDeliverOrder,
     };
     return map[action] || action;
   };
@@ -504,7 +506,7 @@ const DashboardPage = () => {
       <div>
         <h1 className="font-display text-2xl font-bold">Dashboard</h1>
         <p className="text-muted-foreground">
-          Painel de controle de <strong className="text-foreground">{tenant.name}</strong>
+          {t.dashboard.controlPanel} <strong className="text-foreground">{tenant.name}</strong>
         </p>
       </div>
 
@@ -512,10 +514,10 @@ const DashboardPage = () => {
         <div className="overflow-x-auto scrollbar-none -mx-4 px-4 md:mx-0 md:px-0">
           <TabsList className="bg-muted/50 border border-border w-max min-w-full sm:w-auto">
             <TabsTrigger value="overview" className="gap-2 data-[state=active]:bg-background text-xs sm:text-sm">
-              <Eye className="h-4 w-4" /> Visão Geral
+              <Eye className="h-4 w-4" /> {t.dashboard.overviewTab}
             </TabsTrigger>
             <TabsTrigger value="resumo" className="gap-2 data-[state=active]:bg-background text-xs sm:text-sm">
-              <BarChart3 className="h-4 w-4" /> Resumo
+              <BarChart3 className="h-4 w-4" /> {t.dashboard.summaryTab}
             </TabsTrigger>
           </TabsList>
         </div>
@@ -525,9 +527,9 @@ const DashboardPage = () => {
 
       {/* Server Section */}
       <div>
-        <h1 className="font-display text-2xl font-bold">Servidor de Operações</h1>
+        <h1 className="font-display text-2xl font-bold">{t.dashboard.operationsServer}</h1>
         <p className="text-muted-foreground">
-          Servidor onde <strong className="text-foreground">{tenant.name}</strong> está operando.
+          {t.dashboard.operationsServerDesc.replace("{name}", tenant.name)}
         </p>
       </div>
 
@@ -535,7 +537,7 @@ const DashboardPage = () => {
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-border bg-card p-5 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-lg font-semibold border-l-2 border-primary pl-3">Servidor Principal</h2>
+            <h2 className="font-display text-lg font-semibold border-l-2 border-primary pl-3">{t.dashboard.mainServer}</h2>
             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={openServerModal}><Settings2 className="h-4 w-4" /></Button>
           </div>
           {tenant.discord_guild_id ? (
@@ -558,14 +560,14 @@ const DashboardPage = () => {
                 </div>
               </div>
               <div>
-                <p className="text-xs font-semibold text-muted-foreground border-l-2 border-primary pl-2 mb-2">Informações do Servidor</p>
+                <p className="text-xs font-semibold text-muted-foreground border-l-2 border-primary pl-2 mb-2">{t.dashboard.serverInfo}</p>
                 <div className="flex flex-wrap gap-2">
-                  <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-[10px] sm:text-xs font-medium text-muted-foreground"><Users className="h-3 w-3" /> {guildInfo?.member_count ?? 0} membros</span>
-                  <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-[10px] sm:text-xs font-medium text-muted-foreground"><UserCheck className="h-3 w-3" /> {guildInfo?.presence_count ?? 0} online</span>
+                  <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-[10px] sm:text-xs font-medium text-muted-foreground"><Users className="h-3 w-3" /> {guildInfo?.member_count ?? 0} {t.dashboard.membersCount}</span>
+                  <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-[10px] sm:text-xs font-medium text-muted-foreground"><UserCheck className="h-3 w-3" /> {guildInfo?.presence_count ?? 0} {t.dashboard.online}</span>
                 </div>
               </div>
               <Button variant="outline" className="gap-2 text-sm" onClick={handleAddBot}>
-                <ExternalLink className="h-3.5 w-3.5" /> Adicionar <strong>Drika Bot</strong> ao servidor
+                <ExternalLink className="h-3.5 w-3.5" /> {t.dashboard.addDrikaBot}
               </Button>
             </>
           ) : (
@@ -574,35 +576,35 @@ const DashboardPage = () => {
                 <Shield className="h-6 w-6 text-amber-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-foreground">Nenhum servidor conectado</p>
-                <p className="text-xs text-muted-foreground mt-1">Adicione o bot ao seu servidor Discord</p>
+                <p className="text-sm font-medium text-foreground">{t.dashboard.noServerConnected}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t.dashboard.noServerDesc}</p>
               </div>
               {waitingForBot ? (
                 <div className="w-full max-w-sm space-y-2">
                   <div className="rounded-lg border border-border bg-muted/30 p-3">
                     <div className="flex items-center justify-center gap-2 text-sm text-foreground">
                       <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                      Aguardando conexão automática...
+                      {t.dashboard.waitingConnection}
                     </div>
                   </div>
                   <Button variant="outline" size="sm" className="w-full" onClick={handleCancelBotPolling}>
-                    Cancelar
+                    {t.common.cancel}
                   </Button>
                 </div>
               ) : (
                 <Button variant="outline" className="gap-2 text-sm" onClick={handleAddBot}>
-                  <ExternalLink className="h-3.5 w-3.5" /> Adicionar Drika Bot
+                  <ExternalLink className="h-3.5 w-3.5" /> {t.dashboard.addBot}
                 </Button>
               )}
             </div>
           )}
         </div>
         <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-          <h2 className="font-display text-lg font-semibold border-l-2 border-primary pl-3">Auditoria</h2>
+          <h2 className="font-display text-lg font-semibold border-l-2 border-primary pl-3">{t.dashboard.auditLog}</h2>
           {auditLoading ? (
             <div className="space-y-2"><Skeleton className="h-8" /><Skeleton className="h-8" /><Skeleton className="h-8" /></div>
           ) : auditLogs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhum registro de auditoria encontrado.</p>
+            <p className="text-sm text-muted-foreground">{t.dashboard.noAuditLogs}</p>
           ) : (
             <div className="space-y-2 max-h-[300px] overflow-y-auto scrollbar-none">
               {auditLogs.map(log => (
@@ -612,12 +614,12 @@ const DashboardPage = () => {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-foreground">
-                      <span className="text-primary">{log.actor_name || "Sistema"}</span>{" "}
+                      <span className="text-primary">{log.actor_name || t.dashboard.system}</span>{" "}
                       <span className="text-muted-foreground font-normal">{getAuditActionLabel(log.action)}</span>{" "}
                       {log.entity_name && <span className="font-semibold">{log.entity_name}</span>}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {log.entity_type} • {formatDistanceToNow(new Date(log.created_at), { addSuffix: true, locale: ptBR })}
+                      {log.entity_type} • {formatDistanceToNow(new Date(log.created_at), { addSuffix: true, locale: ptBRLocale })}
                     </p>
                   </div>
                 </div>
@@ -630,20 +632,23 @@ const DashboardPage = () => {
       {/* Permissões */}
       <div className="space-y-4">
         <div>
-          <h2 className="font-display text-2xl font-bold">Permissões</h2>
-          <p className="text-muted-foreground">Configure as permissões da Aplicação.</p>
+          <h2 className="font-display text-2xl font-bold">{t.dashboard.permissions}</h2>
+          <p className="text-muted-foreground">{t.dashboard.permissionsDesc}</p>
         </div>
 
         <div className="flex gap-4 sm:gap-6 border-b border-border overflow-x-auto scrollbar-none">
-          {(["membros", "cargos"] as const).map(tab => (
+          {([
+            { key: "membros" as const, label: t.dashboard.members },
+            { key: "cargos" as const, label: t.dashboard.roles },
+          ]).map(tab => (
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`pb-2 text-sm font-medium transition-colors capitalize ${
-                activeTab === tab ? "border-b-2 border-primary text-foreground" : "text-muted-foreground hover:text-foreground"
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`pb-2 text-sm font-medium transition-colors ${
+                activeTab === tab.key ? "border-b-2 border-primary text-foreground" : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              {tab}
+              {tab.label}
             </button>
           ))}
         </div>
@@ -653,7 +658,7 @@ const DashboardPage = () => {
           <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
             <div className="rounded-xl border border-border bg-card p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold border-l-2 border-primary pl-3">Lista de membros</h3>
+                <h3 className="text-sm font-semibold border-l-2 border-primary pl-3">{t.dashboard.membersList}</h3>
                 <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={() => setMemberSearchOpen(true)}>
                   <Plus className="h-4 w-4" />
                 </Button>
@@ -663,7 +668,7 @@ const DashboardPage = () => {
               ) : permissions.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <UserPlus className="h-10 w-10 text-muted-foreground/40 mb-2" />
-                  <p className="text-xs text-muted-foreground">Nenhum membro na lista</p>
+                  <p className="text-xs text-muted-foreground">{t.dashboard.noMembersInList}</p>
                 </div>
               ) : (
                 <div className="space-y-0.5">
@@ -689,9 +694,9 @@ const DashboardPage = () => {
             </div>
 
             <PermissionPanel
-              title={selectedMember ? `Permissões para ${selectedMember.discord_display_name || selectedMember.discord_username}` : null}
-              subtitle="Selecione as permissões que deseja conceder a este usuário"
-              emptyText="Selecione um membro para configurar as permissões"
+              title={selectedMember ? `${t.dashboard.permissionsFor} ${selectedMember.discord_display_name || selectedMember.discord_username}` : null}
+              subtitle={t.dashboard.selectPermissions}
+              emptyText={t.dashboard.selectMember}
               getValue={getMemberValue}
               onToggle={toggleMemberPerm}
               hasChanges={memberHasChanges}
@@ -702,7 +707,7 @@ const DashboardPage = () => {
                 removeMember(selectedMember.id);
                 setSelectedMemberId(null);
                 setMemberDraft({});
-                toast.success("Membro removido.");
+                toast.success(t.dashboard.memberRemoved);
               } : undefined}
             />
           </div>
@@ -713,7 +718,7 @@ const DashboardPage = () => {
           <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
             <div className="rounded-xl border border-border bg-card p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold border-l-2 border-primary pl-3">Lista de cargos</h3>
+                <h3 className="text-sm font-semibold border-l-2 border-primary pl-3">{t.dashboard.rolesList}</h3>
                 <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={() => setCreateRoleOpen(true)}>
                   <Plus className="h-4 w-4" />
                 </Button>
@@ -723,7 +728,7 @@ const DashboardPage = () => {
               ) : roles.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <Shield className="h-10 w-10 text-muted-foreground/40 mb-2" />
-                  <p className="text-xs text-muted-foreground">Nenhum cargo criado</p>
+                  <p className="text-xs text-muted-foreground">{t.dashboard.noRolesCreated}</p>
                 </div>
               ) : (
                 <div className="space-y-0.5">
@@ -747,9 +752,9 @@ const DashboardPage = () => {
             </div>
 
             <PermissionPanel
-              title={selectedRole ? `Permissões do cargo ${selectedRole.name}` : null}
-              subtitle="Selecione as permissões que este cargo concede"
-              emptyText="Selecione um cargo para configurar as permissões"
+              title={selectedRole ? `${t.dashboard.rolePermissions} ${selectedRole.name}` : null}
+              subtitle={t.dashboard.selectRolePermissions}
+              emptyText={t.dashboard.selectRole}
               getValue={getRoleValue}
               onToggle={toggleRolePerm}
               hasChanges={roleHasChanges}
@@ -776,21 +781,21 @@ const DashboardPage = () => {
       <Dialog open={createRoleOpen} onOpenChange={setCreateRoleOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Criar novo cargo</DialogTitle>
-            <DialogDescription>O cargo será criado automaticamente no servidor Discord.</DialogDescription>
+            <DialogTitle>{t.dashboard.createNewRole}</DialogTitle>
+            <DialogDescription>{t.dashboard.createNewRoleDesc}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Nome do cargo</label>
+              <label className="text-sm font-medium">{t.dashboard.roleName}</label>
               <Input
-                placeholder="Ex: Moderador"
+                placeholder={t.dashboard.roleNamePlaceholder}
                 value={newRoleName}
                 onChange={e => setNewRoleName(e.target.value)}
                 autoFocus
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Cor</label>
+              <label className="text-sm font-medium">{t.dashboard.color}</label>
               <div className="flex items-center gap-3">
                 <input
                   type="color"
@@ -803,9 +808,9 @@ const DashboardPage = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setCreateRoleOpen(false)} disabled={creatingRole}>Cancelar</Button>
+            <Button variant="ghost" onClick={() => setCreateRoleOpen(false)} disabled={creatingRole}>{t.common.cancel}</Button>
             <Button onClick={handleCreateRole} disabled={creatingRole || !newRoleName.trim()}>
-              {creatingRole ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Criando...</> : "Criar cargo"}
+              {creatingRole ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> {t.dashboard.creating}</> : t.dashboard.createRole}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -815,8 +820,8 @@ const DashboardPage = () => {
       <Dialog open={serverModalOpen} onOpenChange={setServerModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Trocar Servidor</DialogTitle>
-            <DialogDescription>Selecione o servidor onde o bot irá operar.</DialogDescription>
+            <DialogTitle>{t.dashboard.switchServer}</DialogTitle>
+            <DialogDescription>{t.dashboard.switchServerDesc}</DialogDescription>
           </DialogHeader>
           <div className="space-y-1 max-h-[300px] overflow-y-auto py-2">
             {loadingGuilds ? (
@@ -825,12 +830,12 @@ const DashboardPage = () => {
               </div>
             ) : guilds.length === 0 ? (
               <div className="space-y-3 py-4">
-                <p className="text-sm text-muted-foreground text-center">Nenhum servidor encontrado automaticamente.</p>
+                <p className="text-sm text-muted-foreground text-center">{t.dashboard.noServerFound}</p>
                 <div className="space-y-2">
                   <Input
                     value={manualGuildId}
                     onChange={(e) => setManualGuildId(e.target.value.replace(/\D/g, ""))}
-                    placeholder="Cole o ID do seu servidor Discord"
+                    placeholder={t.dashboard.pasteServerId}
                     className="font-mono"
                   />
                   <Button
@@ -841,14 +846,14 @@ const DashboardPage = () => {
                     {switchingGuild === manualGuildId.trim() ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Vinculando...
+                        {t.dashboard.linking}
                       </>
                     ) : (
-                      "Vincular servidor por ID"
+                      t.dashboard.linkById
                     )}
                   </Button>
                   <p className="text-xs text-muted-foreground">
-                    Adicione o bot no seu servidor, copie o ID do servidor no Discord e cole acima.
+                    {t.dashboard.linkByIdHelp}
                   </p>
                 </div>
               </div>
@@ -877,7 +882,7 @@ const DashboardPage = () => {
                   </div>
                   {switchingGuild === guild.id && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
                   {tenant?.discord_guild_id === guild.id && !switchingGuild && (
-                    <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-medium">Atual</span>
+                    <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-medium">{t.dashboard.currentServer}</span>
                   )}
                 </button>
               ))
@@ -915,6 +920,7 @@ function PermissionPanel({
   onDelete?: () => void;
   roleColor?: string;
 }) {
+  const { t } = useLanguage();
   return (
     <div className="rounded-xl border border-border bg-card p-5 relative">
       {title ? (
@@ -956,10 +962,10 @@ function PermissionPanel({
 
           {hasChanges && (
             <div className="sticky bottom-0 -mx-5 -mb-5 px-5 py-3 border-t border-border bg-card/95 backdrop-blur flex items-center justify-end gap-3 rounded-b-xl">
-              <span className="text-xs text-muted-foreground mr-auto">Alterações não salvas</span>
-              <Button variant="ghost" size="sm" onClick={onDiscard} disabled={saving}>Limpar</Button>
+              <span className="text-xs text-muted-foreground mr-auto">{t.dashboard.unsavedChanges}</span>
+              <Button variant="ghost" size="sm" onClick={onDiscard} disabled={saving}>{t.dashboard.discardChanges}</Button>
               <Button size="sm" onClick={onSave} disabled={saving}>
-                {saving ? "Salvando..." : "Salvar"}
+                {saving ? t.dashboard.saving : t.common.save}
               </Button>
             </div>
           )}
