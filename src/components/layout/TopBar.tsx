@@ -184,11 +184,12 @@ export const TopBar = ({ onToggleSidebar }: TopBarProps) => {
   const { user, signOut } = useAuth();
   const { tenant, tenantId } = useTenant();
   const { theme, setTheme } = useTheme();
+  const { t, language, setLanguage } = useLanguage();
   const navigate = useNavigate();
   const tokenSession = sessionStorage.getItem("token_session");
   const tokenData = tokenSession ? JSON.parse(tokenSession) : null;
   const avatar = user?.user_metadata?.avatar_url;
-  const name = user?.user_metadata?.full_name || user?.user_metadata?.name || tokenData?.tenant_name || "Usuário";
+  const name = user?.user_metadata?.full_name || user?.user_metadata?.name || tokenData?.tenant_name || t.topbar.user;
   const email = user?.email || "token@acesso";
 
   const [notifOpen, setNotifOpen] = useState(false);
