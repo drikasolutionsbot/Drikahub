@@ -156,7 +156,7 @@ const PlanBadge = ({ tenant }: { tenant: { plan: string; plan_expires_at: string
             ) : (
               <div className="rounded-lg bg-primary/5 border border-primary/10 p-3">
                 <p className="text-xs text-muted-foreground">
-                  ✅ Seu plano está ativo. Ao expirar, o acesso será bloqueado até que o plano Pro seja renovado.
+                  ✅ {t.plan.planActive}
                 </p>
               </div>
             )}
