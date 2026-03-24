@@ -236,12 +236,12 @@ const DashboardPage = () => {
 
   const getAuditActionLabel = (action: string) => {
     const map: Record<string, string> = {
-      create: "criou", update: "atualizou", delete: "removeu",
-      activate: "ativou", deactivate: "desativou",
-      switch_server: "trocou o servidor para", save_permissions: "editou permissões de",
-      add_member: "adicionou", remove_member: "removeu",
-      create_role: "criou o cargo", delete_role: "removeu o cargo",
-      add_stock: "adicionou estoque em", deliver_order: "entregou pedido de",
+      create: t.dashboard.auditCreate, update: t.dashboard.auditUpdate, delete: t.dashboard.auditDelete,
+      activate: t.dashboard.auditActivate, deactivate: t.dashboard.auditDeactivate,
+      switch_server: t.dashboard.auditSwitchServer, save_permissions: t.dashboard.auditSavePermissions,
+      add_member: t.dashboard.auditAddMember, remove_member: t.dashboard.auditRemoveMember,
+      create_role: t.dashboard.auditCreateRole, delete_role: t.dashboard.auditDeleteRole,
+      add_stock: t.dashboard.auditAddStock, deliver_order: t.dashboard.auditDeliverOrder,
     };
     return map[action] || action;
   };
