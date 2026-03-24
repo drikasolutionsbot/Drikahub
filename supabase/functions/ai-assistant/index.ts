@@ -30,7 +30,32 @@ async function gatewayText(apiKey: string, messages: any[], model?: string, temp
 }
 
 async function generateImage(apiKey: string, replicateToken: string | undefined, prompt: string): Promise<string> {
-  // Try Replicate first if token available
+  // Try Lovable AI Gateway image generation first (most reliable)
+  try {
+    console.log("🖼️ Generating image with Lovable AI Gateway (gemini-2.5-flash-image)...");
+    const resp = await fetch(GATEWAY_URL, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-image",
+        messages: [{ role: "user", content: `Generate this image: ${prompt}` }],
+        modalities: ["image", "text"],
+      }),
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      const imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+      if (imageData) return imageData;
+      console.log("Gateway returned no image, trying Replicate fallback...");
+    } else {
+      const body = await resp.text();
+      console.log(`Gateway image error ${resp.status}: ${body}, trying Replicate fallback...`);
+    }
+  } catch (e) {
+    console.log("Gateway image error:", e.message);
+  }
+
+  // Fallback: Replicate SDXL Lightning
   if (replicateToken) {
     try {
       const createResp = await fetch("https://api.replicate.com/v1/predictions", {
@@ -59,27 +84,12 @@ async function generateImage(apiKey: string, replicateToken: string | undefined,
           if (typeof output === "string") return output;
         }
       }
-      console.log("Replicate failed, falling back to Lovable AI Gateway for image generation...");
     } catch (e) {
-      console.log("Replicate error, falling back to gateway:", e.message);
+      console.log("Replicate error:", e.message);
     }
   }
 
-  // Fallback: Lovable AI Gateway image generation
-  const resp = await fetch(GATEWAY_URL, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash-image",
-      messages: [{ role: "user", content: prompt }],
-      modalities: ["image", "text"],
-    }),
-  });
-  if (!resp.ok) { const body = await resp.text(); throw new Error(`Image generation error ${resp.status}: ${body}`); }
-  const data = await resp.json();
-  const imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-  if (!imageData) throw new Error("No image returned");
-  return imageData;
+  throw new Error("Não foi possível gerar a imagem. Tente novamente em alguns segundos.");
 }
 
 // ═══════════════════════════════════════════════════════════════════════
