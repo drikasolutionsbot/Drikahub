@@ -64,7 +64,7 @@ const PlanBadge = ({ tenant }: { tenant: { plan: string; plan_expires_at: string
     expiresLabel = expires.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
     
     if (diffMs <= 0) {
-      timeLeft = "Expirado";
+      timeLeft = t.plan.expired;
       isExpiring = true;
       isExpired = true;
     } else {
