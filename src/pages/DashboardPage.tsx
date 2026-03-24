@@ -830,12 +830,12 @@ const DashboardPage = () => {
               </div>
             ) : guilds.length === 0 ? (
               <div className="space-y-3 py-4">
-                <p className="text-sm text-muted-foreground text-center">Nenhum servidor encontrado automaticamente.</p>
+                <p className="text-sm text-muted-foreground text-center">{t.dashboard.noServerFound}</p>
                 <div className="space-y-2">
                   <Input
                     value={manualGuildId}
                     onChange={(e) => setManualGuildId(e.target.value.replace(/\D/g, ""))}
-                    placeholder="Cole o ID do seu servidor Discord"
+                    placeholder={t.dashboard.pasteServerId}
                     className="font-mono"
                   />
                   <Button
@@ -846,14 +846,14 @@ const DashboardPage = () => {
                     {switchingGuild === manualGuildId.trim() ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Vinculando...
+                        {t.dashboard.linking}
                       </>
                     ) : (
-                      "Vincular servidor por ID"
+                      t.dashboard.linkById
                     )}
                   </Button>
                   <p className="text-xs text-muted-foreground">
-                    Adicione o bot no seu servidor, copie o ID do servidor no Discord e cole acima.
+                    {t.dashboard.linkByIdHelp}
                   </p>
                 </div>
               </div>
