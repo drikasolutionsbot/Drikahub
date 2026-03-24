@@ -52,6 +52,7 @@ const PAID_STATUSES = ["paid", "delivered", "delivering"];
 
 export const DashboardOverview = () => {
   const { tenantId } = useTenant();
+  const { t } = useLanguage();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<PeriodKey>("30d");
