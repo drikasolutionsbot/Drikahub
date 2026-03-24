@@ -207,6 +207,53 @@ export type Database = {
           },
         ]
       }
+      ai_generations: {
+        Row: {
+          category: string
+          created_at: string
+          credits_used: number
+          enhanced_prompt: string | null
+          id: string
+          result_image_url: string | null
+          result_text: string | null
+          tenant_id: string
+          user_id: string | null
+          user_input: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          credits_used?: number
+          enhanced_prompt?: string | null
+          id?: string
+          result_image_url?: string | null
+          result_text?: string | null
+          tenant_id: string
+          user_id?: string | null
+          user_input?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          credits_used?: number
+          enhanced_prompt?: string | null
+          id?: string
+          result_image_url?: string | null
+          result_text?: string | null
+          tenant_id?: string
+          user_id?: string | null
+          user_input?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_generations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       automation_logs: {
         Row: {
           automation_id: string
