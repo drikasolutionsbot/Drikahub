@@ -1442,38 +1442,47 @@ export default function AIAssistantPage() {
 
                       {/* Loading animation */}
                       {msg.role === "assistant" && !msg.content && !msg.imageUrl && loading && (
-                        <div className="flex flex-col gap-4 py-3 min-w-[220px]">
+                        <div className="flex flex-col gap-4 py-3 min-w-[260px] animate-fade-in">
                           <div className="flex items-center gap-3">
-                            <div className="relative h-8 w-8">
-                              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary/30 to-[#C44AFF]/30 animate-spin" style={{ animationDuration: "3s" }} />
+                            <div className="relative h-10 w-10">
+                              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary/40 to-[#C44AFF]/40 animate-spin" style={{ animationDuration: "2.5s" }} />
                               <div className="absolute inset-[3px] rounded-full bg-card flex items-center justify-center">
-                                {selectedTool.id === "image" ? <Image className="h-3.5 w-3.5 text-primary animate-pulse" /> : <Brain className="h-3.5 w-3.5 text-primary animate-pulse" />}
+                                {selectedTool.id === "image" ? <Image className="h-4 w-4 text-primary animate-pulse" /> : <Brain className="h-4 w-4 text-primary animate-pulse" />}
                               </div>
                             </div>
                             <div className="flex flex-col gap-1">
-                              <span className="text-[11px] font-bold text-foreground/60">
-                                {selectedTool.id === "image" ? "Gerando imagem profissional..." : "Orquestrando IA"}
+                              <span className="text-xs font-bold text-foreground/70">
+                                {selectedTool.id === "image" ? "🎨 Criando sua imagem..." : "🧠 Pensando..."}
                               </span>
-                              {selectedTool.id === "image" ? (
-                                <div className="flex flex-col gap-1 text-[9px] text-muted-foreground/50">
-                                  <span>① Refinando prompt com GPT-4o...</span>
-                                  <span>② Gerando imagem com SDXL Lightning...</span>
-                                </div>
-                              ) : (
-                                <div className="flex gap-1.5">
-                                  {[0, 1, 2, 3, 4].map(i => (
-                                    <div key={i} className="h-1 w-4 rounded-full bg-gradient-to-r from-primary/50 to-[#C44AFF]/50" style={{ animation: `pulse 1.5s ease-in-out infinite`, animationDelay: `${i * 200}ms`, opacity: 0.3 }} />
-                                  ))}
-                                </div>
-                              )}
+                              <span className="text-[10px] text-muted-foreground/50">
+                                {selectedTool.id === "image" ? "Isso pode levar alguns segundos" : "Gerando resposta"}
+                              </span>
                             </div>
                           </div>
+
                           {selectedTool.id === "image" ? (
-                            <div className="space-y-2">
-                              <div className="h-40 w-full rounded-xl bg-gradient-to-br from-muted/20 via-primary/5 to-muted/20 animate-pulse border border-border/10 flex items-center justify-center">
-                                <Image className="h-8 w-8 text-muted-foreground/20 animate-pulse" />
+                            <div className="space-y-3">
+                              <div className="relative h-44 w-full rounded-xl bg-gradient-to-br from-muted/20 via-primary/5 to-[#C44AFF]/10 border border-border/10 overflow-hidden">
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <div className="relative">
+                                    <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-primary/20 to-[#C44AFF]/20 flex items-center justify-center animate-pulse">
+                                      <Image className="h-8 w-8 text-primary/40" />
+                                    </div>
+                                    <div className="absolute -inset-4 rounded-full border-2 border-dashed border-primary/20 animate-spin" style={{ animationDuration: "8s" }} />
+                                  </div>
+                                </div>
+                                <div className="absolute bottom-0 left-0 right-0 h-1 bg-muted/20 overflow-hidden">
+                                  <div className="h-full bg-gradient-to-r from-primary/50 to-[#C44AFF]/50 animate-[shimmer_2s_linear_infinite]" style={{ width: "200%", transform: "translateX(-50%)" }} />
+                                </div>
                               </div>
-                              <div className="h-2 w-3/4 rounded-full bg-muted/20 animate-pulse" />
+                              <div className="flex items-center gap-2 px-1">
+                                <div className="flex gap-1">
+                                  {[0, 1, 2].map(i => (
+                                    <div key={i} className="h-1.5 w-1.5 rounded-full bg-primary/50 animate-bounce" style={{ animationDelay: `${i * 200}ms` }} />
+                                  ))}
+                                </div>
+                                <span className="text-[9px] text-muted-foreground/40">Processando com IA generativa</span>
+                              </div>
                             </div>
                           ) : (
                             <div className="space-y-2.5">
@@ -1484,6 +1493,14 @@ export default function AIAssistantPage() {
                               ))}
                             </div>
                           )}
+
+                          <button
+                            onClick={handleCancel}
+                            className="self-start flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium text-destructive/70 hover:text-destructive bg-destructive/5 hover:bg-destructive/10 border border-destructive/10 hover:border-destructive/20 transition-all"
+                          >
+                            <Square className="h-3 w-3 fill-current" />
+                            Cancelar
+                          </button>
                         </div>
                       )}
                     </div>
