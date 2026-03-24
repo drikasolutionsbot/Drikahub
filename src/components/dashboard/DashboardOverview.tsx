@@ -338,7 +338,7 @@ export const DashboardOverview = () => {
                 {card.change !== 0 && (
                   <div className={`inline-flex items-center gap-1 text-xs font-semibold ${card.change > 0 ? "text-emerald-400" : "text-destructive"}`}>
                     {card.change > 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                    {card.change > 0 ? "+" : ""}{card.change.toFixed(1)}% vs período anterior
+                    {card.change > 0 ? "+" : ""}{card.change.toFixed(1)}% {t.dashboardOverview.vsPrevPeriod}
                   </div>
                 )}
               </div>
