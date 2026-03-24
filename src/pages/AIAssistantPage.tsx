@@ -1088,17 +1088,69 @@ export default function AIAssistantPage() {
                       )}
 
                       {msg.imageUrl && (
-                        <div className="mb-3 relative rounded-xl overflow-hidden border border-border/20 shadow-xl">
-                          <img src={msg.imageUrl} alt="IA" className="w-full" />
-                          <div className="absolute inset-0 ring-1 ring-inset ring-white/5 rounded-xl pointer-events-none" />
-                        </div>
-                      )}
-                      {msg.imageUrl && (
-                        <div className="mb-2">
-                          <Button variant="outline" size="sm" className="text-[11px] h-7 border-border/20 hover:bg-primary/10 hover:text-primary"
-                            onClick={() => { const a = document.createElement("a"); a.href = msg.imageUrl!; a.download = "ai-generated.png"; a.click(); }}>
-                            Baixar Imagem
-                          </Button>
+                        <div className="mb-3 space-y-3">
+                          <div className="relative rounded-xl overflow-hidden border border-border/20 shadow-xl group/img">
+                            <img src={msg.imageUrl} alt="IA Generated" className="w-full" />
+                            <div className="absolute inset-0 ring-1 ring-inset ring-white/5 rounded-xl pointer-events-none" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover/img:opacity-100 transition-opacity duration-300" />
+                            <div className="absolute bottom-3 left-3 right-3 flex items-center gap-2 opacity-0 group-hover/img:opacity-100 transition-opacity duration-300">
+                              <Button
+                                variant="glass"
+                                size="sm"
+                                className="text-[11px] h-8 text-white border-white/20 hover:bg-white/20"
+                                onClick={() => handleDownloadImage(msg.imageUrl!)}
+                              >
+                                <Download className="h-3.5 w-3.5 mr-1" />
+                                Baixar
+                              </Button>
+                              {msg.enhancedPrompt && activeSessionId && (
+                                <Button
+                                  variant="glass"
+                                  size="sm"
+                                  className="text-[11px] h-8 text-white border-white/20 hover:bg-white/20"
+                                  onClick={() => handleImageVariation(msg.enhancedPrompt!, activeSessionId!)}
+                                  disabled={!!actionLoading}
+                                >
+                                  {actionLoading === "image_variation" ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5 mr-1" />}
+                                  Nova Variação
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-[10px] h-7 border-border/20 hover:bg-primary/10 hover:text-primary"
+                              onClick={() => handleDownloadImage(msg.imageUrl!)}
+                            >
+                              <Download className="h-3 w-3 mr-1" />
+                              Baixar Imagem
+                            </Button>
+                            {msg.enhancedPrompt && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-[10px] h-7 border-border/20 hover:bg-[#8B5CF6]/10 hover:text-[#8B5CF6]"
+                                onClick={() => handleCopy(msg.enhancedPrompt!, msg.id + "-prompt-btn")}
+                              >
+                                {copied === msg.id + "-prompt-btn" ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
+                                Copiar Prompt
+                              </Button>
+                            )}
+                            {msg.enhancedPrompt && activeSessionId && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-[10px] h-7 border-[#F59E0B]/20 bg-[#F59E0B]/5 hover:bg-[#F59E0B]/15 text-[#F59E0B] hover:text-[#F59E0B]"
+                                onClick={() => handleImageVariation(msg.enhancedPrompt!, activeSessionId!)}
+                                disabled={!!actionLoading}
+                              >
+                                {actionLoading === "image_variation" ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <RefreshCw className="h-3 w-3 mr-1" />}
+                                Gerar Nova Variação (3cr)
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       )}
                       {msg.content && (
