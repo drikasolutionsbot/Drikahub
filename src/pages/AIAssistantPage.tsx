@@ -662,6 +662,8 @@ export default function AIAssistantPage() {
     setPrompt("");
     setAttachments([]);
     setLoading(true);
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
 
     const assistantMsgId = crypto.randomUUID();
 
