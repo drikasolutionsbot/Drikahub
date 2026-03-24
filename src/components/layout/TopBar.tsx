@@ -112,7 +112,7 @@ const PlanBadge = ({ tenant }: { tenant: { plan: string; plan_expires_at: string
         <div className="p-4 space-y-3">
           <div className="flex items-center gap-2">
             <Crown className={`h-5 w-5 ${isPro ? "text-primary" : "text-muted-foreground"}`} />
-            <h4 className="text-sm font-bold">Plano {planLabel}</h4>
+            <h4 className="text-sm font-bold">{t.plan.plan} {planLabel}</h4>
           </div>
           
           {tenant.plan_started_at && (
