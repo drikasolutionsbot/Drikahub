@@ -512,6 +512,32 @@ serve(async (req) => {
     }
 
     // ═══════════════════════════════════════
+    // ACTION: generate_image_variation (nova variação de imagem)
+    // ═══════════════════════════════════════
+    if (action === "generate_image_variation") {
+      if (!replicateToken) throw new Error("REPLICATE_API_TOKEN não configurada.");
+
+      const basePrompt = originalContent || prompt;
+      console.log("🎨 Image variation: refining prompt with GPT-4o...");
+      const variationPrompt = await openaiText(openaiKey, [
+        { role: "system", content: systemPrompts.image_prompt },
+        { role: "user", content: `Create a DIFFERENT variation of this concept. Change the style, angle, lighting, or mood significantly while keeping the same subject:\n\n${basePrompt}` },
+      ], "gpt-4o", 0.95);
+
+      console.log("🖼️ Image variation: generating with Replicate...");
+      const imageUrl = await replicateGenerateImage(replicateToken, variationPrompt);
+
+      return new Response(JSON.stringify({
+        image_url: imageUrl,
+        text: `🎨 **Nova variação gerada!**\n\n**Prompt da variação (${variationPrompt.split(" ").length} palavras):**\n\`\`\`\n${variationPrompt}\n\`\`\`\n\n> 🔄 *Cada variação usa um estilo, iluminação ou composição diferente para o mesmo conceito.*`,
+        enhanced_prompt: variationPrompt,
+        model_used: "gpt-4o + sdxl-lightning",
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ═══════════════════════════════════════
     // ACTION: generate_variations (3 variações reais e profundas)
     // ═══════════════════════════════════════
     if (action === "generate_variations") {

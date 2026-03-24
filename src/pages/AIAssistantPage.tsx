@@ -3,7 +3,8 @@ import {
   Sparkles, Wand2, FileText, Image, MessageSquare, Lightbulb, Copy, Check,
   Loader2, Send, ChevronDown, Zap, Brain, Plus, User, Bot, Trash2, Orbit,
   Paperclip, X, RefreshCw, Stars, RotateCcw, Crown, Flame, Clock, ArrowRight,
-  History, RotateCw, Bookmark, BookmarkCheck, Lock, TrendingUp, Gauge
+  History, RotateCw, Bookmark, BookmarkCheck, Lock, TrendingUp, Gauge, Download,
+  ImagePlus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -466,6 +467,71 @@ export default function AIAssistantPage() {
       toast({ title: "Erro", description: e.message || "Erro ao gerar variações", variant: "destructive" });
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  // ═══ GENERATE IMAGE VARIATION ═══
+  const handleImageVariation = async (enhancedPrompt: string, sessionId: string) => {
+    const cost = CREDIT_COSTS.image;
+    if (!canAfford(cost)) {
+      toast({ title: "Créditos insuficientes", description: "Limite diário atingido.", variant: "destructive" });
+      return;
+    }
+    setActionLoading("image_variation");
+    const userMsg: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: "🎨 Gerar nova variação da imagem",
+      toolId: "image",
+      timestamp: new Date().toISOString(),
+    };
+    setSessions(prev => prev.map(s =>
+      s.id === sessionId ? { ...s, messages: [...s.messages, userMsg] } : s
+    ));
+
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-assistant", {
+        body: { action: "generate_image_variation", originalContent: enhancedPrompt, context },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const assistantMsg: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: data.text || "",
+        imageUrl: data.image_url || undefined,
+        enhancedPrompt: data.enhanced_prompt || undefined,
+        toolId: "image",
+        timestamp: new Date().toISOString(),
+      };
+      setSessions(prev => prev.map(s =>
+        s.id === sessionId ? { ...s, messages: [...s.messages, assistantMsg] } : s
+      ));
+      consumeCredits(cost);
+    } catch (e: any) {
+      toast({ title: "Erro ao gerar variação", description: e.message || "Tente novamente", variant: "destructive" });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // ═══ DOWNLOAD IMAGE ═══
+  const handleDownloadImage = async (url: string) => {
+    try {
+      const resp = await fetch(url);
+      const blob = await resp.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = `ai-generated-${Date.now()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+      toast({ title: "📥 Download iniciado!" });
+    } catch {
+      window.open(url, "_blank");
     }
   };
 
@@ -934,7 +1000,7 @@ export default function AIAssistantPage() {
                     <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-primary animate-spin" />
                   </div>
                   <span className="text-[10px] font-semibold text-primary/80 tracking-wide">
-                    {actionLoading === "improve" ? "Melhorando..." : actionLoading === "variations" ? "Gerando 3 variações..." : "Processando..."}
+                    {actionLoading === "improve" ? "Melhorando..." : actionLoading === "variations" ? "Gerando 3 variações..." : actionLoading === "image_variation" ? "Gerando variação da imagem..." : selectedTool.id === "image" ? "Gerando imagem..." : "Processando..."}
                   </span>
                 </div>
               )}
@@ -1022,17 +1088,69 @@ export default function AIAssistantPage() {
                       )}
 
                       {msg.imageUrl && (
-                        <div className="mb-3 relative rounded-xl overflow-hidden border border-border/20 shadow-xl">
-                          <img src={msg.imageUrl} alt="IA" className="w-full" />
-                          <div className="absolute inset-0 ring-1 ring-inset ring-white/5 rounded-xl pointer-events-none" />
-                        </div>
-                      )}
-                      {msg.imageUrl && (
-                        <div className="mb-2">
-                          <Button variant="outline" size="sm" className="text-[11px] h-7 border-border/20 hover:bg-primary/10 hover:text-primary"
-                            onClick={() => { const a = document.createElement("a"); a.href = msg.imageUrl!; a.download = "ai-generated.png"; a.click(); }}>
-                            Baixar Imagem
-                          </Button>
+                        <div className="mb-3 space-y-3">
+                          <div className="relative rounded-xl overflow-hidden border border-border/20 shadow-xl group/img">
+                            <img src={msg.imageUrl} alt="IA Generated" className="w-full" />
+                            <div className="absolute inset-0 ring-1 ring-inset ring-white/5 rounded-xl pointer-events-none" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover/img:opacity-100 transition-opacity duration-300" />
+                            <div className="absolute bottom-3 left-3 right-3 flex items-center gap-2 opacity-0 group-hover/img:opacity-100 transition-opacity duration-300">
+                              <Button
+                                variant="glass"
+                                size="sm"
+                                className="text-[11px] h-8 text-white border-white/20 hover:bg-white/20"
+                                onClick={() => handleDownloadImage(msg.imageUrl!)}
+                              >
+                                <Download className="h-3.5 w-3.5 mr-1" />
+                                Baixar
+                              </Button>
+                              {msg.enhancedPrompt && activeSessionId && (
+                                <Button
+                                  variant="glass"
+                                  size="sm"
+                                  className="text-[11px] h-8 text-white border-white/20 hover:bg-white/20"
+                                  onClick={() => handleImageVariation(msg.enhancedPrompt!, activeSessionId!)}
+                                  disabled={!!actionLoading}
+                                >
+                                  {actionLoading === "image_variation" ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5 mr-1" />}
+                                  Nova Variação
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-[10px] h-7 border-border/20 hover:bg-primary/10 hover:text-primary"
+                              onClick={() => handleDownloadImage(msg.imageUrl!)}
+                            >
+                              <Download className="h-3 w-3 mr-1" />
+                              Baixar Imagem
+                            </Button>
+                            {msg.enhancedPrompt && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-[10px] h-7 border-border/20 hover:bg-[#8B5CF6]/10 hover:text-[#8B5CF6]"
+                                onClick={() => handleCopy(msg.enhancedPrompt!, msg.id + "-prompt-btn")}
+                              >
+                                {copied === msg.id + "-prompt-btn" ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
+                                Copiar Prompt
+                              </Button>
+                            )}
+                            {msg.enhancedPrompt && activeSessionId && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-[10px] h-7 border-[#F59E0B]/20 bg-[#F59E0B]/5 hover:bg-[#F59E0B]/15 text-[#F59E0B] hover:text-[#F59E0B]"
+                                onClick={() => handleImageVariation(msg.enhancedPrompt!, activeSessionId!)}
+                                disabled={!!actionLoading}
+                              >
+                                {actionLoading === "image_variation" ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <RefreshCw className="h-3 w-3 mr-1" />}
+                                Gerar Nova Variação (3cr)
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       )}
                       {msg.content && (
@@ -1091,25 +1209,43 @@ export default function AIAssistantPage() {
                             <div className="relative h-8 w-8">
                               <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary/30 to-[#C44AFF]/30 animate-spin" style={{ animationDuration: "3s" }} />
                               <div className="absolute inset-[3px] rounded-full bg-card flex items-center justify-center">
-                                <Brain className="h-3.5 w-3.5 text-primary animate-pulse" />
+                                {selectedTool.id === "image" ? <Image className="h-3.5 w-3.5 text-primary animate-pulse" /> : <Brain className="h-3.5 w-3.5 text-primary animate-pulse" />}
                               </div>
                             </div>
                             <div className="flex flex-col gap-1">
-                              <span className="text-[11px] font-bold text-foreground/60">Orquestrando IA</span>
-                              <div className="flex gap-1.5">
-                                {[0, 1, 2, 3, 4].map(i => (
-                                  <div key={i} className="h-1 w-4 rounded-full bg-gradient-to-r from-primary/50 to-[#C44AFF]/50" style={{ animation: `pulse 1.5s ease-in-out infinite`, animationDelay: `${i * 200}ms`, opacity: 0.3 }} />
-                                ))}
-                              </div>
+                              <span className="text-[11px] font-bold text-foreground/60">
+                                {selectedTool.id === "image" ? "Gerando imagem profissional..." : "Orquestrando IA"}
+                              </span>
+                              {selectedTool.id === "image" ? (
+                                <div className="flex flex-col gap-1 text-[9px] text-muted-foreground/50">
+                                  <span>① Refinando prompt com GPT-4o...</span>
+                                  <span>② Gerando imagem com SDXL Lightning...</span>
+                                </div>
+                              ) : (
+                                <div className="flex gap-1.5">
+                                  {[0, 1, 2, 3, 4].map(i => (
+                                    <div key={i} className="h-1 w-4 rounded-full bg-gradient-to-r from-primary/50 to-[#C44AFF]/50" style={{ animation: `pulse 1.5s ease-in-out infinite`, animationDelay: `${i * 200}ms`, opacity: 0.3 }} />
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           </div>
-                          <div className="space-y-2.5">
-                            {[85, 65, 45].map((w, i) => (
-                              <div key={i} className="h-2 rounded-full overflow-hidden" style={{ width: `${w}%` }}>
-                                <div className="h-full w-[200%] bg-gradient-to-r from-muted/30 via-muted/10 to-muted/30" style={{ animation: `shimmer 2s linear infinite`, animationDelay: `${i * 300}ms` }} />
+                          {selectedTool.id === "image" ? (
+                            <div className="space-y-2">
+                              <div className="h-40 w-full rounded-xl bg-gradient-to-br from-muted/20 via-primary/5 to-muted/20 animate-pulse border border-border/10 flex items-center justify-center">
+                                <Image className="h-8 w-8 text-muted-foreground/20 animate-pulse" />
                               </div>
-                            ))}
-                          </div>
+                              <div className="h-2 w-3/4 rounded-full bg-muted/20 animate-pulse" />
+                            </div>
+                          ) : (
+                            <div className="space-y-2.5">
+                              {[85, 65, 45].map((w, i) => (
+                                <div key={i} className="h-2 rounded-full overflow-hidden" style={{ width: `${w}%` }}>
+                                  <div className="h-full w-[200%] bg-gradient-to-r from-muted/30 via-muted/10 to-muted/30" style={{ animation: `shimmer 2s linear infinite`, animationDelay: `${i * 300}ms` }} />
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
