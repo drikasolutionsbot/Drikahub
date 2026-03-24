@@ -729,6 +729,28 @@ export default function AIAssistantPage() {
         }
       }
       consumeCredits(cost);
+      // Save text generation to DB (get final accumulated content from session)
+      const finalSession = sessions.find(s => s.id === sessionId);
+      const finalMsg = finalSession?.messages.find(m => m.id === assistantMsgId);
+      if (selectedTool.id !== "image") {
+        // For streamed text, we need to read the accumulated content
+        // We save after the streaming is done
+        setTimeout(() => {
+          setSessions(prev => {
+            const sess = prev.find(s => s.id === sessionId);
+            const msg = sess?.messages.find(m => m.id === assistantMsgId);
+            if (msg?.content) {
+              saveGenerationToDb({
+                category: selectedTool.id,
+                userInput: currentPrompt,
+                resultText: msg.content,
+                creditsUsed: cost,
+              });
+            }
+            return prev;
+          });
+        }, 100);
+      }
     } catch (e: any) {
       toast({ title: "Erro", description: e.message || "Erro ao gerar conteúdo", variant: "destructive" });
       setSessions(prev => prev.map(s =>
