@@ -950,19 +950,19 @@ export default function AIAssistantPage() {
             Novo Chat
           </Button>
 
-          {/* Saved / History Toggle */}
+          {/* Sidebar Tabs: Histórico | Salvos | Banco */}
           <div className="flex gap-1 p-1 rounded-xl bg-card/30 border border-border/20">
             <button
-              onClick={() => setShowSaved(false)}
-              className={cn("flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all",
-                !showSaved ? "bg-primary/15 text-primary border border-primary/20" : "text-muted-foreground/60 hover:text-muted-foreground"
+              onClick={() => { setShowSaved(false); setShowDbHistory(false); }}
+              className={cn("flex-1 flex items-center justify-center gap-1 px-2 py-2 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all",
+                !showSaved && !showDbHistory ? "bg-primary/15 text-primary border border-primary/20" : "text-muted-foreground/60 hover:text-muted-foreground"
               )}
             >
-              <History className="h-3 w-3" /> Histórico
+              <History className="h-3 w-3" /> Chats
             </button>
             <button
-              onClick={() => setShowSaved(true)}
-              className={cn("flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all",
+              onClick={() => { setShowSaved(true); setShowDbHistory(false); }}
+              className={cn("flex-1 flex items-center justify-center gap-1 px-2 py-2 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all",
                 showSaved ? "bg-amber-400/15 text-amber-400 border border-amber-400/20" : "text-muted-foreground/60 hover:text-muted-foreground"
               )}
             >
@@ -971,11 +971,91 @@ export default function AIAssistantPage() {
                 <span className="text-[8px] bg-amber-400/20 px-1 rounded">{savedMessages.length}</span>
               )}
             </button>
+            <button
+              onClick={() => { setShowDbHistory(true); setShowSaved(false); }}
+              className={cn("flex-1 flex items-center justify-center gap-1 px-2 py-2 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all",
+                showDbHistory ? "bg-emerald-400/15 text-emerald-400 border border-emerald-400/20" : "text-muted-foreground/60 hover:text-muted-foreground"
+              )}
+            >
+              <Database className="h-3 w-3" /> Banco
+              {dbHistory.length > 0 && (
+                <span className="text-[8px] bg-emerald-400/20 px-1 rounded">{dbHistory.length}</span>
+              )}
+            </button>
           </div>
 
           <div className="rounded-2xl border border-border/20 bg-card/30 backdrop-blur-sm overflow-hidden">
             <ScrollArea className="h-[280px]">
-              {showSaved ? (
+              {showDbHistory ? (
+                <>
+                  {/* Category filter */}
+                  <div className="sticky top-0 z-10 flex gap-1 p-2 bg-card/80 backdrop-blur-md border-b border-border/10">
+                    {[{ id: "all", label: "Todos" }, ...AI_TOOLS.map(t => ({ id: t.id, label: t.emoji }))].map(cat => (
+                      <button
+                        key={cat.id}
+                        onClick={() => setDbFilterCategory(cat.id)}
+                        className={cn("px-2 py-1 rounded-lg text-[9px] font-bold transition-all",
+                          dbFilterCategory === cat.id ? "bg-emerald-400/15 text-emerald-400 border border-emerald-400/20" : "text-muted-foreground/50 hover:text-muted-foreground"
+                        )}
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
+                  {dbHistoryLoading ? (
+                    <div className="flex items-center justify-center py-14">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/30" />
+                    </div>
+                  ) : dbHistory.filter(g => dbFilterCategory === "all" || g.category === dbFilterCategory).length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-14 px-4 text-center">
+                      <Database className="h-8 w-8 text-muted-foreground/15 mb-3" />
+                      <p className="text-xs text-muted-foreground/50">Nenhuma geração encontrada</p>
+                      <p className="text-[10px] text-muted-foreground/40 mt-1">Suas gerações serão salvas aqui</p>
+                    </div>
+                  ) : (
+                    <div className="p-2 space-y-1">
+                      {dbHistory
+                        .filter(g => dbFilterCategory === "all" || g.category === dbFilterCategory)
+                        .map(gen => {
+                          const tool = AI_TOOLS.find(t => t.id === gen.category);
+                          return (
+                            <div
+                              key={gen.id}
+                              className="group flex items-start gap-2 px-3 py-2.5 rounded-xl hover:bg-emerald-400/5 border border-transparent hover:border-emerald-400/15 transition-all"
+                            >
+                              <span className="text-sm shrink-0 mt-0.5">{tool?.emoji || "🤖"}</span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[11px] text-foreground/70 line-clamp-1 font-medium">{gen.user_input || "Sem input"}</p>
+                                <p className="text-[10px] text-muted-foreground/50 line-clamp-1 mt-0.5">
+                                  {gen.result_image_url ? "🖼️ Imagem gerada" : (gen.result_text?.slice(0, 60) || "...")}
+                                </p>
+                                <p className="text-[9px] text-muted-foreground/40 mt-1">
+                                  {tool?.label} • {gen.credits_used}cr • {new Date(gen.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                                </p>
+                              </div>
+                              <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  onClick={() => { setPrompt(gen.user_input); if (tool) setSelectedTool(tool); setShowDbHistory(false); toast({ title: "♻️ Prompt restaurado!" }); }}
+                                  className="p-1 rounded hover:bg-emerald-400/10"
+                                  title="Reutilizar"
+                                >
+                                  <RotateCw className="h-3 w-3 text-emerald-400" />
+                                </button>
+                                <button
+                                  onClick={() => handleCopy(gen.result_text || gen.enhanced_prompt || gen.user_input, gen.id)}
+                                  className="p-1 rounded hover:bg-primary/10"
+                                  title="Copiar"
+                                >
+                                  {copied === gen.id ? <Check className="h-3 w-3 text-primary" /> : <Copy className="h-3 w-3 text-muted-foreground/50" />}
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  )}
+                </>
+              ) : showSaved ? (
                 savedMessages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-14 px-4 text-center">
                     <Bookmark className="h-8 w-8 text-muted-foreground/15 mb-3" />
@@ -1027,7 +1107,7 @@ export default function AIAssistantPage() {
                           "group flex items-center gap-2 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200",
                           activeSessionId === session.id ? "bg-primary/10 border border-primary/20 shadow-sm" : "hover:bg-muted/30 border border-transparent"
                         )}
-                        onClick={() => { setActiveSessionId(session.id); setShowSaved(false); }}
+                        onClick={() => { setActiveSessionId(session.id); setShowSaved(false); setShowDbHistory(false); }}
                       >
                         <div className={cn("h-6 w-6 rounded-lg flex items-center justify-center shrink-0", activeSessionId === session.id ? "bg-primary/20" : "bg-muted/20")}>
                           <MessageSquare className="h-3 w-3 text-muted-foreground/60" />
