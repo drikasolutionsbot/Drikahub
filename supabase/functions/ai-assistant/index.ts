@@ -479,10 +479,11 @@ serve(async (req) => {
   try {
     const { type, prompt, context, attachments, action, originalContent } = await req.json();
 
-    const openaiKey = Deno.env.get("OPENAI_API_KEY");
-    if (!openaiKey) throw new Error("OPENAI_API_KEY não configurada.");
+    const apiKey = Deno.env.get("LOVABLE_API_KEY");
+    if (!apiKey) throw new Error("LOVABLE_API_KEY não configurada.");
 
-    const replicateToken = Deno.env.get("REPLICATE_API_TOKEN");
+    const textModel = "google/gemini-3-flash-preview";
+    const imageModel = "google/gemini-2.5-flash-image";
 
     // ═══════════════════════════════════════
     // ACTION: improve_prompt (enriquecimento inteligente)
