@@ -184,6 +184,17 @@ interface CreditsState {
   date: string;
 }
 
+interface DbGeneration {
+  id: string;
+  category: string;
+  user_input: string;
+  enhanced_prompt: string | null;
+  result_text: string | null;
+  result_image_url: string | null;
+  credits_used: number;
+  created_at: string;
+}
+
 const STORAGE_KEY = "drika-ai-sessions";
 const CREDITS_KEY = "drika-ai-credits";
 const SAVED_KEY = "drika-ai-saved";
