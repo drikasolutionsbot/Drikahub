@@ -470,6 +470,71 @@ export default function AIAssistantPage() {
     }
   };
 
+  // ═══ GENERATE IMAGE VARIATION ═══
+  const handleImageVariation = async (enhancedPrompt: string, sessionId: string) => {
+    const cost = CREDIT_COSTS.image;
+    if (!canAfford(cost)) {
+      toast({ title: "Créditos insuficientes", description: "Limite diário atingido.", variant: "destructive" });
+      return;
+    }
+    setActionLoading("image_variation");
+    const userMsg: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: "🎨 Gerar nova variação da imagem",
+      toolId: "image",
+      timestamp: new Date().toISOString(),
+    };
+    setSessions(prev => prev.map(s =>
+      s.id === sessionId ? { ...s, messages: [...s.messages, userMsg] } : s
+    ));
+
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-assistant", {
+        body: { action: "generate_image_variation", originalContent: enhancedPrompt, context },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const assistantMsg: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: data.text || "",
+        imageUrl: data.image_url || undefined,
+        enhancedPrompt: data.enhanced_prompt || undefined,
+        toolId: "image",
+        timestamp: new Date().toISOString(),
+      };
+      setSessions(prev => prev.map(s =>
+        s.id === sessionId ? { ...s, messages: [...s.messages, assistantMsg] } : s
+      ));
+      consumeCredits(cost);
+    } catch (e: any) {
+      toast({ title: "Erro ao gerar variação", description: e.message || "Tente novamente", variant: "destructive" });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // ═══ DOWNLOAD IMAGE ═══
+  const handleDownloadImage = async (url: string) => {
+    try {
+      const resp = await fetch(url);
+      const blob = await resp.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = `ai-generated-${Date.now()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+      toast({ title: "📥 Download iniciado!" });
+    } catch {
+      window.open(url, "_blank");
+    }
+  };
+
   // ═══ MAIN GENERATE ═══
   const handleGenerate = async () => {
     if (!prompt.trim() && attachments.length === 0) {
