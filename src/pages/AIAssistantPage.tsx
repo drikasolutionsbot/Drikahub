@@ -1339,32 +1339,30 @@ export default function AIAssistantPage() {
 
                       {/* ── Action buttons (premium feel) ── */}
                       {msg.role === "assistant" && msg.content && !loading && !actionLoading && (
-                        <div className="mt-3 flex flex-wrap items-center gap-1.5 pt-2 border-t border-border/10">
-                          <button onClick={() => handleCopy(msg.content, msg.id)} className="flex items-center gap-1.5 text-[10px] text-muted-foreground/60 hover:text-primary transition-colors px-2 py-1.5 rounded-lg hover:bg-primary/5">
-                            {copied === msg.id ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                        <div className="mt-3 flex flex-wrap items-center gap-2 pt-3 border-t border-border/15">
+                          <button onClick={() => handleCopy(msg.content, msg.id)} className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground hover:text-primary transition-all px-3 py-2 rounded-xl border border-border/20 hover:border-primary/30 hover:bg-primary/10 bg-card/40 backdrop-blur-sm">
+                            {copied === msg.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                             {copied === msg.id ? "Copiado" : "Copiar"}
                           </button>
 
-                          {/* ★ Reuse button */}
                           <button
                             onClick={() => handleReuse(msg)}
-                            className="flex items-center gap-1.5 text-[10px] text-muted-foreground/60 hover:text-emerald-400 transition-colors px-2 py-1.5 rounded-lg hover:bg-emerald-400/5"
+                            className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground hover:text-emerald-400 transition-all px-3 py-2 rounded-xl border border-border/20 hover:border-emerald-400/30 hover:bg-emerald-400/10 bg-card/40 backdrop-blur-sm"
                             title="Reutilizar este prompt"
                           >
-                            <RotateCw className="h-3 w-3" />
+                            <RotateCw className="h-3.5 w-3.5" />
                             Reutilizar
                           </button>
 
-                          {/* ★ Save/Bookmark */}
                           <button
                             onClick={() => handleToggleSave(msg)}
-                            className={cn("flex items-center gap-1.5 text-[10px] transition-colors px-2 py-1.5 rounded-lg",
+                            className={cn("flex items-center gap-1.5 text-[11px] font-medium transition-all px-3 py-2 rounded-xl border backdrop-blur-sm",
                               savedMessages.some(m => m.id === msg.id)
-                                ? "text-amber-400 bg-amber-400/5"
-                                : "text-muted-foreground/60 hover:text-amber-400 hover:bg-amber-400/5"
+                                ? "text-amber-400 bg-amber-400/10 border-amber-400/30"
+                                : "text-muted-foreground hover:text-amber-400 border-border/20 hover:border-amber-400/30 hover:bg-amber-400/10 bg-card/40"
                             )}
                           >
-                            {savedMessages.some(m => m.id === msg.id) ? <BookmarkCheck className="h-3 w-3" /> : <Bookmark className="h-3 w-3" />}
+                            {savedMessages.some(m => m.id === msg.id) ? <BookmarkCheck className="h-3.5 w-3.5" /> : <Bookmark className="h-3.5 w-3.5" />}
                             {savedMessages.some(m => m.id === msg.id) ? "Salvo" : "Salvar"}
                           </button>
 
