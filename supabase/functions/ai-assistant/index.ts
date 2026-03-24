@@ -494,7 +494,7 @@ serve(async (req) => {
     if (!apiKey) throw new Error("LOVABLE_API_KEY não configurada.");
 
     const textModel = "google/gemini-3-flash-preview";
-    const imageModel = "google/gemini-2.5-flash-image";
+    const replicateToken = Deno.env.get("REPLICATE_API_TOKEN");
 
     // ═══════════════════════════════════════
     // ACTION: improve_prompt (enriquecimento inteligente)
