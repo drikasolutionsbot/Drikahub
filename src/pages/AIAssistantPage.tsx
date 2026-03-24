@@ -792,11 +792,24 @@ export default function AIAssistantPage() {
         }, 100);
       }
     } catch (e: any) {
-      toast({ title: "Erro", description: e.message || "Erro ao gerar conteúdo", variant: "destructive" });
+      if (e.name === "AbortError" || e.message === "Geração cancelada") {
+        toast({ title: "Cancelado", description: "Geração interrompida." });
+      } else {
+        toast({ title: "Erro", description: e.message || "Erro ao gerar conteúdo", variant: "destructive" });
+      }
       setSessions(prev => prev.map(s =>
         s.id === sessionId ? { ...s, messages: s.messages.filter(m => m.id !== assistantMsgId || m.content) } : s
       ));
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+      abortControllerRef.current = null;
+    }
+  };
+
+  const handleCancel = () => {
+    abortControllerRef.current?.abort();
+    setLoading(false);
+    abortControllerRef.current = null;
   };
 
   const handleCopy = (text: string, msgId: string) => {
