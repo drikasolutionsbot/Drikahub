@@ -403,7 +403,7 @@ export const DashboardOverview = () => {
           </CardHeader>
           <CardContent className="space-y-3">
             {topClients.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Nenhum dado neste período</p>
+              <p className="text-sm text-muted-foreground text-center py-8">{t.dashboardOverview.noDataPeriod}</p>
             ) : (
               topClients.map((client, i) => (
                 <div key={i} className="flex items-center gap-3">
