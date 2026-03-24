@@ -261,7 +261,7 @@ const NavItem = ({ item, isActive, collapsed, resolvedLabel, reordering, onMoveU
           sideOffset={14}
           className="px-3.5 py-2 text-[12px] font-semibold tracking-wide rounded-xl bg-card text-foreground shadow-[0_8px_30px_rgba(0,0,0,0.35),0_0_0_1px_hsl(330_100%_50%/0.1)] backdrop-blur-xl border border-border/50 animate-in fade-in-0 zoom-in-95 slide-in-from-left-2 duration-200"
         >
-          {item.label}
+          {resolvedLabel}
         </TooltipContent>
       </Tooltip>
     );
