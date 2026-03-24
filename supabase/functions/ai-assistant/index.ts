@@ -489,11 +489,11 @@ serve(async (req) => {
     // ACTION: improve_prompt (enriquecimento inteligente)
     // ═══════════════════════════════════════
     if (action === "improve_prompt") {
-      const result = await openaiText(openaiKey, [
+      const result = await gatewayText(apiKey, [
         { role: "system", content: systemPrompts.prompt_enhancer },
         { role: "user", content: buildEnrichedPrompt("prompt_enhancer", prompt, context) },
-      ], "gpt-4o", 0.9);
-      return new Response(JSON.stringify({ improved_prompt: result, model_used: "gpt-4o" }), {
+      ], textModel, 0.9);
+      return new Response(JSON.stringify({ improved_prompt: result, model_used: textModel }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -502,23 +502,23 @@ serve(async (req) => {
     // ACTION: generate_image_variation (nova variação de imagem)
     // ═══════════════════════════════════════
     if (action === "generate_image_variation") {
-      if (!replicateToken) throw new Error("REPLICATE_API_TOKEN não configurada.");
+      
 
       const basePrompt = originalContent || prompt;
       console.log("🎨 Image variation: refining prompt with GPT-4o...");
-      const variationPrompt = await openaiText(openaiKey, [
+      const variationPrompt = await gatewayText(apiKey, [
         { role: "system", content: systemPrompts.image_prompt },
         { role: "user", content: `Create a DIFFERENT variation of this concept. Change the style, angle, lighting, or mood significantly while keeping the same subject:\n\n${basePrompt}` },
-      ], "gpt-4o", 0.95);
+      ], textModel, 0.95);
 
       console.log("🖼️ Image variation: generating with Replicate...");
-      const imageUrl = await replicateGenerateImage(replicateToken, variationPrompt);
+      const imageUrl = await gatewayGenerateImage(apiKey, variationPrompt);
 
       return new Response(JSON.stringify({
         image_url: imageUrl,
         text: `🎨 **Nova variação gerada!**\n\n**Prompt da variação (${variationPrompt.split(" ").length} palavras):**\n\`\`\`\n${variationPrompt}\n\`\`\`\n\n> 🔄 *Cada variação usa um estilo, iluminação ou composição diferente para o mesmo conceito.*`,
         enhanced_prompt: variationPrompt,
-        model_used: "gpt-4o + sdxl-lightning",
+        model_used: "gemini-flash + gemini-image",
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -528,7 +528,7 @@ serve(async (req) => {
     // ACTION: generate_variations (3 variações reais e profundas)
     // ═══════════════════════════════════════
     if (action === "generate_variations") {
-      const result = await openaiText(openaiKey, [
+      const result = await gatewayText(apiKey, [
         {
           role: "system",
           content: `${MASTER_CORE}
@@ -565,9 +565,9 @@ REGRAS:
         },
         ...(context ? [{ role: "user", content: `Contexto do negócio: ${context}` }] : []),
         { role: "user", content: `Crie 3 variações profissionais e COMPLETAS (cada uma com 400+ palavras) deste conteúdo:\n\n${originalContent}` },
-      ], "gpt-4o", 0.95);
+      ], textModel, 0.95);
 
-      return new Response(JSON.stringify({ variations: result, model_used: "gpt-4o" }), {
+      return new Response(JSON.stringify({ variations: result, model_used: textModel }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -579,23 +579,23 @@ REGRAS:
     // IMAGE GENERATION (orquestração GPT-4o + SDXL)
     // ═══════════════════════════════════════
     if (type === "image") {
-      if (!replicateToken) throw new Error("REPLICATE_API_TOKEN não configurada.");
+      
 
       console.log("🎨 Step 1: GPT-4o refining prompt to commercial-grade...");
-      const enhancedPrompt = await openaiText(openaiKey, [
+      const enhancedPrompt = await gatewayText(apiKey, [
         { role: "system", content: systemPrompts.image_prompt },
         ...(context ? [{ role: "user", content: `Business context: ${context}` }] : []),
         { role: "user", content: prompt },
-      ], "gpt-4o", 0.7);
+      ], textModel, 0.7);
 
       console.log("🖼️ Step 2: Replicate generating with SDXL Lightning...");
-      const imageUrl = await replicateGenerateImage(replicateToken, enhancedPrompt);
+      const imageUrl = await gatewayGenerateImage(apiKey, enhancedPrompt);
 
       return new Response(JSON.stringify({
         image_url: imageUrl,
         text: `🎨 **Imagem gerada com sucesso!**\n\n**Seu input:** ${prompt}\n\n**Prompt profissional gerado pela IA (${enhancedPrompt.split(" ").length} palavras):**\n\`\`\`\n${enhancedPrompt}\n\`\`\`\n\n> 💡 *O prompt foi automaticamente enriquecido com detalhes de composição, iluminação, estilo, paleta de cores e especificações técnicas de câmera para garantir resultado de qualidade publicitária.*\n\n> 🔄 *Clique em "Gerar 3 Variações" para criar versões alternativas com estilos diferentes.*`,
         enhanced_prompt: enhancedPrompt,
-        model_used: "gpt-4o + sdxl-lightning",
+        model_used: "gemini-flash + gemini-image",
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -615,8 +615,8 @@ REGRAS:
     ];
 
     // Use gpt-4o for all categories (premium quality)
-    const model = "gpt-4o";
-    const response = await openaiChat(openaiKey, messages, { stream: true, model, temperature: 0.85 });
+    const model = textModel;
+    const response = await gatewayChat(apiKey, messages, { stream: true, model, temperature: 0.85 });
 
     if (!response.ok) {
       const body = await response.text();
