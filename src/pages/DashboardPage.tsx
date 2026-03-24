@@ -23,7 +23,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { logTenantAudit, fetchTenantAuditLogs, type AuditLogEntry } from "@/lib/tenantAuditLog";
 import { formatDistanceToNow } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { ptBR as ptBRLocale } from "date-fns/locale";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 const BOT_PERMISSIONS = "536870920"; // Administrator + MANAGE_WEBHOOKS
 
