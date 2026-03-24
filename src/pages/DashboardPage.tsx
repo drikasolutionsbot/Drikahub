@@ -728,7 +728,7 @@ const DashboardPage = () => {
               ) : roles.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <Shield className="h-10 w-10 text-muted-foreground/40 mb-2" />
-                  <p className="text-xs text-muted-foreground">Nenhum cargo criado</p>
+                  <p className="text-xs text-muted-foreground">{t.dashboard.noRolesCreated}</p>
                 </div>
               ) : (
                 <div className="space-y-0.5">
