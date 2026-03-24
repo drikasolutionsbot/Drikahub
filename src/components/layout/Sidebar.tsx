@@ -165,6 +165,7 @@ interface NavItemProps {
   item: NavItemDef;
   isActive: boolean;
   collapsed: boolean;
+  resolvedLabel: string;
   reordering?: boolean;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
@@ -172,7 +173,7 @@ interface NavItemProps {
   canMoveDown?: boolean;
 }
 
-const NavItem = ({ item, isActive, collapsed, reordering, onMoveUp, onMoveDown, canMoveUp, canMoveDown }: NavItemProps) => {
+const NavItem = ({ item, isActive, collapsed, resolvedLabel, reordering, onMoveUp, onMoveDown, canMoveUp, canMoveDown }: NavItemProps) => {
   const content = (
     <div className={cn("relative flex items-center", reordering && !collapsed && "group/reorder")}>
       {reordering && !collapsed && (
