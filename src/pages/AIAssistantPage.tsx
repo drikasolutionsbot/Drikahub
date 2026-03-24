@@ -288,7 +288,7 @@ export default function AIAssistantPage() {
   const [sessions, setSessions] = useState<ChatSession[]>(() => loadSessions());
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
-  const [credits, setCredits] = useState<CreditsState>(() => loadCredits());
+  const [credits, setCredits] = useState<CreditsState>({ remaining: 100, daily: 100, loaded: false });
   const [savedMessages, setSavedMessages] = useState<ChatMessage[]>(() => loadSaved());
   const [showSaved, setShowSaved] = useState(false);
   const [dbHistory, setDbHistory] = useState<DbGeneration[]>([]);
