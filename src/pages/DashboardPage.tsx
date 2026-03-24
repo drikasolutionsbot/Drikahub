@@ -619,7 +619,7 @@ const DashboardPage = () => {
                       {log.entity_name && <span className="font-semibold">{log.entity_name}</span>}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {log.entity_type} • {formatDistanceToNow(new Date(log.created_at), { addSuffix: true, locale: ptBR })}
+                      {log.entity_type} • {formatDistanceToNow(new Date(log.created_at), { addSuffix: true, locale: ptBRLocale })}
                     </p>
                   </div>
                 </div>
