@@ -297,7 +297,7 @@ export const TopBar = ({ onToggleSidebar }: TopBarProps) => {
         </Button>
         <div className="relative hidden md:block">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Buscar..." className="w-64 bg-muted pl-9 border-none focus-visible:ring-primary" />
+          <Input placeholder={t.topbar.search} className="w-64 bg-muted pl-9 border-none focus-visible:ring-primary" />
         </div>
       </div>
       <div className="flex items-center gap-1.5 md:gap-3">
