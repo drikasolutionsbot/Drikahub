@@ -245,7 +245,7 @@ const NavItem = ({ item, isActive, collapsed, resolvedLabel, reordering, onMoveU
             "truncate transition-colors duration-300 relative z-10",
             isActive ? "text-primary font-semibold" : "text-white/55 group-hover:text-white/80"
           )}>
-            {item.label}
+            {resolvedLabel}
           </span>
         )}
       </Link>
