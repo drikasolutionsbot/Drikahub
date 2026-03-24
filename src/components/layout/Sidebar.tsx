@@ -16,6 +16,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useTenant } from "@/contexts/TenantContext";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 interface NavItemDef {
   label: string;
