@@ -1575,10 +1575,17 @@ export default function AIAssistantPage() {
                   {actionLoading === "improve" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
                 </Button>
 
-                <Button size="icon" onClick={handleGenerate} disabled={loading || !!actionLoading || (!prompt.trim() && attachments.length === 0)}
-                  className={cn("h-10 w-10 rounded-xl shrink-0 shadow-lg transition-all duration-300", "bg-gradient-to-r", selectedTool.gradient, "hover:scale-110 hover:shadow-xl disabled:opacity-30 disabled:hover:scale-100")}>
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <Send className="h-4 w-4 text-white" />}
-                </Button>
+                {loading ? (
+                  <Button size="icon" onClick={handleCancel}
+                    className="h-10 w-10 rounded-xl shrink-0 shadow-lg transition-all duration-300 bg-destructive hover:bg-destructive/80 hover:scale-110">
+                    <Square className="h-4 w-4 text-white fill-white" />
+                  </Button>
+                ) : (
+                  <Button size="icon" onClick={handleGenerate} disabled={!!actionLoading || (!prompt.trim() && attachments.length === 0)}
+                    className={cn("h-10 w-10 rounded-xl shrink-0 shadow-lg transition-all duration-300", "bg-gradient-to-r", selectedTool.gradient, "hover:scale-110 hover:shadow-xl disabled:opacity-30 disabled:hover:scale-100")}>
+                    <Send className="h-4 w-4 text-white" />
+                  </Button>
+                )}
               </div>
             </div>
             <p className="text-[10px] text-muted-foreground/40 mt-2 text-center tracking-wide">
