@@ -36,7 +36,7 @@ const LoginPage = () => {
       await new Promise(resolve => setTimeout(resolve, 3000));
 
       if (error || data?.error) {
-        toast({ title: "Token inválido", description: data?.error || error?.message, variant: "destructive" });
+        toast({ title: t.login.invalidToken, description: data?.error || error?.message, variant: "destructive" });
         setValidating(false);
       } else {
         sessionStorage.setItem("token_session", JSON.stringify({
