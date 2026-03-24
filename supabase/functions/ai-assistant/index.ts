@@ -590,7 +590,7 @@ REGRAS:
     // IMAGE GENERATION (orquestração GPT-4o + SDXL)
     // ═══════════════════════════════════════
     if (type === "image") {
-      
+      if (!replicateToken) throw new Error("REPLICATE_API_TOKEN não configurada.");
 
       console.log("🎨 Step 1: GPT-4o refining prompt to commercial-grade...");
       const enhancedPrompt = await gatewayText(apiKey, [
