@@ -474,9 +474,9 @@ export const DashboardOverview = () => {
         <Card className="border-border bg-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-semibold">
-              Volume de Pedidos — {period === "today" ? "Por hora" : periodLabel}
+              {t.dashboardOverview.orderVolume} — {period === "today" ? t.dashboardOverview.perHour : periodLabel}
             </CardTitle>
-            <p className="text-xs text-muted-foreground">Quantidade de pedidos {period === "today" ? "por hora" : "por dia"}</p>
+            <p className="text-xs text-muted-foreground">{t.dashboardOverview.orderQty} {period === "today" ? t.dashboardOverview.perHour.toLowerCase() : t.dashboardOverview.perDay}</p>
           </CardHeader>
           <CardContent className="pt-0 pb-2">
             <ChartContainer config={chartConfig} className="h-[240px] w-full">
