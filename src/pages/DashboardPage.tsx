@@ -707,7 +707,7 @@ const DashboardPage = () => {
                 removeMember(selectedMember.id);
                 setSelectedMemberId(null);
                 setMemberDraft({});
-                toast.success("Membro removido.");
+                toast.success(t.dashboard.memberRemoved);
               } : undefined}
             />
           </div>
