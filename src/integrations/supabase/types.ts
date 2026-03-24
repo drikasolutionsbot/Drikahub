@@ -1802,6 +1802,44 @@ export type Database = {
           },
         ]
       }
+      tenant_credits: {
+        Row: {
+          created_at: string
+          credits_remaining: number
+          daily_limit: number
+          id: string
+          last_reset_at: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          credits_remaining?: number
+          daily_limit?: number
+          id?: string
+          last_reset_at?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          credits_remaining?: number
+          daily_limit?: number
+          id?: string
+          last_reset_at?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_credits_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_permissions: {
         Row: {
           can_change_server: boolean
