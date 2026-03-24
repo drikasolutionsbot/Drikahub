@@ -1135,6 +1135,13 @@ export default function AIAssistantPage() {
                         )}
                         onClick={() => { setActiveSessionId(session.id); setShowSaved(false); setShowDbHistory(false); }}
                       >
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteSession(session.id); }}
+                          className="shrink-0 p-1 rounded-md text-destructive/60 hover:text-destructive hover:bg-destructive/10 transition-all"
+                          title="Excluir chat"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
                         <div className={cn("h-6 w-6 rounded-lg flex items-center justify-center shrink-0", activeSessionId === session.id ? "bg-primary/20" : "bg-muted/20")}>
                           <MessageSquare className="h-3 w-3 text-muted-foreground/60" />
                         </div>
@@ -1144,13 +1151,6 @@ export default function AIAssistantPage() {
                             {session.messages.length} msg • {new Date(session.createdAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
                           </p>
                         </div>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleDeleteSession(session.id); }}
-                          className="shrink-0 p-1 rounded-md text-destructive/60 hover:text-destructive hover:bg-destructive/10 transition-all"
-                          title="Excluir chat"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
                       </div>
                     ))}
                   </div>
