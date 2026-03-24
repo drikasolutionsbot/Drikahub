@@ -658,7 +658,7 @@ const DashboardPage = () => {
           <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
             <div className="rounded-xl border border-border bg-card p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold border-l-2 border-primary pl-3">Lista de membros</h3>
+                <h3 className="text-sm font-semibold border-l-2 border-primary pl-3">{t.dashboard.membersList}</h3>
                 <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={() => setMemberSearchOpen(true)}>
                   <Plus className="h-4 w-4" />
                 </Button>
