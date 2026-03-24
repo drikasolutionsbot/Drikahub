@@ -537,7 +537,7 @@ const DashboardPage = () => {
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-border bg-card p-5 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-lg font-semibold border-l-2 border-primary pl-3">Servidor Principal</h2>
+            <h2 className="font-display text-lg font-semibold border-l-2 border-primary pl-3">{t.dashboard.mainServer}</h2>
             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={openServerModal}><Settings2 className="h-4 w-4" /></Button>
           </div>
           {tenant.discord_guild_id ? (
