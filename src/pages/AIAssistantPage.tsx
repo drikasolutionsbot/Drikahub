@@ -881,7 +881,7 @@ export default function AIAssistantPage() {
                 <span className={cn("text-2xl font-extrabold tabular-nums", creditsRemaining <= 5 ? "text-red-400" : "text-foreground")}>
                   {creditsRemaining}
                 </span>
-                <span className="text-[10px] text-muted-foreground/60">/ {planConfig.daily} hoje</span>
+                <span className="text-[10px] text-muted-foreground/60">/ {credits.daily} hoje</span>
               </div>
               <Progress value={Math.min(creditsPercent, 100)} className="h-1.5" />
               {creditsPercent >= 80 && (
