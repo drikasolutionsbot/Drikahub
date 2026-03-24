@@ -172,7 +172,7 @@ const PlanBadge = ({ tenant }: { tenant: { plan: string; plan_expires_at: string
               }}
             >
               <Crown className="h-3.5 w-3.5" />
-              Assine o Plano Pro
+              {t.plan.subscribePro}
             </Button>
           )}
         </div>
