@@ -587,7 +587,7 @@ export default function AIAssistantPage() {
       ));
       consumeCredits(cost);
     } catch (e: any) {
-      toast({ title: "Erro ao gerar variação", description: e.message || "Tente novamente", variant: "destructive" });
+      toast({ title: t.ai.errorGeneratingVariation, description: e.message || t.ai.tryAgain, variant: "destructive" });
     } finally {
       setActionLoading(null);
     }
