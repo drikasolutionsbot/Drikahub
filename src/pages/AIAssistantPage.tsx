@@ -1352,7 +1352,7 @@ export default function AIAssistantPage() {
                                 onClick={() => handleCopy(msg.enhancedPrompt!, msg.id + "-prompt-btn")}
                               >
                                 {copied === msg.id + "-prompt-btn" ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
-                                Copiar Prompt
+                                {t.ai.copyPrompt}
                               </Button>
                             )}
                             {msg.enhancedPrompt && activeSessionId && (
