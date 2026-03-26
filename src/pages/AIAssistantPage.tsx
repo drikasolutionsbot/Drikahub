@@ -627,7 +627,7 @@ export default function AIAssistantPage() {
 
     let sessionId = activeSessionId;
     if (!sessionId) {
-      sessionId = createNewSession(selectedTool.id, prompt || "Análise de imagem");
+      sessionId = createNewSession(selectedTool.id, prompt || t.ai.imageAnalysis);
     }
 
     const currentAttachments = [...attachments];
