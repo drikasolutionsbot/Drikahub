@@ -1298,7 +1298,7 @@ export default function AIAssistantPage() {
                               className="mt-1.5 flex items-center gap-1 text-[9px] text-primary/60 hover:text-primary transition-colors"
                             >
                               {copied === msg.id + "-prompt" ? <Check className="h-2.5 w-2.5" /> : <Copy className="h-2.5 w-2.5" />}
-                              {copied === msg.id + "-prompt" ? "Copiado" : "Copiar prompt"}
+                              {copied === msg.id + "-prompt" ? t.ai.copiedPrompt : t.ai.copyPrompt}
                             </button>
                           </div>
                         </details>
