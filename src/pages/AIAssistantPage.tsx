@@ -1089,8 +1089,8 @@ export default function AIAssistantPage() {
                 savedMessages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-14 px-4 text-center">
                     <Bookmark className="h-8 w-8 text-muted-foreground/15 mb-3" />
-                    <p className="text-xs text-muted-foreground/50">Nenhuma geração salva</p>
-                    <p className="text-[10px] text-muted-foreground/40 mt-1">Clique ⭐ em qualquer resultado</p>
+                    <p className="text-xs text-muted-foreground/50">{t.ai.noSavedGenerations}</p>
+                    <p className="text-[10px] text-muted-foreground/40 mt-1">{t.ai.clickStarToSave}</p>
                   </div>
                 ) : (
                   <div className="p-2 space-y-1">
