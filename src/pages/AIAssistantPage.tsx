@@ -408,7 +408,7 @@ export default function AIAssistantPage() {
     const id = crypto.randomUUID();
     const session: ChatSession = {
       id,
-      title: firstMessage?.slice(0, 50) || "Novo chat",
+      title: firstMessage?.slice(0, 50) || t.ai.newChat,
       messages: [],
       toolId,
       createdAt: new Date().toISOString(),
