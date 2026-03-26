@@ -914,7 +914,7 @@ export default function AIAssistantPage() {
         <Flame className={cn("h-4 w-4 shrink-0", creditsPercent > 80 ? "text-red-400" : "text-primary")} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[11px] font-bold">{creditsRemaining} créditos restantes</span>
+            <span className="text-[11px] font-bold">{t.ai.creditsRemaining.replace("{n}", String(creditsRemaining))}</span>
             <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded-full", planConfig.color, "bg-primary/10 border border-primary/20")}>
               {planConfig.badge}
             </span>
