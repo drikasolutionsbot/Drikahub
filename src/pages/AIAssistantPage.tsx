@@ -1106,7 +1106,7 @@ export default function AIAssistantPage() {
                         <div className="flex-1 min-w-0">
                           <p className="text-[11px] text-foreground/70 line-clamp-2">{msg.content.slice(0, 100)}...</p>
                           <p className="text-[9px] text-muted-foreground/40 mt-1">
-                            {AI_TOOLS.find(t => t.id === msg.toolId)?.emoji} {AI_TOOLS.find(t => t.id === msg.toolId)?.label}
+                            {AI_TOOLS.find(t2 => t2.id === msg.toolId)?.emoji} {AI_TOOLS.find(t2 => t2.id === msg.toolId)?.label}
                           </p>
                         </div>
                         <button
