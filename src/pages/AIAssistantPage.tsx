@@ -988,7 +988,7 @@ export default function AIAssistantPage() {
                 !showSaved && !showDbHistory ? "bg-primary/15 text-primary border border-primary/20" : "text-muted-foreground/60 hover:text-muted-foreground"
               )}
             >
-              <History className="h-3 w-3" /> Chats
+              <History className="h-3 w-3" /> {t.ai.chats}
             </button>
             <button
               onClick={() => { setShowSaved(true); setShowDbHistory(false); }}
