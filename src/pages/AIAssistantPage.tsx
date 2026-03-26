@@ -606,7 +606,7 @@ export default function AIAssistantPage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(blobUrl);
-      toast({ title: "📥 Download iniciado!" });
+      toast({ title: t.ai.downloadStarted });
     } catch {
       window.open(url, "_blank");
     }
