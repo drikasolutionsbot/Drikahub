@@ -514,7 +514,7 @@ export default function AIAssistantPage() {
     const userMsg: ChatMessage = {
       id: crypto.randomUUID(),
       role: "user",
-      content: "🔄 Gerar 3 variações profissionais",
+      content: t.ai.generateVariationsUser,
       toolId: selectedTool.id,
       timestamp: new Date().toISOString(),
     };
