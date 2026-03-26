@@ -902,7 +902,7 @@ export default function AIAssistantPage() {
             </div>
             <div className="flex items-center gap-2 text-[10px] text-muted-foreground/50">
               <div className="h-1.5 w-1.5 rounded-full bg-primary/60" />
-              <span className="font-medium">Custo: {CREDIT_COSTS[selectedTool.id] || 1} crédito(s) por geração</span>
+              <span className="font-medium">{t.ai.creditsCost.replace("{cost}", String(CREDIT_COSTS[selectedTool.id] || 1))}</span>
             </div>
           </div>
         </div>
