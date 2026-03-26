@@ -507,7 +507,7 @@ export default function AIAssistantPage() {
   // ═══ GENERATE VARIATIONS ═══
   const handleGenerateVariations = async (originalContent: string, sessionId: string) => {
     if (!canAfford(CREDIT_COSTS.variations)) {
-      toast({ title: "Créditos insuficientes", description: "Limite diário atingido.", variant: "destructive" });
+      toast({ title: t.ai.insufficientCredits, description: t.ai.dailyLimitReached, variant: "destructive" });
       return;
     }
     setActionLoading("variations");
