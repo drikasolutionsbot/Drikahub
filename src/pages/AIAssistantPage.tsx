@@ -1007,7 +1007,7 @@ export default function AIAssistantPage() {
                 showDbHistory ? "bg-emerald-400/15 text-emerald-400 border border-emerald-400/20" : "text-muted-foreground/60 hover:text-muted-foreground"
               )}
             >
-              <Database className="h-3 w-3" /> Banco
+              <Database className="h-3 w-3" /> {t.ai.database}
               {dbHistory.length > 0 && (
                 <span className="text-[8px] bg-emerald-400/20 px-1 rounded">{dbHistory.length}</span>
               )}
