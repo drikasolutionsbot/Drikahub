@@ -1233,23 +1233,23 @@ export default function AIAssistantPage() {
                     </div>
                   </div>
                   <div>
-                    <p className="text-base font-bold text-foreground/80 mb-1">Escreva pouco, receba muito</p>
+                    <p className="text-base font-bold text-foreground/80 mb-1">{t.ai.writeReceive}</p>
                     <p className="text-xs text-muted-foreground/60 max-w-[320px] leading-relaxed">
-                      Digite uma ideia simples e o Gerador IA entrega resultados de agência premium automaticamente
+                      {t.ai.writeReceiveDesc}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center justify-center gap-2 text-[10px] text-muted-foreground/45">
                     <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted/10 border border-border/10">
-                      <Wand2 className="h-3 w-3" /> Melhorar prompt
+                      <Wand2 className="h-3 w-3" /> {t.ai.improvePrompt}
                     </span>
                     <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted/10 border border-border/10">
-                      <RefreshCw className="h-3 w-3" /> 3 variações
+                      <RefreshCw className="h-3 w-3" /> {t.ai.variations3}
                     </span>
                     <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted/10 border border-border/10">
-                      <RotateCw className="h-3 w-3" /> Reutilizar
+                      <RotateCw className="h-3 w-3" /> {t.ai.reuse}
                     </span>
                     <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted/10 border border-border/10">
-                      <Bookmark className="h-3 w-3" /> Favoritos
+                      <Bookmark className="h-3 w-3" /> {t.ai.favorites}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 text-[10px] text-muted-foreground/45">
