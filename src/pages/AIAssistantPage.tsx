@@ -429,11 +429,11 @@ export default function AIAssistantPage() {
     if (!files) return;
     for (const file of Array.from(files)) {
       if (file.size > MAX_FILE_SIZE) {
-        toast({ title: "Arquivo muito grande", description: `${file.name} excede 10MB.`, variant: "destructive" });
+        toast({ title: t.ai.fileTooLarge, description: t.ai.fileTooLargeDesc.replace("{name}", file.name), variant: "destructive" });
         continue;
       }
       if (!file.type.startsWith("image/")) {
-        toast({ title: "Formato não suportado", description: "Envie apenas imagens.", variant: "destructive" });
+        toast({ title: t.ai.unsupportedFormat, description: t.ai.sendImagesOnly, variant: "destructive" });
         continue;
       }
       const reader = new FileReader();
