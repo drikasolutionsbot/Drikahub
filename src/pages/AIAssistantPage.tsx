@@ -470,10 +470,10 @@ export default function AIAssistantPage() {
     const isSaved = savedMessages.some(m => m.id === msg.id);
     if (isSaved) {
       setSavedMessages(prev => prev.filter(m => m.id !== msg.id));
-      toast({ title: "Removido dos salvos" });
+      toast({ title: t.ai.removedFromSaved });
     } else {
       setSavedMessages(prev => [{ ...msg, saved: true }, ...prev]);
-      toast({ title: "⭐ Salvo!", description: "Acesse seus favoritos no histórico." });
+      toast({ title: t.ai.savedSuccess, description: t.ai.savedDesc });
     }
   };
 
