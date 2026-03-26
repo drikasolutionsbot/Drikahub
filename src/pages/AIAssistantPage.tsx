@@ -259,6 +259,11 @@ export default function AIAssistantPage() {
   }));
 
   const [selectedTool, setSelectedTool] = useState(AI_TOOLS[0]);
+
+  // Keep selectedTool in sync with language changes
+  useEffect(() => {
+    setSelectedTool(prev => AI_TOOLS.find(t2 => t2.id === prev.id) || AI_TOOLS[0]);
+  }, [t]);
   const [prompt, setPrompt] = useState("");
   const [context, setContext] = useState("");
   const [loading, setLoading] = useState(false);
