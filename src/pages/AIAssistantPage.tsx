@@ -1394,10 +1394,10 @@ export default function AIAssistantPage() {
                           <button
                             onClick={() => handleReuse(msg)}
                             className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground hover:text-emerald-400 transition-all px-3 py-2 rounded-xl border border-border/20 hover:border-emerald-400/30 hover:bg-emerald-400/10 bg-card/40 backdrop-blur-sm"
-                            title="Reutilizar este prompt"
+                            title={t.ai.reuse}
                           >
                             <RotateCw className="h-3.5 w-3.5" />
-                            Reutilizar
+                            {t.ai.reuse}
                           </button>
 
                           <button
