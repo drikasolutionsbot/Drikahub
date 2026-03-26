@@ -1055,7 +1055,7 @@ export default function AIAssistantPage() {
                             >
                               <span className="text-sm shrink-0 mt-0.5">{tool?.emoji || "🤖"}</span>
                               <div className="flex-1 min-w-0">
-                                <p className="text-[11px] text-foreground/70 line-clamp-1 font-medium">{gen.user_input || "Sem input"}</p>
+                                <p className="text-[11px] text-foreground/70 line-clamp-1 font-medium">{gen.user_input || t.ai.noInput}</p>
                                 <p className="text-[10px] text-muted-foreground/50 line-clamp-1 mt-0.5">
                                   {gen.result_image_url ? "🖼️ Imagem gerada" : (gen.result_text?.slice(0, 60) || "...")}
                                 </p>
