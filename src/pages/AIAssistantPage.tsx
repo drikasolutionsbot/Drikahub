@@ -1039,8 +1039,8 @@ export default function AIAssistantPage() {
                   ) : dbHistory.filter(g => dbFilterCategory === "all" || g.category === dbFilterCategory).length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-14 px-4 text-center">
                       <Database className="h-8 w-8 text-muted-foreground/15 mb-3" />
-                      <p className="text-xs text-muted-foreground/50">Nenhuma geração encontrada</p>
-                      <p className="text-[10px] text-muted-foreground/40 mt-1">Suas gerações serão salvas aqui</p>
+                       <p className="text-xs text-muted-foreground/50">{t.ai.noGenerationsFound}</p>
+                       <p className="text-[10px] text-muted-foreground/40 mt-1">{t.ai.generationsSavedHere}</p>
                     </div>
                   ) : (
                     <div className="p-2 space-y-1">
