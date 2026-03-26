@@ -1125,8 +1125,8 @@ export default function AIAssistantPage() {
                     <div className="h-12 w-12 rounded-2xl bg-muted/20 flex items-center justify-center mb-3">
                       <MessageSquare className="h-5 w-5 text-muted-foreground/15" />
                     </div>
-                    <p className="text-xs text-muted-foreground/50">Nenhum chat ainda</p>
-                    <p className="text-[10px] text-muted-foreground/40 mt-1">Comece uma conversa!</p>
+                    <p className="text-xs text-muted-foreground/50">{t.ai.noChatYet}</p>
+                    <p className="text-[10px] text-muted-foreground/40 mt-1">{t.ai.startConversation}</p>
                   </div>
                 ) : (
                   <div className="p-2 space-y-1">
