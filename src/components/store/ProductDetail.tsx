@@ -53,6 +53,7 @@ export const ProductDetail = ({ product, onBack, onSave, onDelete, categories = 
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [postModalOpen, setPostModalOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [embedColor, setEmbedColor] = useState("#2B2D31");
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const editedRef = useRef(edited);
