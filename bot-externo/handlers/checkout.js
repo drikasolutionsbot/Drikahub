@@ -429,6 +429,78 @@ async function goToPayment(interaction, tenant, orderId) {
   );
 
   await sendWithIdentity(channel, tenant, { embeds: [pixEmbed], components: [pixRow] });
+
+  // ── Start payment polling for providers without reliable webhooks ──
+  if (provider && provider.provider_key) {
+    startPaymentPolling(order.id, tenant.id, channel, tenant, timeoutMin);
+  }
+}
+
+// ── Payment Polling ──
+// Polls check-payment-status edge function every 10s until paid, canceled, or timeout
+async function startPaymentPolling(orderId, tenantId, channel, tenant, timeoutMin = 30) {
+  const maxAttempts = Math.floor((timeoutMin * 60) / 10); // poll every 10 seconds
+  let attempts = 0;
+
+  const poll = async () => {
+    attempts++;
+    if (attempts > maxAttempts) {
+      console.log(`[POLLING] Timeout for order ${orderId} after ${attempts} attempts`);
+      return;
+    }
+
+    try {
+      // Check if order is still pending
+      const currentOrder = await getOrder(orderId);
+      if (!currentOrder || currentOrder.status !== "pending_payment") {
+        console.log(`[POLLING] Order ${orderId} no longer pending: ${currentOrder?.status}`);
+        return;
+      }
+
+      const res = await fetch(`${process.env.SUPABASE_URL}/functions/v1/check-payment-status`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+        },
+        body: JSON.stringify({ order_id: orderId, tenant_id: tenantId }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        console.log(`[POLLING] Order ${orderId} attempt ${attempts}: ${JSON.stringify(data)}`);
+
+        if (data.status === "paid" && data.changed) {
+          console.log(`[POLLING] Payment confirmed for order ${orderId}!`);
+          // Trigger automation from bot side
+          try {
+            const paidOrder = await getOrder(orderId);
+            if (paidOrder) {
+              await triggerAutomation(tenantId, "order_paid", {
+                discord_user_id: paidOrder.discord_user_id,
+                discord_username: paidOrder.discord_username,
+                order_id: orderId,
+                order_number: paidOrder.order_number,
+                product_name: paidOrder.product_name,
+                total_cents: paidOrder.total_cents,
+              });
+            }
+          } catch (e) {
+            console.error("[POLLING] Automation trigger error:", e.message);
+          }
+          return; // Stop polling - delivery was triggered by the edge function
+        }
+      }
+    } catch (e) {
+      console.error(`[POLLING] Error checking order ${orderId}:`, e.message);
+    }
+
+    // Schedule next poll
+    setTimeout(poll, 10000);
+  };
+
+  // Start polling after 10 seconds (give webhook a chance first)
+  setTimeout(poll, 10000);
 }
 
 // ── Approve Order ──
