@@ -451,7 +451,9 @@ async function approveOrder(interaction, tenant, orderId) {
   // DM buyer
   try {
     const user = await interaction.client.users.fetch(order.discord_user_id);
-    await user.send({ embeds: [new EmbedBuilder().setTitle("✅ Pagamento Confirmado!").setDescription(`Seu pedido **#${order.order_number}** (${order.product_name}) foi aprovado!\nSeu produto será entregue em instantes.`).setColor(0x2B2D31).setTimestamp()] });
+    const dmStoreConfig = await getStoreConfig(tenant.id);
+    const dmEmbedColor = parseInt((dmStoreConfig?.embed_color || "#2B2D31").replace("#", ""), 16);
+    await user.send({ embeds: [new EmbedBuilder().setTitle("✅ Pagamento Confirmado!").setDescription(`Seu pedido **#${order.order_number}** (${order.product_name}) foi aprovado!\nSeu produto será entregue em instantes.`).setColor(dmEmbedColor).setTimestamp()] });
   } catch {}
 
   const approvedEmbed = new EmbedBuilder()
