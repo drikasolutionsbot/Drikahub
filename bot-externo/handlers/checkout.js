@@ -456,10 +456,12 @@ async function approveOrder(interaction, tenant, orderId) {
     await user.send({ embeds: [new EmbedBuilder().setTitle("✅ Pagamento Confirmado!").setDescription(`Seu pedido **#${order.order_number}** (${order.product_name}) foi aprovado!\nSeu produto será entregue em instantes.`).setColor(dmEmbedColor).setTimestamp()] });
   } catch {}
 
+  const approveStoreConfig = await getStoreConfig(tenant.id);
+  const approveEmbedColor = parseInt((approveStoreConfig?.embed_color || "#2B2D31").replace("#", ""), 16);
   const approvedEmbed = new EmbedBuilder()
     .setTitle("✅ Pedido Aprovado")
     .setDescription(`Pedido **#${order.order_number}** aprovado por <@${interaction.user.id}>`)
-    .setColor(0x2B2D31)
+    .setColor(approveEmbedColor)
     .addFields(
       { name: "📦 Produto", value: order.product_name, inline: true },
       { name: "💰 Valor", value: formatBRL(order.total_cents), inline: true },
