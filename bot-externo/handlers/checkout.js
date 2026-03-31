@@ -679,6 +679,18 @@ async function rejectOrder(interaction, tenant, orderId) {
     embeds: [new EmbedBuilder().setTitle("❌ Pedido Recusado").setDescription(`Pedido **#${order.order_number}** recusado por <@${interaction.user.id}>`).setColor(0xED4245).addFields({ name: "📦 Produto", value: order.product_name, inline: true }, { name: "👤 Comprador", value: `<@${order.discord_user_id}>`, inline: true }).setTimestamp()],
     components: [],
   });
+
+  // Log: Pedido recusado
+  await sendLog(interaction.guild, tenant, {
+    title: "🚫 Pedido recusado",
+    description: `Pedido **#${order.order_number}** recusado por <@${interaction.user.id}>.`,
+    color: 0xED4245,
+    fields: [
+      { name: "**Detalhes**", value: `\`1x ${order.product_name} | ${formatBRL(order.total_cents)}\``, inline: false },
+      { name: "**ID do Pedido**", value: `\`${order.id}\``, inline: false },
+      { name: "**Comprador**", value: `<@${order.discord_user_id}>`, inline: false },
+    ],
+  });
 }
 
 // ── Cancel Order ──
