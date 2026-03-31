@@ -99,6 +99,7 @@ const StorePage = () => {
           show_sold: product.show_sold,
           enable_instructions: product.enable_instructions,
           button_style: product.button_style,
+          role_id: product.role_id,
         },
       },
     });
