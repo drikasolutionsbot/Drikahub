@@ -137,7 +137,16 @@ async function buildProductPayload(
       },
     ],
     footer: {
-      text: `Servidor de ${tenant?.name} • ${new Date().toLocaleString("pt-BR")}`,
+      text: (() => {
+        const footerTemplate = embedConfig.footer_text;
+        const dateStr = new Date().toLocaleString("pt-BR");
+        if (footerTemplate) {
+          return footerTemplate
+            .replace(/\{loja\}/gi, tenant?.name || "Loja")
+            .replace(/\{data\}/gi, dateStr);
+        }
+        return `Servidor de ${tenant?.name} • ${dateStr}`;
+      })(),
     },
   };
 
