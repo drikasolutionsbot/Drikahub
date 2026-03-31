@@ -867,6 +867,18 @@ async function cancelManual(interaction, tenant, orderId) {
     embeds: [new EmbedBuilder().setTitle("❌ Pedido Cancelado").setDescription(`Pedido **#${order.order_number}** cancelado por <@${interaction.user.id}>.`).setColor(0xED4245)],
     components: [],
   });
+
+  // Log: Cancelamento manual pelo admin
+  await sendLog(interaction.guild, tenant, {
+    title: "⛔ Cancelamento manual",
+    description: `Pedido **#${order.order_number}** cancelado manualmente por <@${interaction.user.id}>.`,
+    color: 0xED4245,
+    fields: [
+      { name: "**Detalhes**", value: `\`${order.product_name} | ${formatBRL(order.total_cents)}\``, inline: false },
+      { name: "**ID do Pedido**", value: `\`${order.id}\``, inline: false },
+      { name: "**Comprador**", value: `<@${order.discord_user_id}>`, inline: false },
+    ],
+  });
 }
 
 // ── Copy Delivered ──
