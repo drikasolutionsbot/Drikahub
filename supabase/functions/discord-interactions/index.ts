@@ -2635,6 +2635,18 @@ async function generatePixInThread(
 
   const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(brcode)}`;
 
+  const paymentDate = new Date().toLocaleDateString("pt-BR");
+  const paymentTime = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  const pixFooterText = applyPurchaseFooterTemplate(scBrand?.purchase_embed_footer, {
+    storeName,
+    productName: order.product_name,
+    orderNumber: order.order_number,
+    timeoutMin,
+    date: paymentDate,
+    time: paymentTime,
+    username: order.discord_username || userId,
+  }) || `${storeName} – Pagamento expira em ${timeoutMin} minutos.\n• Hoje às ${paymentTime}`;
+
   // Send PIX embed in the thread
   const pixEmbed: any = {
     author: { name: order.discord_username || userId },
@@ -2650,7 +2662,7 @@ async function generatePixInThread(
     color: embedColor,
     image: { url: qrImageUrl },
     footer: {
-      text: scBrand?.purchase_embed_footer || `${storeName} – Pagamento expira em ${timeoutMin} minutos.\n• Hoje às ${new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`,
+      text: pixFooterText,
       icon_url: storeLogo || undefined,
     },
   };
