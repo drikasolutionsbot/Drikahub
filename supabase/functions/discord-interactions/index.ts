@@ -2740,6 +2740,9 @@ async function generatePixInThread(
     }
 
     await supabase.from("orders").update({ payment_id: paymentId, payment_provider: providerKey }).eq("id", order.id);
+
+    // Log: Pedido solicitado (gateway)
+    await sendPixGeneratedLog(supabase, botToken, order, providerKey);
   } else {
     // Static PIX fallback
     const { data: tenant } = await supabase.from("tenants").select("name, pix_key, pix_key_type").eq("id", tenantId).single();
@@ -2862,6 +2865,11 @@ async function generatePixInThread(
       body: JSON.stringify({ name: `🛒 • ${order.discord_username || userId} • ${order.order_number}` }),
     });
   } catch {}
+
+  // Log: Pedido solicitado (static pix) — only if no gateway log was sent above
+  if (!activeProvider || amountBRL <= 0) {
+    await sendPixGeneratedLog(supabase, botToken, order, "static_pix");
+  }
 }
 
 // ─── Send "Pedido solicitado" log when PIX is generated ─────
