@@ -1,0 +1,1 @@
+ALTER TABLE public.products ADD COLUMN role_id text DEFAULT NULL;

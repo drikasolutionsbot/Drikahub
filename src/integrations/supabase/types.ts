@@ -1287,6 +1287,7 @@ export type Database = {
           id: string
           name: string
           price_cents: number
+          role_id: string | null
           show_sold: boolean
           show_stock: boolean
           stock: number | null
@@ -1310,6 +1311,7 @@ export type Database = {
           id?: string
           name: string
           price_cents?: number
+          role_id?: string | null
           show_sold?: boolean
           show_stock?: boolean
           stock?: number | null
@@ -1333,6 +1335,7 @@ export type Database = {
           id?: string
           name?: string
           price_cents?: number
+          role_id?: string | null
           show_sold?: boolean
           show_stock?: boolean
           stock?: number | null
