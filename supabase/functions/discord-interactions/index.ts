@@ -117,6 +117,49 @@ async function generatePushinPayPix(apiKey: string, amountCents: number, webhook
 const formatBRL = (cents: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
 
+// ─── Store Log Helper ───────────────────────────────────────
+async function sendStoreLog(
+  supabase: any,
+  botToken: string,
+  tenantId: string,
+  opts: { title: string; description: string; color?: number; fields?: any[] }
+) {
+  try {
+    const { data: sc } = await supabase
+      .from("store_configs")
+      .select("logs_channel_id, store_title, store_logo_url, embed_color")
+      .eq("tenant_id", tenantId)
+      .single();
+    if (!sc?.logs_channel_id) return;
+
+    const { data: t } = await supabase.from("tenants").select("name, logo_url").eq("id", tenantId).single();
+    const storeName = sc.store_title || t?.name || "Loja";
+    const storeLogo = sc.store_logo_url || t?.logo_url;
+    const embedColor = opts.color ?? (sc.embed_color ? parseInt(sc.embed_color.replace("#", ""), 16) : 0x2B2D31);
+    const d = new Date().toLocaleDateString("pt-BR");
+    const tm = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+    const embed: any = {
+      title: opts.title,
+      description: opts.description,
+      color: embedColor,
+      footer: { text: `${storeName} | ${d}, ${tm}`, icon_url: storeLogo || undefined },
+      timestamp: new Date().toISOString(),
+    };
+    if (opts.fields?.length) embed.fields = opts.fields;
+
+    const res = await fetch(`${DISCORD_API}/channels/${sc.logs_channel_id}/messages`, {
+      method: "POST",
+      headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ embeds: [embed] }),
+    });
+    if (!res.ok) console.error(`sendStoreLog failed [${opts.title}]:`, res.status, await res.text());
+    else console.log(`[LOG] ${opts.title} sent for tenant ${tenantId}`);
+  } catch (err: any) {
+    console.error(`sendStoreLog error [${opts.title}]:`, err.message);
+  }
+}
+
 function extractProductIdCandidates(rawProductId: string): string[] {
   if (!rawProductId) return [];
 
