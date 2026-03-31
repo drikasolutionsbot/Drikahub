@@ -17,6 +17,31 @@ const formatDateTime = (dateObj = new Date()) => ({
   time: dateObj.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
 });
 
+// ── Log helper ──
+async function sendLog(guild, tenant, { title, description, color, fields: extraFields, storeConfig: sc }) {
+  try {
+    const storeConfig = sc || await getStoreConfig(tenant.id);
+    if (!storeConfig?.logs_channel_id) return;
+    const logsChannel = await guild.channels.fetch(storeConfig.logs_channel_id);
+    const storeName = storeConfig?.store_title || tenant.name || "Loja";
+    const storeLogo = storeConfig?.store_logo_url || tenant.logo_url;
+    const embedColor = color || parseInt((storeConfig?.embed_color || "#2B2D31").replace("#", ""), 16);
+    const { date, time } = formatDateTime();
+
+    const embed = new EmbedBuilder()
+      .setTitle(title)
+      .setDescription(description)
+      .setColor(embedColor)
+      .setFooter({ text: `${storeName} | ${date}, ${time}`, iconURL: storeLogo || undefined });
+
+    if (extraFields?.length) embed.addFields(extraFields);
+
+    await sendWithIdentity(logsChannel, tenant, { embeds: [embed] });
+  } catch (err) {
+    console.error(`Failed to send log [${title}]:`, err.message);
+  }
+}
+
 function applyFooterTemplate(template, context = {}) {
   if (!template || !String(template).trim()) return "";
   return String(template)
@@ -622,6 +647,18 @@ async function approveOrder(interaction, tenant, orderId) {
     .setTimestamp();
 
   await interaction.editReply({ embeds: [approvedEmbed], components: [] });
+
+  // Log: Pedido aprovado
+  await sendLog(interaction.guild, tenant, {
+    title: "✅ Pedido aprovado",
+    description: `Pedido **#${order.order_number}** aprovado por <@${interaction.user.id}>.`,
+    color: 0x57F287,
+    fields: [
+      { name: "**Detalhes**", value: `\`1x ${order.product_name} | ${formatBRL(order.total_cents)}\``, inline: false },
+      { name: "**ID do Pedido**", value: `\`${order.id}\``, inline: false },
+      { name: "**Comprador**", value: `<@${order.discord_user_id}>`, inline: false },
+    ],
+  });
 }
 
 // ── Reject Order ──
@@ -642,6 +679,18 @@ async function rejectOrder(interaction, tenant, orderId) {
     embeds: [new EmbedBuilder().setTitle("❌ Pedido Recusado").setDescription(`Pedido **#${order.order_number}** recusado por <@${interaction.user.id}>`).setColor(0xED4245).addFields({ name: "📦 Produto", value: order.product_name, inline: true }, { name: "👤 Comprador", value: `<@${order.discord_user_id}>`, inline: true }).setTimestamp()],
     components: [],
   });
+
+  // Log: Pedido recusado
+  await sendLog(interaction.guild, tenant, {
+    title: "🚫 Pedido recusado",
+    description: `Pedido **#${order.order_number}** recusado por <@${interaction.user.id}>.`,
+    color: 0xED4245,
+    fields: [
+      { name: "**Detalhes**", value: `\`1x ${order.product_name} | ${formatBRL(order.total_cents)}\``, inline: false },
+      { name: "**ID do Pedido**", value: `\`${order.id}\``, inline: false },
+      { name: "**Comprador**", value: `<@${order.discord_user_id}>`, inline: false },
+    ],
+  });
 }
 
 // ── Cancel Order ──
@@ -658,6 +707,18 @@ async function cancelOrder(interaction, tenant, orderId) {
   const cancelStoreConfig = await getStoreConfig(tenant.id);
   const cancelEmbedColor = parseInt((cancelStoreConfig?.embed_color || "#2B2D31").replace("#", ""), 16);
   await sendWithIdentity(channel, tenant, { embeds: [new EmbedBuilder().setTitle("❌ Compra Cancelada").setDescription(`Pedido **#${order.order_number}** foi cancelado.\nO tópico será arquivado.`).setColor(cancelEmbedColor)] });
+
+  // Log: Pedido cancelado pelo cliente
+  await sendLog(interaction.guild, tenant, {
+    title: "🗑️ Pedido cancelado",
+    description: `Usuário <@${order.discord_user_id}> cancelou o pedido.`,
+    color: 0xED4245,
+    fields: [
+      { name: "**Detalhes**", value: `\`1x ${order.product_name} | ${formatBRL(order.total_cents)}\``, inline: false },
+      { name: "**ID do Pedido**", value: `\`${order.id}\``, inline: false },
+    ],
+    storeConfig: cancelStoreConfig,
+  });
 
   setTimeout(() => {
     channel.setArchived?.(true).catch(() => {});
@@ -709,6 +770,18 @@ async function handleCouponModal(interaction, tenant, orderId) {
   });
 
   await interaction.editReply({ content: "✅ Cupom aplicado!" });
+
+  // Log: Cupom aplicado
+  await sendLog(interaction.guild, tenant, {
+    title: "🏷️ Cupom aplicado",
+    description: `Usuário <@${interaction.user.id}> aplicou um cupom.`,
+    fields: [
+      { name: "**Cupom**", value: `\`${couponCode}\``, inline: true },
+      { name: "**Desconto**", value: `\`-${formatBRL(discount)}\``, inline: true },
+      { name: "**Novo Total**", value: `\`${formatBRL(newTotal)}\``, inline: true },
+      { name: "**ID do Pedido**", value: `\`${order.id}\``, inline: false },
+    ],
+  });
 }
 
 // ── Quantity Modal ──
@@ -745,6 +818,18 @@ async function handleQuantityModal(interaction, tenant, orderId) {
   });
 
   await interaction.editReply({ content: `✅ Quantidade atualizada para ${qty}x!` });
+
+  // Log: Quantidade editada
+  await sendLog(interaction.guild, tenant, {
+    title: "✏️ Quantidade editada",
+    description: `Usuário <@${interaction.user.id}> alterou a quantidade do pedido.`,
+    fields: [
+      { name: "**Produto**", value: `\`${order.product_name}\``, inline: true },
+      { name: "**Quantidade**", value: `\`${qty}x\``, inline: true },
+      { name: "**Novo Total**", value: `\`${formatBRL(newTotal)}\``, inline: true },
+      { name: "**ID do Pedido**", value: `\`${order.id}\``, inline: false },
+    ],
+  });
 }
 
 // ── Mark Delivered ──
@@ -762,6 +847,18 @@ async function markDelivered(interaction, tenant, orderId) {
   await interaction.editReply({
     embeds: [new EmbedBuilder().setTitle("✅ Pedido Entregue").setDescription(`Pedido **#${order.order_number}** (${order.product_name}) entregue.`).setColor(0x57F287)],
     components: [],
+  });
+
+  // Log: Entrega manual confirmada
+  await sendLog(interaction.guild, tenant, {
+    title: "📦 Entrega manual confirmada",
+    description: `Pedido **#${order.order_number}** marcado como entregue por <@${interaction.user.id}>.`,
+    color: 0x57F287,
+    fields: [
+      { name: "**Detalhes**", value: `\`${order.product_name} | ${formatBRL(order.total_cents)}\``, inline: false },
+      { name: "**ID do Pedido**", value: `\`${order.id}\``, inline: false },
+      { name: "**Comprador**", value: `<@${order.discord_user_id}>`, inline: false },
+    ],
   });
 }
 
@@ -781,6 +878,18 @@ async function cancelManual(interaction, tenant, orderId) {
   await interaction.editReply({
     embeds: [new EmbedBuilder().setTitle("❌ Pedido Cancelado").setDescription(`Pedido **#${order.order_number}** cancelado por <@${interaction.user.id}>.`).setColor(0xED4245)],
     components: [],
+  });
+
+  // Log: Cancelamento manual pelo admin
+  await sendLog(interaction.guild, tenant, {
+    title: "⛔ Cancelamento manual",
+    description: `Pedido **#${order.order_number}** cancelado manualmente por <@${interaction.user.id}>.`,
+    color: 0xED4245,
+    fields: [
+      { name: "**Detalhes**", value: `\`${order.product_name} | ${formatBRL(order.total_cents)}\``, inline: false },
+      { name: "**ID do Pedido**", value: `\`${order.id}\``, inline: false },
+      { name: "**Comprador**", value: `<@${order.discord_user_id}>`, inline: false },
+    ],
   });
 }
 
