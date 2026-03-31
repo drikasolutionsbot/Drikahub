@@ -107,6 +107,22 @@ export const PostMessageModal = ({
       const isDefaultColor = !finalColor || finalColor === "#2B2D31";
       
       const autoDeliveryLine = product.auto_delivery ? "⚡ **Entrega Automática!**\n\n" : "";
+      
+      // Resolve footer from embed_config
+      const ec = product.embed_config || {};
+      const showFooter = ec.show_footer !== false;
+      let footerText = "";
+      if (showFooter) {
+        const customFooter = ec.footer_available_text || ec.footer || "";
+        if (customFooter) {
+          footerText = customFooter
+            .replace(/\{loja\}/gi, tenant?.name || "Loja")
+            .replace(/\{data\}/gi, new Date().toLocaleString("pt-BR"));
+        } else {
+          footerText = `Servidor de ${tenant?.name} • ${new Date().toLocaleString("pt-BR")}`;
+        }
+      }
+
       const embed: Record<string, any> = {
         title: `${product.name}`,
         description: `${autoDeliveryLine}${product.description || ""}`,
@@ -117,10 +133,11 @@ export const PostMessageModal = ({
             inline: true,
           },
         ],
-        footer: {
-          text: `Servidor de ${tenant?.name} • ${new Date().toLocaleString("pt-BR")}`,
-        },
       };
+
+      if (showFooter && footerText) {
+        embed.footer = { text: footerText };
+      }
 
       // Only set color if user has a custom color, otherwise Discord shows no border
       if (!isDefaultColor) {
