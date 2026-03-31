@@ -42,6 +42,7 @@ interface ProductDetailGeneralProps {
 
 export const ProductDetailGeneral = ({ product, onChange, categories = [] }: ProductDetailGeneralProps) => {
   const { tenantId } = useTenant();
+  const { roles, loading: rolesLoading } = useDiscordRoles();
   const nameMaxLen = 256;
   const descMaxLen = 4096;
 
