@@ -355,7 +355,7 @@ serve(async (req) => {
 
     // 8. (Hooks removed)
 
-    // 9. Auto-assign customer role
+    // 9. Auto-assign customer role (global)
     if (storeConfig?.customer_role_id) {
       try {
         await fetch(
@@ -364,6 +364,18 @@ serve(async (req) => {
         );
       } catch (roleErr) {
         console.error("Failed to assign customer role:", roleErr);
+      }
+    }
+
+    // 9b. Auto-assign product-specific role
+    if (product?.role_id) {
+      try {
+        await fetch(
+          `${DISCORD_API}/guilds/${guildId}/members/${order.discord_user_id}/roles/${product.role_id}`,
+          { method: "PUT", headers: { Authorization: `Bot ${botToken}` } }
+        );
+      } catch (roleErr) {
+        console.error("Failed to assign product role:", roleErr);
       }
     }
 
