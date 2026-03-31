@@ -18,10 +18,13 @@ const formatDateTime = (dateObj = new Date()) => ({
 });
 
 // ── Log helper ──
-async function sendLog(guild, tenant, { title, description, color, fields: extraFields, storeConfig: sc, components }) {
+async function sendLog(guild, tenant, { title, description, color, fields: extraFields, storeConfig: sc, components: rawComponents }) {
   try {
     const storeConfig = sc || await getStoreConfig(tenant.id);
-    if (!storeConfig?.logs_channel_id) return;
+    if (!storeConfig?.logs_channel_id) {
+      console.warn(`[LOG] No logs_channel_id for tenant ${tenant.id}, skipping: ${title}`);
+      return;
+    }
 
     const storeName = storeConfig?.store_title || tenant.name || "Loja";
     const storeLogo = storeConfig?.store_logo_url || tenant.logo_url;
@@ -29,44 +32,46 @@ async function sendLog(guild, tenant, { title, description, color, fields: extra
     const { date, time } = formatDateTime();
     const botToken = process.env.DISCORD_BOT_TOKEN;
 
-    const embed = new EmbedBuilder()
-      .setTitle(title)
-      .setDescription(description)
-      .setColor(embedColor)
-      .setFooter({ text: `${storeName} | ${date}, ${time}`, iconURL: storeLogo || undefined });
-
-    if (extraFields?.length) embed.addFields(extraFields);
-
-    const payload = { embeds: [embed.toJSON()], components: components || [] };
-
-    try {
-      const logsChannel = await guild.channels.fetch(storeConfig.logs_channel_id);
-      if (logsChannel?.isTextBased?.()) {
-        await sendWithIdentity(logsChannel, tenant, payload);
-        console.log(`[LOG] ${title} sent for tenant ${tenant.id} to channel ${storeConfig.logs_channel_id}`);
-        return;
-      }
-    } catch (channelErr) {
-      console.warn(`Primary log send failed [${title}]:`, channelErr.message);
+    if (!botToken) {
+      console.error(`[LOG] DISCORD_BOT_TOKEN not set, cannot send: ${title}`);
+      return;
     }
 
-    if (!botToken) throw new Error("DISCORD_BOT_TOKEN not configured");
+    // Build embed as plain JSON (no Discord.js dependency for reliability)
+    const embed = {
+      title,
+      description,
+      color: embedColor,
+      footer: { text: `${storeName} | ${date}, ${time}`, icon_url: storeLogo || undefined },
+      timestamp: new Date().toISOString(),
+    };
+    if (extraFields?.length) embed.fields = extraFields;
 
+    const body = { embeds: [embed] };
+
+    // Convert Discord.js components to JSON if needed
+    if (rawComponents) {
+      if (Array.isArray(rawComponents)) {
+        body.components = rawComponents.map(c => typeof c.toJSON === "function" ? c.toJSON() : c);
+      }
+    }
+
+    // PRIMARY: Direct REST API call (proven reliable, same as expire-pending-orders cron)
     const res = await fetch(`https://discord.com/api/v10/channels/${storeConfig.logs_channel_id}/messages`, {
       method: "POST",
       headers: {
         Authorization: `Bot ${botToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(body),
     });
 
     if (!res.ok) {
-      const body = await res.text();
-      throw new Error(`Discord API ${res.status}: ${body}`);
+      const errBody = await res.text();
+      console.error(`[LOG] REST send failed [${title}]: ${res.status} ${errBody}`);
+    } else {
+      console.log(`[LOG] ✅ ${title} sent for tenant ${tenant.id} to channel ${storeConfig.logs_channel_id}`);
     }
-
-    console.log(`[LOG] ${title} sent via REST fallback for tenant ${tenant.id} to channel ${storeConfig.logs_channel_id}`);
   } catch (err) {
     console.error(`Failed to send log [${title}]:`, err.message);
   }
@@ -373,29 +378,16 @@ async function processPurchase(interaction, tenant, product, priceCents, fieldId
           checkoutThread.setLocked?.(true).catch(() => {});
         }, 5000);
 
-        // ── Send "Pagamento expirado" log ──
-        try {
-          const expStoreConfig = await getStoreConfig(tenant.id);
-          if (expStoreConfig?.logs_channel_id) {
-            const expStoreName = expStoreConfig?.store_title || tenant.name || "Loja";
-            const expStoreLogo = expStoreConfig?.store_logo_url || tenant.logo_url;
-            const { date: expDate, time: expTime } = formatDateTime();
-
-            const logsChannel = await interaction.guild.channels.fetch(expStoreConfig.logs_channel_id);
-            const expiredEmbed = new EmbedBuilder()
-              .setTitle("🍃 Pagamento expirado")
-              .setDescription(`Usuário <@${current.discord_user_id}> deixou o pagamento expirar.`)
-              .setColor(0xED4245)
-              .addFields(
-                { name: "**ID do Pedido**", value: `\`${current.id}\``, inline: false },
-              )
-              .setFooter({ text: `${expStoreName} | ${expDate}, ${expTime}`, iconURL: expStoreLogo || undefined });
-
-            await sendWithIdentity(logsChannel, tenant, { embeds: [expiredEmbed] });
-          }
-        } catch (logErr) {
-          console.error("Failed to send expired log:", logErr);
-        }
+        // ── Send "Pagamento expirado" log via unified helper ──
+        await sendLog(interaction.guild, tenant, {
+          title: "🍃 Pagamento expirado",
+          description: `Usuário <@${current.discord_user_id}> deixou o pagamento expirar.`,
+          color: 0xED4245,
+          fields: [
+            { name: "**Detalhes**", value: `\`${current.product_name} | ${formatBRL(current.total_cents)}\``, inline: false },
+            { name: "**ID do Pedido**", value: `\`${current.id}\``, inline: false },
+          ],
+        });
       }
     } catch {}
   }, timeout);
@@ -570,7 +562,7 @@ async function startPaymentPolling(orderId, tenantId, channel, tenant, timeoutMi
 
         if (data.status === "paid" && data.changed) {
           console.log(`[POLLING] Payment confirmed for order ${orderId}!`);
-          // Trigger automation from bot side
+          // Trigger automation + send log from bot side
           try {
             const paidOrder = await getOrder(orderId);
             if (paidOrder) {
@@ -581,6 +573,19 @@ async function startPaymentPolling(orderId, tenantId, channel, tenant, timeoutMi
                 order_number: paidOrder.order_number,
                 product_name: paidOrder.product_name,
                 total_cents: paidOrder.total_cents,
+              });
+
+              // Log: Pagamento confirmado
+              const paidTenant = await require("../supabase").getTenantByGuild(null) || tenant;
+              await sendLog(null, { id: tenantId, name: paidTenant?.name || tenant?.name || "Loja", logo_url: paidTenant?.logo_url || tenant?.logo_url }, {
+                title: "💰 Pagamento confirmado",
+                description: `Usuário <@${paidOrder.discord_user_id}> teve o pagamento confirmado.`,
+                color: 0x57F287,
+                fields: [
+                  { name: "**Detalhes**", value: `\`${paidOrder.product_name} | ${formatBRL(paidOrder.total_cents)}\``, inline: false },
+                  { name: "**Pedido**", value: `\`#${paidOrder.order_number}\``, inline: true },
+                  { name: "**ID do Pedido**", value: `\`${orderId}\``, inline: false },
+                ],
               });
             }
           } catch (e) {
