@@ -4,7 +4,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ProductImageUpload } from "./ProductImageUpload";
 import { useTenant } from "@/contexts/TenantContext";
-import { List, Zap } from "lucide-react";
+import { List, Zap, Shield } from "lucide-react";
+import { useDiscordRoles } from "@/hooks/useDiscordRoles";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Category {
   id: string;
