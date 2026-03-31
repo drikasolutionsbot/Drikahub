@@ -22,11 +22,12 @@ async function sendLog(guild, tenant, { title, description, color, fields: extra
   try {
     const storeConfig = sc || await getStoreConfig(tenant.id);
     if (!storeConfig?.logs_channel_id) return;
-    const logsChannel = await guild.channels.fetch(storeConfig.logs_channel_id);
+
     const storeName = storeConfig?.store_title || tenant.name || "Loja";
     const storeLogo = storeConfig?.store_logo_url || tenant.logo_url;
     const embedColor = color || parseInt((storeConfig?.embed_color || "#2B2D31").replace("#", ""), 16);
     const { date, time } = formatDateTime();
+    const botToken = process.env.DISCORD_BOT_TOKEN;
 
     const embed = new EmbedBuilder()
       .setTitle(title)
@@ -36,8 +37,33 @@ async function sendLog(guild, tenant, { title, description, color, fields: extra
 
     if (extraFields?.length) embed.addFields(extraFields);
 
-    // Send directly via channel.send to avoid webhook permission issues on log channels
-    await logsChannel.send({ embeds: [embed] });
+    const payload = { embeds: [embed.toJSON()] };
+
+    try {
+      const logsChannel = await guild.channels.fetch(storeConfig.logs_channel_id);
+      if (logsChannel?.isTextBased?.()) {
+        await logsChannel.send(payload);
+        return;
+      }
+    } catch (channelErr) {
+      console.warn(`Primary log send failed [${title}]:`, channelErr.message);
+    }
+
+    if (!botToken) throw new Error("DISCORD_BOT_TOKEN not configured");
+
+    const res = await fetch(`https://discord.com/api/v10/channels/${storeConfig.logs_channel_id}/messages`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bot ${botToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Discord API ${res.status}: ${body}`);
+    }
   } catch (err) {
     console.error(`Failed to send log [${title}]:`, err.message);
   }
