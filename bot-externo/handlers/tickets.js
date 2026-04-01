@@ -185,6 +185,7 @@ async function openTicket(interaction, tenant, targetChannelId = null) {
 // ── Close Ticket ──
 async function handleCloseTicket(interaction, tenant, ticketId) {
   try {
+    const storeConfig = await getStoreConfig(tenant.id);
     const isStaff = await checkStaffPermission(tenant, interaction);
     if (!isStaff) {
       if (interaction.deferred || interaction.replied) {
@@ -231,6 +232,7 @@ async function handleCloseTicket(interaction, tenant, ticketId) {
 // ── Delete Ticket ──
 async function handleDeleteTicket(interaction, tenant, ticketId) {
   try {
+    const storeConfig = await getStoreConfig(tenant.id);
     const isStaff = await checkStaffPermission(tenant, interaction);
     if (!isStaff) {
       if (interaction.deferred || interaction.replied) {
