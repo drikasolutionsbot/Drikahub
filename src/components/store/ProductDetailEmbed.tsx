@@ -120,6 +120,17 @@ export const ProductDetailEmbed = ({ product, onChange, storeEmbedColor }: Produ
             type: "product_embed",
             embed_config: config,
             button_style: product.button_style || "success",
+            general: {
+              name: product.name,
+              description: product.description,
+              price_cents: product.price_cents,
+              compare_price_cents: product.compare_price_cents,
+              type: product.type,
+              auto_delivery: product.auto_delivery,
+              active: product.active,
+              icon_url: product.icon_url,
+              banner_url: product.banner_url,
+            },
           },
         },
       });
@@ -136,10 +147,21 @@ export const ProductDetailEmbed = ({ product, onChange, storeEmbedColor }: Produ
   const handleLoadTemplate = (tpl: any) => {
     const data = tpl.embed_data;
     if (data?.embed_config) {
-      onChange({
+      const updates: Partial<Product> = {
         embed_config: { ...DEFAULT_EMBED, ...data.embed_config },
         button_style: data.button_style || product.button_style,
-      });
+      };
+      if (data.general) {
+        if (data.general.name) updates.name = data.general.name;
+        if (data.general.description !== undefined) updates.description = data.general.description;
+        if (data.general.price_cents !== undefined) updates.price_cents = data.general.price_cents;
+        if (data.general.compare_price_cents !== undefined) updates.compare_price_cents = data.general.compare_price_cents;
+        if (data.general.type) updates.type = data.general.type;
+        if (data.general.auto_delivery !== undefined) updates.auto_delivery = data.general.auto_delivery;
+        if (data.general.icon_url !== undefined) updates.icon_url = data.general.icon_url;
+        if (data.general.banner_url !== undefined) updates.banner_url = data.general.banner_url;
+      }
+      onChange(updates);
       toast.success(`Template "${tpl.name}" aplicado!`);
       setLoadDialogOpen(false);
     }
