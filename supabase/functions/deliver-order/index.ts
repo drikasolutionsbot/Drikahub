@@ -108,6 +108,21 @@ serve(async (req) => {
               delivered_to: order.discord_user_id,
             })
             .in("id", ids);
+
+          // Decrement product stock count
+          const { data: currentProduct } = await supabase
+            .from("products")
+            .select("stock")
+            .eq("id", order.product_id)
+            .single();
+          if (currentProduct && currentProduct.stock !== null) {
+            const newStock = Math.max(0, currentProduct.stock - items.length);
+            await supabase
+              .from("products")
+              .update({ stock: newStock, updated_at: new Date().toISOString() })
+              .eq("id", order.product_id)
+              .eq("tenant_id", tenant_id);
+          }
         }
       }
     }
