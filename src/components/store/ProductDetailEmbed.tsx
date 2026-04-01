@@ -1,10 +1,16 @@
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Save, FolderOpen, Loader2, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { ProductDiscordPreview } from "./ProductDiscordPreview";
 import { DiscordButtonStylePicker, type DiscordButtonStyle } from "@/components/discord/DiscordButtonStylePicker";
 import ButtonLabelWithEmoji from "@/components/discord/ButtonLabelWithEmoji";
+import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/contexts/TenantContext";
 
 export type EmbedBgStyle = "default" | "clean" | "transparent";
 
@@ -76,6 +82,81 @@ const bgOptions: { value: EmbedBgStyle; label: string; desc: string; preview: st
 
 export const ProductDetailEmbed = ({ product, onChange, storeEmbedColor }: ProductDetailEmbedProps) => {
   const config: EmbedConfig = { ...DEFAULT_EMBED, ...(product.embed_config || {}) };
+  const { tenantId } = useTenant();
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [loadDialogOpen, setLoadDialogOpen] = useState(false);
+  const [templateName, setTemplateName] = useState("");
+  const [savingTemplate, setSavingTemplate] = useState(false);
+  const [savedTemplates, setSavedTemplates] = useState<{ id: string; name: string; embed_data: any; created_at: string }[]>([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+
+  const fetchTemplates = async () => {
+    if (!tenantId) return;
+    setLoadingTemplates(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-saved-embeds", {
+        body: { action: "list", tenant_id: tenantId },
+      });
+      if (error) throw error;
+      // Filter only product embed templates (type === "product_embed")
+      const all = (data?.embeds || []) as any[];
+      setSavedTemplates(all.filter((e: any) => e.embed_data?.type === "product_embed"));
+    } catch {
+      setSavedTemplates([]);
+    }
+    setLoadingTemplates(false);
+  };
+
+  const handleSaveTemplate = async () => {
+    if (!tenantId || !templateName.trim()) return;
+    setSavingTemplate(true);
+    try {
+      const { error } = await supabase.functions.invoke("manage-saved-embeds", {
+        body: {
+          action: "save",
+          tenant_id: tenantId,
+          name: templateName.trim(),
+          embed_data: {
+            type: "product_embed",
+            embed_config: config,
+            button_style: product.button_style || "success",
+          },
+        },
+      });
+      if (error) throw error;
+      toast.success(`Template "${templateName}" salvo!`);
+      setTemplateName("");
+      setSaveDialogOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao salvar template");
+    }
+    setSavingTemplate(false);
+  };
+
+  const handleLoadTemplate = (tpl: any) => {
+    const data = tpl.embed_data;
+    if (data?.embed_config) {
+      onChange({
+        embed_config: { ...DEFAULT_EMBED, ...data.embed_config },
+        button_style: data.button_style || product.button_style,
+      });
+      toast.success(`Template "${tpl.name}" aplicado!`);
+      setLoadDialogOpen(false);
+    }
+  };
+
+  const handleDeleteTemplate = async (id: string) => {
+    if (!tenantId) return;
+    try {
+      await supabase.functions.invoke("manage-saved-embeds", {
+        body: { action: "delete", tenant_id: tenantId, id },
+      });
+      setSavedTemplates((prev) => prev.filter((t) => t.id !== id));
+      toast.success("Template excluído");
+    } catch {
+      toast.error("Erro ao excluir template");
+    }
+  };
 
   const update = (key: keyof EmbedConfig, value: unknown) => {
     onChange({ embed_config: { ...config, [key]: value } });
@@ -85,6 +166,33 @@ export const ProductDetailEmbed = ({ product, onChange, storeEmbedColor }: Produ
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
       {/* Form */}
       <div className="space-y-6">
+        {/* Template Actions */}
+        <section className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="text-xs"
+            onClick={() => setSaveDialogOpen(true)}
+          >
+            <Save className="h-3.5 w-3.5 mr-1.5" />
+            Salvar Template
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="text-xs"
+            onClick={() => {
+              fetchTemplates();
+              setLoadDialogOpen(true);
+            }}
+          >
+            <FolderOpen className="h-3.5 w-3.5 mr-1.5" />
+            Carregar Template
+          </Button>
+        </section>
+
         {/* Estilo do Botão */}
         <section className="space-y-3">
           <DiscordButtonStylePicker
@@ -295,6 +403,80 @@ export const ProductDetailEmbed = ({ product, onChange, storeEmbedColor }: Produ
           embedConfig={config}
         />
       </div>
+
+      {/* Save Template Dialog */}
+      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Salvar Template de Embed</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nome do template</Label>
+              <Input
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                placeholder="Ex: Embed padrão da loja"
+                className="bg-muted border-border"
+              />
+            </div>
+            <Button
+              onClick={handleSaveTemplate}
+              disabled={savingTemplate || !templateName.trim()}
+              className="w-full"
+            >
+              {savingTemplate ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+              Salvar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Load Template Dialog */}
+      <Dialog open={loadDialogOpen} onOpenChange={setLoadDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Carregar Template de Embed</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 max-h-[400px] overflow-y-auto">
+            {loadingTemplates ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : savedTemplates.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                Nenhum template salvo ainda.
+              </p>
+            ) : (
+              savedTemplates.map((tpl) => (
+                <div
+                  key={tpl.id}
+                  className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+                >
+                  <button
+                    type="button"
+                    className="flex-1 text-left"
+                    onClick={() => handleLoadTemplate(tpl)}
+                  >
+                    <p className="text-sm font-medium">{tpl.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(tpl.created_at).toLocaleDateString("pt-BR")}
+                    </p>
+                  </button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive hover:text-destructive"
+                    onClick={() => handleDeleteTemplate(tpl.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
