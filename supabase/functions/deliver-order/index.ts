@@ -53,15 +53,17 @@ serve(async (req) => {
     let isAutoDelivery = false;
     let stockItems: any[] = [];
     const fieldId = order.field_id;
+    let product: any = null;
 
     if (order.product_id) {
-      const { data: product } = await supabase
+      const { data: productData } = await supabase
         .from("products")
         .select("*, auto_delivery")
         .eq("id", order.product_id)
         .eq("tenant_id", tenant_id)
         .single();
 
+      product = productData;
       isAutoDelivery = !!product?.auto_delivery;
 
       if (isAutoDelivery) {
