@@ -345,7 +345,11 @@ async function processPurchase(interaction, tenant, product, priceCents, fieldId
     new ButtonBuilder().setCustomId(`checkout_cancel:${order.id}`).setLabel("Cancelar").setEmoji("🗑️").setStyle(ButtonStyle.Danger),
   );
 
-  await sendWithIdentity(checkoutThread, tenant, { embeds: [reviewEmbed], components: [row1, row2] });
+  await sendWithIdentity(checkoutThread, tenant, {
+    embeds: [reviewEmbed],
+    components: [row1, row2],
+    allowedMentions: { parse: [] },
+  });
 
   // Tell user where to go
   const threadLink = `https://discord.com/channels/${interaction.guild.id}/${checkoutThread.id}`;
