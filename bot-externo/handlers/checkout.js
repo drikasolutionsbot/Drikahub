@@ -296,7 +296,8 @@ async function processPurchase(interaction, tenant, product, priceCents, fieldId
   const storeConfig = await getStoreConfig(tenant.id);
   const storeName = storeConfig?.store_title || tenant.name || "Loja";
   const storeLogo = storeConfig?.store_logo_url || tenant.logo_url;
-  const embedColor = parseInt((storeConfig?.embed_color || "#2B2D31").replace("#", ""), 16);
+  const productEmbedColor = product.embed_config?.color;
+  const embedColor = parseInt((productEmbedColor || storeConfig?.embed_color || "#5865F2").replace("#", ""), 16);
 
   // Stock count
   let stockCount = "∞";
