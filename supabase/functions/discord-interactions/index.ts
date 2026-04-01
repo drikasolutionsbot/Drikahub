@@ -2493,9 +2493,11 @@ async function processPurchase(
 
   const storeName = storeConfigForCheckout?.store_title || tenantInfo?.name || "Loja";
   const storeLogo = storeConfigForCheckout?.store_logo_url || tenantInfo?.logo_url;
-  const storeEmbedColor = storeConfigForCheckout?.embed_color
-    ? parseInt(storeConfigForCheckout.embed_color.replace("#", ""), 16)
-    : 0x2B2D31;
+  const productEmbedColor = typeof product.embed_config?.color === "string"
+    ? product.embed_config.color
+    : null;
+  const storeEmbedColor = productEmbedColor || storeConfigForCheckout?.embed_color || "#5865F2";
+  const reviewEmbedColor = parseInt(storeEmbedColor.replace("#", ""), 16);
 
   // Get stock count
   let stockCount = "∞";
@@ -2544,7 +2546,7 @@ async function processPurchase(
     author: { name: username || userId, icon_url: `https://cdn.discordapp.com/embed/avatars/${(parseInt(userId) >> 22) % 6}.png` },
     title: "Revisão do Pedido",
     description: descLines.join("\n\n") || undefined,
-    color: storeEmbedColor,
+    color: reviewEmbedColor,
     fields: [
       { name: "Valor à vista", value: formatBRL(priceCents), inline: true },
       { name: "📦 Em estoque", value: stockCount, inline: true },
@@ -2565,7 +2567,6 @@ async function processPurchase(
     method: "POST",
     headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      content: `<@${userId}>`,
       embeds: [reviewEmbed],
       components: [
         {
@@ -2583,6 +2584,7 @@ async function processPurchase(
           ],
         },
       ],
+      allowed_mentions: { parse: [] },
     }),
   });
 
