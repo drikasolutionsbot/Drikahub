@@ -89,10 +89,28 @@ function applyFooterTemplate(template, context = {}) {
     .replace(/\{user\}/gi, context.username || "");
 }
 
+function resolveHexColor(value, fallback = "#5865F2") {
+  const raw = typeof value === "string" ? value.trim() : "";
+  const normalized = raw ? (raw.startsWith("#") ? raw : `#${raw}`) : fallback;
+  return /^#[0-9a-fA-F]{6}$/.test(normalized) ? normalized : fallback;
+}
+
+function getProductEmbedConfig(product) {
+  const rawConfig = product?.embed_config;
+  if (!rawConfig) return {};
+  if (typeof rawConfig === "string") {
+    try {
+      const parsed = JSON.parse(rawConfig);
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  return typeof rawConfig === "object" ? rawConfig : {};
+}
+
 function resolveCheckoutFooter(storeConfig, product, stockCount, context) {
-  const embedConfig = product?.embed_config && typeof product.embed_config === "object"
-    ? product.embed_config
-    : {};
+  const embedConfig = getProductEmbedConfig(product);
 
   const numericStock = Number(stockCount);
   const hasStock = stockCount === "∞" || (!Number.isNaN(numericStock) && numericStock > 0);
@@ -298,8 +316,9 @@ async function processPurchase(interaction, tenant, product, priceCents, fieldId
   const storeConfig = await getStoreConfig(tenant.id);
   const storeName = storeConfig?.store_title || tenant.name || "Loja";
   const storeLogo = storeConfig?.store_logo_url || tenant.logo_url;
-  const productEmbedColor = product.embed_config?.color;
-  const embedColor = parseInt((productEmbedColor || storeConfig?.embed_color || "#5865F2").replace("#", ""), 16);
+  const productEmbedConfig = getProductEmbedConfig(product);
+  const resolvedEmbedHex = resolveHexColor(productEmbedConfig.color, resolveHexColor(storeConfig?.embed_color || "#5865F2"));
+  const embedColor = parseInt(resolvedEmbedHex.replace("#", ""), 16);
 
   // Stock count
   let stockCount = "∞";
