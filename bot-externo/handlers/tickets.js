@@ -276,6 +276,7 @@ async function handleDeleteTicket(interaction, tenant, ticketId) {
 // ── Remind Ticket ──
 async function handleRemindTicket(interaction, tenant, ticketId) {
   await interaction.deferReply({ ephemeral: true });
+  const storeConfig = await getStoreConfig(tenant.id);
 
   const ticket = await getTicketById(ticketId);
   if (!ticket) return interaction.editReply({ content: "❌ Ticket não encontrado." });
