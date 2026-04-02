@@ -1156,11 +1156,12 @@ serve(async (req) => {
 
         // Send cancel message then archive thread
         const channelId = interaction.channel_id;
+        const cancelColor = await resolveOrderEmbedColor(order) || 0x2B2D31;
         await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
           method: "POST",
           headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
           body: JSON.stringify({
-            embeds: [{ title: "❌ Compra Cancelada", description: `Pedido **#${order.order_number}** foi cancelado.\nO tópico será arquivado.`, color: 0x2B2D31 }],
+            embeds: [{ title: "❌ Compra Cancelada", description: `Pedido **#${order.order_number}** foi cancelado.\nO tópico será arquivado.`, color: cancelColor }],
           }),
         });
 
