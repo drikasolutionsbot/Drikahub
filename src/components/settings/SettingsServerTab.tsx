@@ -384,17 +384,29 @@ const SettingsServerTab = ({ tenant, tenantId, refetchTenant }: Props) => {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      toast({
-        title: "Loja clonada com sucesso! 🎉",
-        description: `${data?.cloned_products || 0} produtos copiados para o novo servidor.`,
+      setCloneResult({
+        token: data?.access_token || "",
+        stats: data?.stats || {},
       });
-      setCloneDialogOpen(false);
-      setCloneGuildId("");
+      toast({ title: "Loja clonada com sucesso! 🎉" });
     } catch (err: any) {
       toast({ title: "Erro ao clonar", description: err.message, variant: "destructive" });
     } finally {
       setCloning(false);
     }
+  };
+
+  const copyCloneToken = () => {
+    if (cloneResult?.token) {
+      navigator.clipboard.writeText(cloneResult.token);
+      toast({ title: "Token copiado!" });
+    }
+  };
+
+  const handleCloseCloneDialog = () => {
+    setCloneDialogOpen(false);
+    setCloneGuildId("");
+    setCloneResult(null);
   };
 
   return (
