@@ -2820,7 +2820,16 @@ async function generatePixInThread(
   const storeName = scBrand?.store_title || tInfo?.name || "Loja";
   const storeLogo = scBrand?.store_logo_url || tInfo?.logo_url;
   const timeoutMin = scBrand?.payment_timeout_minutes || 30;
-  const embedColor = scBrand?.embed_color ? parseInt(scBrand.embed_color.replace("#", ""), 16) : 0x2B2D31;
+  // Resolve product-specific color for PIX embed
+  let embedColor = scBrand?.embed_color ? parseInt(scBrand.embed_color.replace("#", ""), 16) : 0x2B2D31;
+  if (order.product_id) {
+    const { data: pixProduct } = await supabase.from("products").select("embed_config").eq("id", order.product_id).single();
+    if (pixProduct) {
+      const pixEmbedConfig = parseProductEmbedConfig(pixProduct.embed_config);
+      const pixHex = resolveHexColor(pixEmbedConfig.color, resolveHexColor(scBrand?.embed_color || "#5865F2"));
+      embedColor = parseInt(pixHex.replace("#", ""), 16);
+    }
+  }
 
   const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(brcode)}`;
 
