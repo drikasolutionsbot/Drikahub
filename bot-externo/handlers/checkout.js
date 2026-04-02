@@ -210,6 +210,31 @@ async function startCheckout(interaction, tenant, productId) {
   if (!product.active) return interaction.editReply({ content: "❌ Este produto está indisponível." });
 
   const fields = await getProductFields(product.id, tenant.id);
+
+  // ── Check stock before proceeding ──
+  if (product.auto_delivery) {
+    if (fields.length > 0) {
+      // Check if ALL fields have 0 stock
+      let totalStock = 0;
+      for (const f of fields) {
+        const sc = await countStock(product.id, tenant.id, f.id);
+        totalStock += (sc || 0);
+      }
+      if (totalStock <= 0) {
+        return interaction.editReply({
+          content: `✅ Pronto, agora você será notificado quando \`${product.name}\` estiver com estoque disponível.`,
+        });
+      }
+    } else {
+      const sc = await countStock(product.id, tenant.id);
+      if (sc !== null && sc <= 0) {
+        return interaction.editReply({
+          content: `✅ Pronto, agora você será notificado quando \`${product.name}\` estiver com estoque disponível.`,
+        });
+      }
+    }
+  }
+
   if (fields.length > 0) {
     // Show variation selector
     const storeConfig = await getStoreConfig(tenant.id);
