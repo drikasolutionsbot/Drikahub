@@ -565,7 +565,7 @@ async function goToPayment(interaction, tenant, orderId) {
   const storeName = storeConfig?.store_title || tenant.name || "Loja";
   const storeLogo = storeConfig?.store_logo_url || tenant.logo_url;
   const timeoutMin = storeConfig?.payment_timeout_minutes || 30;
-  const embedColor = parseInt((storeConfig?.embed_color || "#2B2D31").replace("#", ""), 16);
+  const embedColor = await resolveOrderColor(order, storeConfig);
   const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(brcode)}`;
   const { date: paymentDate, time: paymentTime } = formatDateTime();
   const pixFooterText = resolvePixFooter(storeConfig, {
