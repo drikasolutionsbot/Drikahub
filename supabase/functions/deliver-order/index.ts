@@ -529,18 +529,7 @@ serve(async (req) => {
       }],
     };
 
-    // Send to sales channel
-    if (storeConfig?.sales_channel_id) {
-      try {
-        await fetch(`${DISCORD_API}/channels/${storeConfig.sales_channel_id}/messages`, {
-          method: "POST",
-          headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
-          body: JSON.stringify(salesPayload),
-        });
-      } catch (salesErr) {
-        console.error("Failed to send sales announcement:", salesErr);
-      }
-    }
+    // Send to logs channel only
 
     // Send to logs channel too
     if (storeConfig?.logs_channel_id) {
