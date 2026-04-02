@@ -994,7 +994,8 @@ async function viewVariations(interaction, tenant, productId) {
   if (!fields.length) return interaction.reply({ content: "Este produto não tem variações.", ephemeral: true });
 
   const storeConfig = await getStoreConfig(product.tenant_id);
-  const embedColor = parseInt((storeConfig?.embed_color || "#2B2D31").replace("#", ""), 16);
+  const { data: fullProduct } = await supabase.from("products").select("*").eq("id", productId).single();
+  const embedColor = fullProduct ? resolveProductColor(fullProduct, storeConfig) : parseInt(resolveHexColor(storeConfig?.embed_color || "#5865F2").replace("#", ""), 16);
 
   const fieldLines = fields.map((f) => {
     const emoji = f.emoji || "•";
