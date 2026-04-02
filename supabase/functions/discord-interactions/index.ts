@@ -2374,6 +2374,7 @@ serve(async (req) => {
         await supabase.from("orders").update({ total_cents: newTotal }).eq("id", orderId);
 
         const channelId = interaction.channel_id;
+        const qtyColor = await resolveOrderEmbedColor(order) || 0x2B2D31;
         await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
           method: "POST",
           headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
@@ -2381,7 +2382,7 @@ serve(async (req) => {
             embeds: [{
               title: "✏️ Quantidade Atualizada",
               description: `Quantidade: **${qty}x**\nNovo total: **${formatBRL(newTotal)}**`,
-              color: 0x2B2D31,
+              color: qtyColor,
             }],
           }),
         });
