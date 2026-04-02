@@ -155,8 +155,9 @@ Deno.serve(async (req) => {
     }
 
     // Add user to guild (if not already) using OAuth token
+    console.log("Adding user to guild:", { guildId, discordUserId, roleId });
     try {
-      await fetch(`${DISCORD_API}/guilds/${guildId}/members/${discordUserId}`, {
+      const addRes = await fetch(`${DISCORD_API}/guilds/${guildId}/members/${discordUserId}`, {
         method: "PUT",
         headers: {
           Authorization: `Bot ${botToken}`,
@@ -167,17 +168,22 @@ Deno.serve(async (req) => {
           roles: roleId ? [roleId] : [],
         }),
       });
+      const addResText = await addRes.text();
+      console.log("Add to guild response:", addRes.status, addResText);
     } catch (e) {
       console.error("Add to guild error:", e);
     }
 
     // If user is already in the guild, add the role directly
     if (roleId) {
+      console.log("Adding role directly:", { guildId, discordUserId, roleId });
       try {
-        await fetch(`${DISCORD_API}/guilds/${guildId}/members/${discordUserId}/roles/${roleId}`, {
+        const roleRes = await fetch(`${DISCORD_API}/guilds/${guildId}/members/${discordUserId}/roles/${roleId}`, {
           method: "PUT",
           headers: { Authorization: `Bot ${botToken}` },
         });
+        const roleResText = await roleRes.text();
+        console.log("Add role response:", roleRes.status, roleResText);
       } catch (e) {
         console.error("Add role error:", e);
       }
