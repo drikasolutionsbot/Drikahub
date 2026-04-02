@@ -1017,7 +1017,7 @@ async function viewDetails(interaction, tenant, productId) {
 
   const fields = await getProductFields(productId, tenant.id);
   const storeConfig = await getStoreConfig(tenant.id);
-  const embedColor = parseInt((storeConfig?.embed_color || "#2B2D31").replace("#", ""), 16);
+  const embedColor = resolveProductColor(product, storeConfig);
 
   const autoDeliveryText = product.auto_delivery ? "⚡ **Entrega Automática!**\n\n" : "";
   const embed = new EmbedBuilder()
