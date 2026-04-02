@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Server, Unplug, Loader2, Check, AlertTriangle, Bot } from "lucide-react";
+import { Server, Unplug, Loader2, Check, AlertTriangle, Bot, ArrowRightLeft, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
@@ -15,6 +17,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 const BOT_PERMISSIONS = "536870920";
 
@@ -43,6 +54,14 @@ const SettingsServerTab = ({ tenant, tenantId, refetchTenant }: Props) => {
   const guildsBeforeInviteRef = useRef<Set<string>>(new Set());
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollCountRef = useRef(0);
+
+  // Transfer state
+  const [transferMode, setTransferMode] = useState(false);
+
+  // Clone state
+  const [cloneDialogOpen, setCloneDialogOpen] = useState(false);
+  const [cloneGuildId, setCloneGuildId] = useState("");
+  const [cloning, setCloning] = useState(false);
 
   const isConnected = !!tenant?.discord_guild_id;
   const disconnectedGuildStorageKey = tenantId ? `last_disconnected_guild:${tenantId}` : null;
@@ -144,6 +163,7 @@ const SettingsServerTab = ({ tenant, tenantId, refetchTenant }: Props) => {
       if (data?.error) throw new Error(data.error);
       clearPreferredReconnectGuildId();
       await refetchTenant();
+      setTransferMode(false);
       toast({ title: `Conectado ao servidor ${guild.name}! 🎉` });
       return true;
     } catch (err: any) {
@@ -185,6 +205,7 @@ const SettingsServerTab = ({ tenant, tenantId, refetchTenant }: Props) => {
         stopPolling();
         setWaitingForBot(false);
         clearPreferredReconnectGuildId();
+        setTransferMode(false);
         await refetchTenant();
         toast({ title: "Servidor conectado automaticamente! 🎉" });
         return true;
@@ -226,7 +247,6 @@ const SettingsServerTab = ({ tenant, tenantId, refetchTenant }: Props) => {
     pollIntervalRef.current = setInterval(async () => {
       pollCountRef.current++;
 
-      // Stop after 40 polls (~3.5 minutes with 5s interval)
       if (pollCountRef.current > 40) {
         stopPolling();
         setWaitingForBot(false);
@@ -239,7 +259,6 @@ const SettingsServerTab = ({ tenant, tenantId, refetchTenant }: Props) => {
       }
 
       try {
-        // First check for new guilds via diff
         const currentGuilds = await fetchAllBotGuilds();
         if (currentGuilds) {
           const newGuilds = currentGuilds.filter((g) => !guildsBeforeInviteRef.current.has(g.id));
@@ -263,8 +282,6 @@ const SettingsServerTab = ({ tenant, tenantId, refetchTenant }: Props) => {
           }
         }
 
-        // Fallback: try auto-link via backend on every poll
-        // This handles reconnection (bot already in server)
         await tryAutoLink();
       } catch {
         // silently retry next interval
@@ -294,6 +311,29 @@ const SettingsServerTab = ({ tenant, tenantId, refetchTenant }: Props) => {
     }
   };
 
+  const handleTransferServer = async () => {
+    if (!tenantId) return;
+    const previousGuildId = tenant?.discord_guild_id;
+    setDisconnecting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("update-tenant", {
+        body: { tenant_id: tenantId, updates: { discord_guild_id: null } },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (previousGuildId && disconnectedGuildStorageKey) {
+        localStorage.setItem(disconnectedGuildStorageKey, previousGuildId);
+      }
+      await refetchTenant();
+      setTransferMode(true);
+      toast({ title: "Servidor desconectado. Agora conecte o novo servidor." });
+    } catch (err: any) {
+      toast({ title: "Erro ao desconectar", description: err.message, variant: "destructive" });
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
   const handleAddBot = async () => {
     let inviteUrl = botInviteData?.invite_url;
     if (!inviteUrl) {
@@ -305,7 +345,6 @@ const SettingsServerTab = ({ tenant, tenantId, refetchTenant }: Props) => {
       return;
     }
 
-    // Save current guilds before opening invite
     try {
       const currentGuilds = await fetchAllBotGuilds();
       guildsBeforeInviteRef.current = new Set((currentGuilds || []).map((g) => g.id));
@@ -314,8 +353,6 @@ const SettingsServerTab = ({ tenant, tenantId, refetchTenant }: Props) => {
     }
 
     window.open(inviteUrl, "_blank", "noopener,noreferrer");
-
-    // Start polling for new guild
     startPollingForNewGuild();
   };
 
@@ -323,8 +360,41 @@ const SettingsServerTab = ({ tenant, tenantId, refetchTenant }: Props) => {
     stopPolling();
     setWaitingForBot(false);
     setDetectedGuild(null);
+    if (transferMode && !isConnected) {
+      // Keep transfer mode active so user can retry
+    }
   };
 
+  const handleClone = async () => {
+    const trimmed = cloneGuildId.trim();
+    if (!trimmed || !tenantId) return;
+
+    if (!/^\d{17,20}$/.test(trimmed)) {
+      toast({ title: "ID inválido", description: "O ID deve conter 17-20 dígitos.", variant: "destructive" });
+      return;
+    }
+
+    setCloning(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("clone-tenant", {
+        body: { source_tenant_id: tenantId, new_discord_guild_id: trimmed },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast({
+        title: "Loja clonada com sucesso! 🎉",
+        description: `${data?.cloned_products || 0} produtos copiados para o novo servidor.`,
+      });
+      setCloneDialogOpen(false);
+      setCloneGuildId("");
+    } catch (err: any) {
+      toast({ title: "Erro ao clonar", description: err.message, variant: "destructive" });
+    } finally {
+      setCloning(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -362,42 +432,144 @@ const SettingsServerTab = ({ tenant, tenantId, refetchTenant }: Props) => {
               </div>
             </div>
 
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-full gap-2 border-destructive/30 text-destructive hover:bg-destructive/10"
-                  disabled={disconnecting}
-                >
-                  {disconnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Unplug className="h-4 w-4" />}
-                  Desconectar servidor
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle className="flex items-center gap-2">
-                    <AlertTriangle className="h-5 w-5 text-destructive" />
-                    Desconectar servidor?
-                  </AlertDialogTitle>
-                  <AlertDialogDescription>
-                    O bot deixará de operar neste servidor. Todas as configurações ficarão salvas,
-                    mas só funcionarão quando um servidor for reconectado.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleDisconnect}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Transfer Server */}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 border-primary/30 text-primary hover:bg-primary/10"
+                    disabled={disconnecting}
                   >
-                    Sim, desconectar
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+                    {disconnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRightLeft className="h-4 w-4" />}
+                    Trocar servidor
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                      <ArrowRightLeft className="h-5 w-5 text-primary" />
+                      Trocar de servidor?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Todas as configurações (produtos, estoque, cupons, embeds) serão mantidas
+                      e transferidas para o novo servidor. Apenas a conexão atual será desfeita.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleTransferServer}
+                      className="bg-primary text-primary-foreground hover:bg-primary/90"
+                    >
+                      Sim, trocar
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+
+              {/* Clone to new server */}
+              <Dialog open={cloneDialogOpen} onOpenChange={setCloneDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 border-accent/30 text-accent-foreground hover:bg-accent/10"
+                  >
+                    <Copy className="h-4 w-4" />
+                    Clonar para outro
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Copy className="h-5 w-5 text-primary" />
+                      Clonar loja para outro servidor
+                    </DialogTitle>
+                    <DialogDescription>
+                      Isso criará uma nova loja com todos os produtos, estoque, cupons e configurações
+                      copiados do servidor atual. Será gerado um novo plano gratuito para o clone.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-3 py-2">
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground uppercase tracking-wider">
+                        ID do novo servidor Discord
+                      </Label>
+                      <Input
+                        placeholder="Ex: 123456789012345678"
+                        value={cloneGuildId}
+                        onChange={(e) => setCloneGuildId(e.target.value)}
+                        className="font-mono"
+                        maxLength={20}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Certifique-se de que o bot já foi adicionado ao novo servidor antes de clonar.
+                      </p>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setCloneDialogOpen(false)}>
+                      Cancelar
+                    </Button>
+                    <Button
+                      onClick={handleClone}
+                      disabled={cloning || !cloneGuildId.trim()}
+                      className="gradient-pink text-primary-foreground"
+                    >
+                      {cloning ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
+                      {cloning ? "Clonando..." : "Clonar loja"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              {/* Disconnect */}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 border-destructive/30 text-destructive hover:bg-destructive/10"
+                    disabled={disconnecting}
+                  >
+                    {disconnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Unplug className="h-4 w-4" />}
+                    Desconectar
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5 text-destructive" />
+                      Desconectar servidor?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      O bot deixará de operar neste servidor. Todas as configurações ficarão salvas,
+                      mas só funcionarão quando um servidor for reconectado.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDisconnect}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Sim, desconectar
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           </div>
         ) : (
           <div className="space-y-5">
+            {transferMode && !waitingForBot && !detectedGuild && (
+              <div className="rounded-xl bg-primary/5 border border-primary/20 px-4 py-3 mb-2">
+                <p className="text-sm text-foreground font-medium">🔄 Modo transferência ativo</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Adicione o bot ao novo servidor. Todas as configurações serão mantidas.
+                </p>
+              </div>
+            )}
+
             {!waitingForBot && !detectedGuild ? (
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">
