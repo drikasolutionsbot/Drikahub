@@ -2312,6 +2312,7 @@ serve(async (req) => {
         await supabase.from("coupons").update({ used_count: coupon.used_count + 1 }).eq("id", coupon.id);
 
         const channelId = interaction.channel_id;
+        const couponColor = await resolveOrderEmbedColor(order) || 0x57F287;
         // Send updated review in the thread
         await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
           method: "POST",
@@ -2320,7 +2321,7 @@ serve(async (req) => {
             embeds: [{
               title: "🏷️ Cupom Aplicado!",
               description: `Cupom **${couponCode}** aplicado com sucesso!\n\n~~${formatBRL(order.total_cents)}~~ → **${formatBRL(newTotal)}**\nDesconto: **-${formatBRL(discount)}**`,
-              color: 0x57F287,
+              color: couponColor,
             }],
           }),
         });
