@@ -50,6 +50,7 @@ type PermState = "allow" | "deny" | "neutral";
 const PERM_BITS: Record<string, bigint> = {
   view_channel: BigInt(1) << BigInt(10),
   send_messages: BigInt(1) << BigInt(11),
+  send_messages_in_threads: BigInt(1) << BigInt(38),
   read_message_history: BigInt(1) << BigInt(16),
   add_reactions: BigInt(1) << BigInt(6),
   attach_files: BigInt(1) << BigInt(15),
@@ -59,6 +60,7 @@ const PERM_BITS: Record<string, bigint> = {
 const PERM_LABELS: Record<string, { label: string; icon: typeof Eye }> = {
   view_channel: { label: "Ver Canal", icon: Eye },
   send_messages: { label: "Enviar Mensagens", icon: MessageSquare },
+  send_messages_in_threads: { label: "Enviar em Tópicos", icon: MessageSquare },
 };
 
 function getPermState(allow: string, deny: string, bit: bigint): PermState {
