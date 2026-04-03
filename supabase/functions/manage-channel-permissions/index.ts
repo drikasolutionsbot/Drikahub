@@ -113,6 +113,7 @@ Deno.serve(async (req) => {
         const permMap: Record<string, bigint> = {
           view_channel: PERMISSIONS.VIEW_CHANNEL,
           send_messages: PERMISSIONS.SEND_MESSAGES,
+          send_messages_in_threads: PERMISSIONS.SEND_MESSAGES_IN_THREADS,
           add_reactions: PERMISSIONS.ADD_REACTIONS,
           attach_files: PERMISSIONS.ATTACH_FILES,
           read_message_history: PERMISSIONS.READ_MESSAGE_HISTORY,
